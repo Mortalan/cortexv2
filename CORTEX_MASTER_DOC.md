@@ -20,7 +20,7 @@
 ## 2. INFRASTRUCTURE & HARDWARE
 
 ### 2.1 THE GATEWAY (HAPROXY NODE)
-- **Host:** Ubuntu 22.04 LTS (10.0.0.239)
+- **Host:** Ubuntu 22.04 LTS (192.168.50.239)
 - **Role:** SSL Termination, SNI Routing, ACME Challenge handling.
 - **SSL:** Let's Encrypt (Wildcard *.rmmservice.co.za).
 
@@ -31,7 +31,7 @@
 - **Roles:** Real-time management, Ingress, Persistent connectivity.
 
 ### 2.3 THE BRAIN (VIKI INTELLIGENCE NODE)
-- **Host:** Local Test Bench (10.0.0.240)
+- **Host:** Local Test Bench (192.168.50.240)
 - **Hardware:** AMD Ryzen 7 5700, 32GB RAM.
 - **GPU:** NVIDIA RTX 4060 (Dedicated to LLM Inference).
 - **Storage:** 4TB HDD (Forensic Data Lake) - Mounted at /mnt/data_lake (BTRFS).
@@ -51,8 +51,8 @@
 ---
 
 ## 4. NETWORK TOPOLOGY & DATA FLOW
-1. **Public/Local Ingress:** Client -> `rmmservice.co.za` -> Public IP -> HAProxy (10.0.0.239).
-2. **Reverse Proxy:** HAProxy (SSL Term) -> VIKI Traefik (10.0.0.240:80).
+1. **Public/Local Ingress:** Client -> `rmmservice.co.za` -> Public IP -> HAProxy (192.168.50.239).
+2. **Reverse Proxy:** HAProxy (SSL Term) -> VIKI Traefik (192.168.50.240:80).
 3. **Telemetry Pipe:** VDS (Velociraptor/NetLock) -> Redis -> n8n -> VIKI.
 4. **Forensic Lake:** VDS Logs -> WireGuard Tunnel -> VIKI 4TB HDD.
 5. **Heartbeat:** VDS pings VIKI every 60s. If down, VDS enters **"Reflex Mode"** (Defender/ASR only) and queues logs in Redis.
@@ -70,7 +70,7 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 
 ### 5.2 OPERATIONAL PROTOCOLS (MANDATORY FOR GEMINI CLI)
 1. **Autonomous Atomic Commits:** After every single code generation or structural change, the agent MUST perform the commit autonomously: `git add . && git commit -m "CORTEX: [Specific Task Description]"`.
-2. **Root Execution:** All deployment and infrastructure commands on VIKI (10.0.0.240) are executed as `root`. Do not use `sudo`.
+2. **Root Execution:** All deployment and infrastructure commands on VIKI (192.168.50.240) are executed as `root`. Do not use `sudo`.
 3. **Documentation Parity:** Ensure any change in ports, networks, or volumes is immediately updated in the "Topology" section of the current session.
 4. **No Hallucinations:** Never invent hardware. If a spec is missing, ask.
 5. **Context Management:** After 5-7 tasks, explicitly suggest a session restart using the Startup Command above to prevent context bloat and drifting.

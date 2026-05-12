@@ -3,7 +3,7 @@
 - **Project Initiation:** Created `cortexproject.md` (Bible) and auxiliary tracking files.
 - **Naming Convention:** Finalized project name as **CORTEX**.
 - **Hardware Update:** Updated VIKI specs to AMD Ryzen 7 5700 and RTX 4060 after verification of lab machine.
-- **Lab Research:** Verified NetLock 3.0.0 is running on VIKI (10.0.0.240) via Docker.
+- **Lab Research:** Verified NetLock 3.0.0 is running on VIKI (192.168.50.240) via Docker.
 - **Phase 4 Initialization:** Established `infrastructure/viki/` directory and defined `docker-compose.yml` for GPU-accelerated Ollama deployment.
 - **Phase 4 Completion:** Successfully deployed Ollama with RTX 4060 GPU passthrough. Verified local inference with TinyLlama.
 - **Infrastructure Unification:** Reorganized VIKI node file structure into a unified `infrastructure/viki/` directory.
@@ -14,12 +14,12 @@
 - **Phase 8 Completion:** Hardened all services with Authelia MFA Identity Gate.
 - **Phase 9 Completion:** Established Vector Telemetry pipe for real-time forensic offload.
 - **Phase 10 Completion:** Verified 'Reflex Mode' autonomous failover logic.
-- **Unified Command:** Deployed Homer Management Portal at `http://10.0.0.240`.
+- **Unified Command:** Deployed Homer Management Portal at `http://192.168.50.240`.
 - **End of Session:** Syncing context for reset.
 
 ## 2026-05-11
 - **Domain Transition:** Migrated Lab environment to `rmmservice.co.za`. 
-- **Gateway Integration:** Configured HAProxy (10.0.0.239) for SNI routing and SSL termination (Self-signed wildcard).
+- **Gateway Integration:** Configured HAProxy (192.168.50.239) for SNI routing and SSL termination (Self-signed wildcard).
 - **Ingress Repair:** Fixed 404/503 errors by updating Traefik `trustedIPs` for Authelia compatibility and correcting MinIO routing labels.
 - **Phoenix Protocol Executed:** Full scrap and rebuild to `/opt/cortex/` unified structure.
 - **Credential Unification:** All services (Authelia, EDR, S3) synchronized to `admin` / `password`.

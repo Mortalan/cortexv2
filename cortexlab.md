@@ -1,8 +1,8 @@
 # CORTEX LAB: EXECUTION TRACKER
 
 ## CURRENT STATUS
-- **Lab Node:** VIKI (10.0.0.240)
-- **Access:** root@10.0.0.240 (SSH)
+- **Lab Node:** VIKI (192.168.50.240)
+- **Access:** root@192.168.50.240 (SSH)
 - **Hardware:** Ryzen 7 5700 / RTX 4060 / 4TB HDD
 - **Path:** /opt/cortex/ (Unified v2 Structure)
 - **GitHub:** https://github.com/Mortalan/cortexv2

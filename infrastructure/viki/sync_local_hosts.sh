@@ -2,7 +2,7 @@
 # CORTEX: Local Hosts Sync Script (Pseudo-Production)
 # Run this on your workstation to map rmmservice.co.za domains to the HAProxy gateway.
 
-GATEWAY_IP="10.0.0.239"
+GATEWAY_IP="192.168.50.239"
 DOMAINS=(
     "rmmservice.co.za"
     "auth.rmmservice.co.za"

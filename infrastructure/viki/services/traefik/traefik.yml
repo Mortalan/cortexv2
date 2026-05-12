@@ -8,11 +8,11 @@ entryPoints:
     proxyProtocol:
       trustedIPs:
         - 127.0.0.1
-        - 10.0.0.239
+        - 192.168.50.239
     forwardedHeaders:
       trustedIPs:
         - 127.0.0.1
-        - 10.0.0.239
+        - 192.168.50.239
   websecure:
     address: ':443'
 
