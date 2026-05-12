@@ -216,46 +216,37 @@ function BinaryBit({ pos, speed, val }: { pos: [number, number, number], speed: 
   );
 }
 
-function Rig() {
-  return useFrame((state) => {
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, state.mouse.x * 2, 0.05);
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 1.5 + state.mouse.y, 0.05);
-    state.camera.lookAt(0, 0, -5);
-  });
-}
-
 function Topology({ status }: { status: ServiceStatus[] }) {
   const getStatus = (name: string) => status.find(s => s.name === name || (name === "MinIO" && s.name === "Data Lake"))?.status || "offline";
 
   const nodes = [
-    { id: "rmm", pos: [-3, 0, -2] as [number, number, number], name: "NetLock RMM", label: "RMM" },
-    { id: "edr", pos: [-3, 0, -4] as [number, number, number], name: "Velociraptor", label: "EDR" },
-    { id: "glpi", pos: [-3, 0, -6] as [number, number, number], name: "GLPI", label: "GLPI" },
-    { id: "s3", pos: [3, 0, -2] as [number, number, number], name: "MinIO", label: "S3" },
-    { id: "n8n", pos: [3, 0, -4] as [number, number, number], name: "n8n", label: "n8n" },
-    { id: "ai", pos: [3, 0, -6] as [number, number, number], name: "Ollama AI", label: "AI" },
+    { id: "rmm", pos: [-2, 0, -2] as [number, number, number], name: "NetLock RMM", label: "RMM" },
+    { id: "edr", pos: [-2, 0, -4] as [number, number, number], name: "Velociraptor", label: "EDR" },
+    { id: "glpi", pos: [-2, 0, -6] as [number, number, number], name: "GLPI", label: "GLPI" },
+    { id: "s3", pos: [2, 0, -2] as [number, number, number], name: "MinIO", label: "S3" },
+    { id: "n8n", pos: [2, 0, -4] as [number, number, number], name: "n8n", label: "n8n" },
+    { id: "ai", pos: [2, 0, -6] as [number, number, number], name: "Ollama AI", label: "AI" },
   ];
 
   const coreStatus = "online"; // Keep core lit
 
   return (
     <div className="topology-container">
-      <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 40 }}>
+      <Canvas shadows camera={{ position: [0, 1.2, 2], fov: 60 }}>
         <Suspense fallback={null}>
-          <Rig />
           <color attach="background" args={["#010204"]} />
-          <fog attach="fog" args={["#010204", 5, 15]} />
+          <fog attach="fog" args={["#010204", 2, 12]} />
           
-          <ambientLight intensity={0.5} />
-          <pointLight position={[0, 5, -5]} intensity={2} color="#00f2ff" />
-          <spotLight position={[0, 10, 0]} angle={0.3} penumbra={1} intensity={2} castShadow />
+          <ambientLight intensity={1.5} />
+          <pointLight position={[0, 3, -5]} intensity={5} color="#00f2ff" />
+          <spotLight position={[0, 8, 0]} angle={0.4} penumbra={1} intensity={5} castShadow />
 
           {/* Hallway Floor */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, -5]}>
             <planeGeometry args={[20, 20]} />
-            <meshStandardMaterial color="#05080f" roughness={0.1} metalness={0.9} />
+            <meshStandardMaterial color="#080c14" roughness={0.1} metalness={0.9} />
           </mesh>
-          <gridHelper args={[20, 40, "#00f2ff", "#001a1a"]} position={[0, -0.99, -5]} />
+          <gridHelper args={[20, 40, "#00f2ff", "#002a2a"]} position={[0, -0.99, -5]} />
 
           <DataCore status={coreStatus} />
           <BinaryDust />
