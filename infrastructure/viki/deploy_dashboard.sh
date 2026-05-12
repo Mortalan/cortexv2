@@ -16,12 +16,12 @@ git pull origin main
 # 2. Build & Deploy
 echo "[*] Rebuilding Dashboard container..."
 cd $DASHBOARD_PATH
-docker compose build --no-cache dashboard-react
-docker compose up -d dashboard-react
+docker compose build --no-cache dashboard
+docker compose up -d dashboard
 
 # 3. Validation
 echo "[*] Verifying deployment..."
-if [ "$(docker inspect -f '{{.State.Running}}' dashboard-react)" == "true" ]; then
+if [ "$(docker inspect -f '{{.State.Running}}' viki-dashboard-react)" == "true" ]; then
     echo "[+] SUCCESS: 3D Neural-Core is live at https://rmmservice.co.za"
 else
     echo "[!] FAILURE: Dashboard container failed to start!"
