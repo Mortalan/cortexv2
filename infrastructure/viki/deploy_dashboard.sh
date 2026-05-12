@@ -16,8 +16,8 @@ git pull origin main
 # 2. Build & Deploy
 echo "[*] Rebuilding Dashboard container..."
 cd $DASHBOARD_PATH
-docker-compose build --no-cache dashboard-react
-docker-compose up -d dashboard-react
+docker compose build --no-cache dashboard-react
+docker compose up -d dashboard-react
 
 # 3. Validation
 echo "[*] Verifying deployment..."
