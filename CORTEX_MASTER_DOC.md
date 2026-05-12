@@ -31,10 +31,13 @@
 - **Roles:** Real-time management, Ingress, Persistent connectivity.
 
 ### 2.3 THE BRAIN (VIKI INTELLIGENCE NODE)
-- **Host:** Local Test Bench (192.168.50.240)
+- **Host:** Proxmox VE 9.x (192.168.50.240)
 - **Hardware:** AMD Ryzen 7 5700, 32GB RAM.
-- **GPU:** NVIDIA RTX 4060 (Dedicated to LLM Inference).
-- **Storage:** 4TB HDD (Forensic Data Lake) - Mounted at /mnt/data_lake (BTRFS).
+- **GPU:** NVIDIA RTX 4060 (Passed through to AI-VM).
+- **Storage:**
+    - **Boot/VMs:** 500GB NVMe (ZFS Mirror recommended).
+    - **Data Lake:** 4TB HDD (Passed through to Forensic-VM) - Mounted at /mnt/data_lake (BTRFS).
+- **Architecture:** Virtualized Isolation (Snapshot-capable).
 - **Roles:** Behavioral Triage, Historical Log Analysis, n8n decision logic.
 
 ---

@@ -27,3 +27,11 @@
 - **Identity Management:** Deployed LLDAP for web-based user management at `auth-admin.rmmservice.co.za`.
 - **GitHub Migration:** Moved source of truth to `https://github.com/Mortalan/cortexv2`.
 
+## 2026-05-12
+- **Network Migration:** Successfully transitioned entire environment from 10.0.0.X to **192.168.50.X** subnet.
+- **Gateway Update:** Synchronized HAProxy (Happy) backend IPs and Let's Encrypt certificates.
+- **Production Restore:** Recovered GLPI instance (fitsdev.co.za) by resolving proxy trust mismatches and disabling router-level QoS throttling.
+- **Architectural Shift:** Designated **Proxmox VE 9.x** as the primary hypervisor for the VIKI node to mitigate filesystem corruption risks.
+- **Disaster Recovery:** Created Proxmox 9.1 bootable media for hardware resurrection.
+- **Infrastructure Audit:** Verified 1Gbps line speed and healthy database integrity for production assets.
+
