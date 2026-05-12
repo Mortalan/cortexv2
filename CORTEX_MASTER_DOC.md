@@ -1,5 +1,5 @@
 # CORTEX: THE MASTER REFERENCE BIBLE & OPERATIONAL MANUAL
-## [VERSION 1.1 - MAY 2026]
+## [VERSION 1.3 - MAY 2026]
 
 ---
 
@@ -78,22 +78,22 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 
 ---
 
-## 6. CURRENT PROJECT STATE (AS OF MAY 11, 2026)
+## 6. CURRENT PROJECT STATE (AS OF MAY 12, 2026)
 ### ACTIVE TASKS
-- [x] Phase 12.3: Implement Dashboard real-time alerting for AI classifications.
-- [x] Phase 13.1: Automated NIST 2.0 Compliance Reporting via Bareos/Forensic Lake.
+- [/] Phase 13.1: Automated NIST 2.0 Compliance Reporting via Bareos/Forensic Lake (INITIALIZED).
 
 ### COMPLETED MILESTONES
-- [x] **Autonomous Response:** Implemented Reflex API and Playbooks for automated host isolation.
+- [x] **3D Neural-Core Redesign:** Implemented cinematic server room visualization with Three.js.
+- [x] **Pre-built Deployment:** Established 'Build-and-Sync' workflow to bypass remote container build issues.
+- [x] **Bareos Scaffold:** Deployed multi-container backup stack for Forensic Lake retention.
 - [x] Phase 1-10: All services functional in Lab environment.
 - [x] Documentation Sync & Security Audit Script.
 - [x] Strategic pivot to Real-Domain / Real-SSL for Lab (Pseudo-Prod).
 - [x] Ingress Stability: Resolved Authelia protocol mismatch and MinIO routing ambiguity.
-- [x] **Dashboard Evolution:** Transitioned from Homer to custom React 19 + Topology Monitor.
 - [x] **Intelligence Integration:** Upgraded VIKI to Ollama v0.3.4 (RTX 4060) with Llama3 support.
 - [x] **Automated Triage:** Verified NIST 2.0-aligned Behavioral Triage workflow in n8n.
 - [x] **Telemetry Automation:** Deployed Velociraptor VQL forwarders and automated n8n triage loop.
-- [x] **Real-time Alerting:** Integrated AI-driven 'CRITICAL' threat indicators into React 19 Dashboard.
+- [x] **Real-time Alerting:** Integrated AI-driven 'CRITICAL' threat indicators into 3D Dashboard.
 
 ---
 
@@ -104,40 +104,19 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 - [x] Push current `cortex` (v1) to GitHub (Backup).
 - [x] Document current stable service labels.
 
-### 8.2 THE CLEAN SWEEP (TO BE DONE ON VIKI)
-1. **Docker Nuclear Wipe:**
-   ```bash
-   docker rm -f $(docker ps -aq)
-   docker system prune -a -f --volumes
-   docker network rm $(docker network ls -q)
-   ```
-2. **Filesystem Purge:**
-   ```bash
-   rm -rf /root/cortex
-   rm -rf /root/cortex-lab
-   # Data Lake remains persistent for forensics
-   ```
+### 8.2 THE CLEAN SWEEP (DONE)
+- [x] **Nuclear Wipe & Filesystem Purge** (Legacy Cleanup complete on VIKI).
 
-### 8.3 CORTEX v2 INITIALIZATION
-1. **New Repository:** Initialize `cortexv2` on GitHub. 
-   - **URL:** `https://github.com/Mortalan/cortexv2`
-   - **Token:** Stored in `/opt/cortex/.env` (v2 Standard).
-2. **Fresh Scaffold:**
-   - Unified folder structure: `/opt/cortex/`
-   - Single source of truth for secrets: `/opt/cortex/.env`
-   - **Lab Defaults:** `admin` / `password` (Unified across Authelia, EDR, and S3).
-3. **Core Services:** Re-deployed Traefik, Authelia, and GLPI first to verify the new Ingress.
-4. **User Management:** Integrated **LLDAP** for modern web-based identity management (`auth-admin.rmmservice.co.za`).
-5. **Domain Lock:** Hard-locked `rmmservice.co.za` from Step 1.
+### 8.3 CORTEX v2 INITIALIZATION (COMPLETE)
+1. **New Repository:** `https://github.com/Mortalan/cortexv2`
+2. **Fresh Scaffold:** Unified `/opt/cortex/` structure.
+3. **Core Services:** Re-deployed Traefik, Authelia, and GLPI.
+4. **User Management:** Integrated **LLDAP** (`auth-admin.rmmservice.co.za`).
 
 ---
 
 ## 9. DASHBOARD & UI (REACT 19)
-- **Engine:** Custom React 19 + TypeScript (Vite).
-- **Styling:** Vanilla CSS (Modern Dark Glassmorphism).
-- **Deployment:** Dockerized (Nginx) on VIKI.
-- **Path:** `/opt/cortex/infrastructure/viki/services/dashboard-react/`
-- **Designer Access:** 
-  1. Push changes to GitHub repository.
-  2. Execute `/opt/cortex/deploy_dashboard.sh` on VIKI to rebuild and deploy.
-
+- **Engine:** Custom React 19 + TypeScript (Vite) + Three.js.
+- **Aesthetic:** Cinematic 3D Neural-Core (Server Hallway).
+- **Deployment:** Pre-built locally -> Synced to `/opt/cortex/infrastructure/viki/services/dashboard-react/dist` -> Mounted to Nginx container.
+- **Maintenance:** Run `/opt/cortex/infrastructure/viki/deploy_dashboard.sh` after updating the `dist` folder.
