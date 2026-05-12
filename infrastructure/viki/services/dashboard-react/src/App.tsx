@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Text, Sphere, MeshDistortMaterial, Stars } from "@react-three/drei";
+import { Text, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import "./App.css";
 
@@ -48,24 +48,6 @@ const servicesData = [
     ],
   },
 ];
-
-function Connection({ start, end, status }: { start: [number, number, number], end: [number, number, number], status: string }) {
-  const points = useMemo(() => [
-    new THREE.Vector3(...start),
-    new THREE.Vector3(...end)
-  ], [start, end]);
-
-  return (
-    <mesh>
-      <tubeGeometry args={[new THREE.CatmullRomCurve3(points), 20, 0.02, 8, false]} />
-      <meshBasicMaterial 
-        color={status === "online" ? "#00f2ff" : "#333"} 
-        transparent 
-        opacity={status === "online" ? 0.6 : 0.1} 
-      />
-    </mesh>
-  );
-}
 
 function ServerRack({ position, isOnline, label }: { position: [number, number, number], isOnline: boolean, label: string }) {
   const lights = useMemo(() => Array.from({ length: 8 }, (_, i) => ({
@@ -228,7 +210,7 @@ function BinaryBit({ pos, speed, val }: { pos: [number, number, number], speed: 
 
   return (
     <group position={pos} ref={ref}>
-      <Text fontSize={0.1} color="#00f2ff" opacity={0.2} transparent>
+      <Text fontSize={0.1} color="#00f2ff" fillOpacity={0.2}>
         {val}
       </Text>
     </group>
