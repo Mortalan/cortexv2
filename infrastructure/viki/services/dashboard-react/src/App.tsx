@@ -77,7 +77,6 @@ function ServerRack({ position, isOnline, label }: { position: [number, number, 
         position={[0, 1.2, 0]}
         fontSize={0.15}
         color={isOnline ? "#00f2ff" : "#555"}
-        font="https://fonts.gstatic.com/s/spacegrotesk/v15/V8mQoQDjQSkFtoSREU29XnE_E96ObeH59i0.woff"
       >
         {label}
       </Text>
