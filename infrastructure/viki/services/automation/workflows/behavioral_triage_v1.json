@@ -1,0 +1,221 @@
+{
+  "id": "89ecafed-8deb-4ed1-b2de-bbc526e25cb1",
+  "name": "CORTEX: Behavioral Triage v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "triage",
+        "options": {}
+      },
+      "name": "telemetry",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "id": "webhook-1"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "prompt",
+              "value": "=Analyze the following telemetry log from Project CORTEX. Classify the threat level based on NIST 2.0 principles as LOW, MEDIUM, or HIGH. Return ONLY a JSON object with 'classification' and 'reasoning' keys.\n\nTelemetry: {{JSON.stringify($json.body)}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "set-2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://viki-ollama:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3:8b\",\n  \"prompt\": {{JSON.stringify($json.prompt)}},\n  \"stream\": false,\n  \"format\": \"json\"\n}",
+        "options": {}
+      },
+      "name": "VIKI Analysis (Ollama)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "http-request-1"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "threat_data",
+              "value": "={{JSON.parse($json[\"response\"])}}"
+            },
+            {
+              "name": "original_telemetry",
+              "value": "={{$node[\"telemetry\"].json[\"body\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Format Triage Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        600,
+        300
+      ],
+      "id": "set-1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"threat_data\"][\"classification\"]}}",
+              "value2": "HIGH"
+            }
+          ]
+        }
+      },
+      "name": "Is High Threat?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "id": "if-1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rmmservice.co.za/api/alerts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "CRITICAL"
+            },
+            {
+              "name": "source",
+              "value": "VIKI_TRIAGE"
+            },
+            {
+              "name": "message",
+              "value": "={{$json[\"threat_data\"][\"reasoning\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Push to Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1100,
+        200
+      ],
+      "id": "http-request-2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://reflex-daemon:9090/playbook",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"playbook\": \"isolate_host\",\n  \"target\": \"{{$json[\"original_telemetry\"][\"client_id\"]}}\"\n}",
+        "options": {}
+      },
+      "name": "Trigger Playbook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1100,
+        400
+      ],
+      "id": "http-request-3"
+    }
+  ],
+  "connections": {
+    "telemetry": {
+      "main": [
+        [
+          {
+            "node": "Prepare Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Prompt": {
+      "main": [
+        [
+          {
+            "node": "VIKI Analysis (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VIKI Analysis (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Format Triage Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Triage Data": {
+      "main": [
+        [
+          {
+            "node": "Is High Threat?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is High Threat?": {
+      "main": [
+        [
+          {
+            "node": "Push to Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trigger Playbook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

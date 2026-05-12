@@ -1,0 +1,27 @@
+name: Cortex.Triage.Forwarder
+description: |
+  Forwards events from selected artifacts to the CORTEX n8n triage webhook.
+type: SERVER_EVENT
+parameters:
+  - name: TriageWebhook
+    default: http://n8n-automation:5678/webhook/triage
+  - name: ArtifactFilter
+    default: 'Cortex.Hunter.*'
+sources:
+  - query: |
+      SELECT * FROM watch_monitoring(artifacts=ArtifactFilter)
+      WHERE log(message='Forwarding event from ' + Artifact)
+      SELECT * FROM http(
+        url=TriageWebhook
+,
+        method='POST',
+        headers=dict(`Content-Type`='application/json'),
+        body=serialize(item=dict(
+            source='Velociraptor',
+            artifact=Artifact,
+            timestamp=Timestamp,
+            hostname=Hostname,
+            client_id=ClientID,
+            data=Data
+        ))
+      )

@@ -1,0 +1,15 @@
+services:
+  dnsmasq:
+    image: jpillora/dnsmasq
+    container_name: viki-dns
+    restart: always
+    ports:
+      - "53:53/udp"
+    volumes:
+      - ./dnsmasq.conf:/etc/dnsmasq.conf:ro
+    networks:
+      - netlock_netlock-network
+
+networks:
+  netlock_netlock-network:
+    external: true

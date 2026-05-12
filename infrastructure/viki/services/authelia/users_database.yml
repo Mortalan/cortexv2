@@ -1,0 +1,8 @@
+users:
+  admin:
+    displayname: "CORTEX Admin"
+    password: "$6$svzmYkWTUQp/Hlu2$4Vpv6cFWtTZ2mLZUFVdIcbdJ.p6GrG07gI5gu.FLAlJGGU01sGQv8cDHxp4pt9hf3jq5GK8fhlNUPdkSH6h5D0"
+    email: admin@rmmservice.co.za
+    groups:
+      - admins
+      - dev

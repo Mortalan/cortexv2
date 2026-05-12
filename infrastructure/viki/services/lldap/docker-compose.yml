@@ -1,0 +1,21 @@
+services:
+  lldap:
+    image: lldap/lldap:latest
+    container_name: lldap
+    restart: always
+    environment:
+      - LLDAP_LDAP_BASE_DN=dc=rmmservice,dc=co,dc=za
+    volumes:
+      - /mnt/data_lake/lldap:/data
+    networks:
+      - netlock_netlock-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lldap.rule=Host(`auth-admin.rmmservice.co.za`)"
+      - "traefik.http.routers.lldap.entrypoints=web"
+      - "traefik.http.routers.lldap.middlewares=authelia@docker"
+      - "traefik.http.services.lldap.loadbalancer.server.port=17170"
+
+networks:
+  netlock_netlock-network:
+    external: true

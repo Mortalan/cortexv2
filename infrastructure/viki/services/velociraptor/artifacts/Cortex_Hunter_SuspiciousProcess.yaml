@@ -1,0 +1,18 @@
+name: Cortex.Hunter.SuspiciousProcess
+description: |
+  Example hunter for suspicious process execution on Linux/Windows.
+type: CLIENT_EVENT
+parameters:
+  - name: SuspiciousPatterns
+    default: "whoami|mimikatz|powershell.*-enc|vssadmin.*delete|nc -e|python.*-c.*import socket"
+sources:
+  - query: |
+      LET linux_proc = SELECT * FROM watch_mon-itoring(artifacts="Linux.Events.ProcessCreation")
+      WHERE CommandLine =~ SuspiciousPatterns
+
+      LET win_proc = SELECT * FROM watch_monitoring(artifacts="Windows.Events.ProcessCreation")
+      WHERE CommandLine =~ SuspiciousPatterns
+
+      SELECT * FROM linux_proc
+      UNION
+      SELECT * FROM win_proc

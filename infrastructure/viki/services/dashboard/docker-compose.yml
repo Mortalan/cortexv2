@@ -1,0 +1,19 @@
+services:
+  dashboard:
+    image: b4bz/homer:latest
+    container_name: viki-dashboard
+    restart: always
+    volumes:
+      - /mnt/data_lake/dashboard:/www/assets
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.middlewares=authelia@docker"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+    networks:
+      - netlock_netlock-network
+
+networks:
+  netlock_netlock-network:
+    external: true

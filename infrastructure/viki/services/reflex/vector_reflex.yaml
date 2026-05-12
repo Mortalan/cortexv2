@@ -1,0 +1,14 @@
+sources:
+  traefik_logs:
+    type: "docker_logs"
+    include_containers: ["traefik"]
+
+sinks:
+  redis_queue:
+    type: "redis"
+    inputs: ["traefik_logs"]
+    endpoint: "redis://redis-automation:6379"
+    key: "cortex_reflex_logs"
+    data_type: "list"
+    encoding:
+      codec: "json"

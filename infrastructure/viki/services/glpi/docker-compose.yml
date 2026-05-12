@@ -1,0 +1,45 @@
+services:
+  glpi-db:
+    image: mariadb:10.11
+    container_name: glpi-db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: cortex_secure_db_pass
+      MARIADB_DATABASE: glpi
+      MARIADB_USER: glpi_user
+      MARIADB_PASSWORD: glpi_password
+    volumes:
+      - /mnt/data_lake/glpi/db:/var/lib/mysql
+    networks:
+      - netlock_netlock-network
+
+  glpi:
+    image: glpi/glpi:latest
+    container_name: glpi
+    restart: always
+    depends_on:
+      - glpi-db
+    environment:
+      - GLPI_DB_HOST=glpi-db
+      - GLPI_DB_PORT=3306
+      - GLPI_DB_USER=glpi_user
+      - GLPI_DB_PASSWORD=glpi_password
+      - GLPI_DB_NAME=glpi
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /mnt/data_lake/glpi/config:/var/glpi/config
+      - /mnt/data_lake/glpi/files:/var/glpi/files
+      - /mnt/data_lake/glpi/marketplace:/var/glpi/marketplace
+      - /mnt/data_lake/glpi/logs:/var/glpi/logs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glpi.rule=Host(`glpi.rmmservice.co.za`)"
+      - "traefik.http.routers.glpi.entrypoints=web"
+      - "traefik.http.routers.glpi.middlewares=authelia@docker"
+      - "traefik.http.services.glpi.loadbalancer.server.port=80"
+    networks:
+      - netlock_netlock-network
+
+networks:
+  netlock_netlock-network:
+    external: true

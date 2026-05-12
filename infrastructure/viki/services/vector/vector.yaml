@@ -1,0 +1,24 @@
+sources:
+  traefik_logs:
+    type: "docker_logs"
+    include_containers:
+      - "traefik"
+
+  vector_internal:
+    type: "internal_metrics"
+
+sinks:
+  forensic_lake:
+    type: "file"
+    inputs:
+      - "traefik_logs"
+    path: "/mnt/data_lake/logs/traefik/%Y/%m/%d/access.log"
+    encoding:
+      codec: "json"
+
+  console:
+    type: "console"
+    inputs:
+      - "traefik_logs"
+    encoding:
+      codec: "text"

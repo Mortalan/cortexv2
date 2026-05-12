@@ -1,0 +1,28 @@
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: viki-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cortex_admin
+      MINIO_ROOT_PASSWORD: cortex_secure_minio_pass
+    volumes:
+      - /mnt/data_lake/minio/data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`s3.rmmservice.co.za`)"
+      - "traefik.http.routers.minio.entrypoints=web"
+      - "traefik.http.routers.minio.service=minio"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+      - "traefik.http.routers.minio-console.rule=Host(`s3-console.rmmservice.co.za`)"
+      - "traefik.http.routers.minio-console.entrypoints=web"
+      - "traefik.http.routers.minio-console.service=minio-console"
+      - "traefik.http.routers.minio-console.middlewares=authelia@docker"
+      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+    networks:
+      - netlock_netlock-network
+
+networks:
+  netlock_netlock-network:
+    external: true

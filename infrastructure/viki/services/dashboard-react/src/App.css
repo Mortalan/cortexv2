@@ -1,0 +1,330 @@
+:root {
+  --bg-color: #020408;
+  --card-bg: rgba(10, 15, 25, 0.7);
+  --accent: #00f2ff;
+  --accent-glow: rgba(0, 242, 255, 0.3);
+  --online: #00ff9d;
+  --offline: #ff4d4d;
+  --text: #ffffff;
+  --text-dim: rgba(255, 255, 255, 0.5);
+  --link-color: rgba(0, 242, 255, 0.15);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  background-image: 
+    linear-gradient(rgba(0, 242, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.dashboard {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 3rem;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: -2px;
+  background: linear-gradient(to bottom, #fff, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  filter: drop-shadow(0 0 15px var(--accent-glow));
+}
+
+.header .subtitle {
+  text-align: center;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+/* Layout Split: 2fr for Links, 1fr for Monitor */
+.main-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 1400px) {
+  .main-layout {
+    grid-template-columns: 1.5fr 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+  .monitor-sidebar {
+    order: -1;
+  }
+}
+
+/* Topology Monitor (Compact) */
+.topology-section {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 242, 255, 0.1);
+  border-radius: 20px;
+  padding: 1.5rem;
+  position: sticky;
+  top: 1.5rem;
+}
+
+.topology-svg {
+  width: 100%;
+  height: auto;
+  max-height: 250px; /* Force compact height */
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+}
+
+.link-line {
+  stroke: var(--link-color);
+  stroke-width: 1;
+  fill: none;
+  stroke-dasharray: 4, 4;
+}
+
+.data-packet {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 5px var(--accent));
+}
+
+.node {
+  stroke-width: 2;
+  transition: all 0.5s ease;
+}
+
+.central-node {
+  fill: #000;
+  stroke: var(--accent);
+  filter: url(#glow);
+}
+
+.node.online {
+  fill: var(--online);
+  stroke: rgba(0, 255, 157, 0.3);
+  filter: drop-shadow(0 0 5px var(--online));
+}
+
+.node.offline {
+  fill: var(--offline);
+  stroke: rgba(255, 77, 77, 0.3);
+  filter: drop-shadow(0 0 5px var(--offline));
+}
+
+.node-label {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.node-label-small {
+  fill: var(--text-dim);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Grid & Cards */
+.section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  opacity: 0.7;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+}
+
+.icon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.6rem;
+  border-radius: 12px;
+}
+
+.info h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.info p {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.status-dot {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.status-dot.online { background-color: var(--online); box-shadow: 0 0 6px var(--online); }
+.status-dot.offline { background-color: var(--offline); box-shadow: 0 0 6px var(--offline); }
+
+.footer {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  font-size: 0.65rem;
+}
+
+/* --- CORTEX ALERT SYSTEM STYLES --- */
+
+.dashboard.critical-state {
+  background: radial-gradient(circle at center, #1a0505 0%, #020408 100%);
+  animation: alarm-pulse 4s infinite;
+}
+
+@keyframes alarm-pulse {
+  0% { box-shadow: inset 0 0 100px rgba(255, 0, 0, 0); }
+  50% { box-shadow: inset 0 0 150px rgba(255, 0, 0, 0.15); }
+  100% { box-shadow: inset 0 0 100px rgba(255, 0, 0, 0); }
+}
+
+/* Alert Overlay */
+.alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.alert-content {
+  background: rgba(30, 10, 10, 0.9);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 0 50px rgba(255, 0, 0, 0.2);
+  text-align: center;
+}
+
+.alert-header h2 {
+  color: #ff4d4d;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 2px;
+  margin: 10px 0 30px 0;
+  text-transform: uppercase;
+}
+
+.alert-icon {
+  font-size: 3rem;
+  display: block;
+}
+
+.alert-list {
+  text-align: left;
+  margin-bottom: 30px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.alert-item {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #ff4d4d;
+  margin-bottom: 10px;
+}
+
+.alert-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.alert-source {
+  color: #ff4d4d;
+  font-weight: bold;
+}
+
+.alert-message {
+  color: #eee;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.alert-close {
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.alert-close:hover {
+  background: #ff3333;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+}

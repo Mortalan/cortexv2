@@ -1,0 +1,30 @@
+services:
+  velociraptor:
+    image: wlambert/velociraptor:latest
+    container_name: velociraptor
+    restart: always
+    environment:
+      - VELOX_USER=admin
+      - VELOX_PASSWORD=${VELOX_PASSWORD}
+      - VELOX_ROLE=administrator
+      - VELOX_FRONTEND_HOSTNAME=edr.rmmservice.co.za
+      - VELOX_SERVER_URL=https://edr.rmmservice.co.za/
+    ports:
+      - '8000:8000'
+      - '8889:8889'
+    volumes:
+      - /mnt/data_lake/velociraptor/data:/velociraptor
+    working_dir: /velociraptor
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.velociraptor.rule=Host(`edr.rmmservice.co.za`)'
+      - 'traefik.http.routers.velociraptor.entrypoints=web'
+      - 'traefik.http.routers.velociraptor.middlewares=authelia@docker'
+      - 'traefik.http.services.velociraptor.loadbalancer.server.port=8889'
+      - 'traefik.http.services.velociraptor.loadbalancer.server.scheme=https'
+    networks:
+      - netlock_netlock-network
+
+networks:
+  netlock_netlock-network:
+    external: true

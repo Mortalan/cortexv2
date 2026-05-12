@@ -1,0 +1,35 @@
+services:
+  vector:
+    image: timberio/vector:0.38.0-debian
+    container_name: vds-vector
+    restart: always
+    command: --watch-config
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml
+      - ./vector_normal.yaml:/etc/vector/vector_normal.yaml:ro
+      - ./vector_reflex.yaml:/etc/vector/vector_reflex.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+    networks:
+      - netlock_netlock-network
+
+  reflex-daemon:
+    build: .
+    container_name: reflex-daemon
+    restart: always
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./reflex_daemon.py:/app/reflex_daemon.py:ro
+      - .:/etc/vector
+      - /opt/cortex/infrastructure/viki/playbooks:/opt/cortex/infrastructure/viki/playbooks:ro
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - netlock_netlock-network
+    depends_on:
+      - vector
+
+networks:
+  netlock_netlock-network:
+    external: true

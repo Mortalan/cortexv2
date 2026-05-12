@@ -1,0 +1,41 @@
+name: Cortex.Report.NIST3
+description: |
+  Generates a summary report aligned with NIST 2.0 Cybersecurity Framework.
+type: SERVER
+parameters:
+  - name: DaysBack
+    default: 30
+    type: int
+sources:
+  - name: Inventory (ID.AM)
+    query: |
+      SELECT os_info.hostname AS Hostname,
+             client_id AS ClientID,
+             os_info.system AS OS,
+             last_seen_at AS LastSeen
+      FROM clients()
+
+  - name: AuthenticationEvents (PR.AC / DE.AE)
+    query: |
+      LET audit_files = SELECT FullPath FROM glob(globs='/velociraptor/server_artifacts/Server.Audit.Logs/*.json')
+      SELECT * FROM foreach(
+        row=audit_files,
+        query={
+          SELECT timestamp(epoch=_ts) AS Timestamp,
+                 operation AS Event,
+                 principal AS User,
+                 details.remote AS RemoteIP,
+                 details.status AS Status
+          FROM parse_json_lines(filename=FullPath)
+          WHERE Event =~ 'password|login|auth'
+            AND Timestamp > now() - DaysBack * 86400
+        }
+      )
+
+  - name: MonitoringState (DE.CM)
+    query: |
+      SELECT Name,
+             Type,
+             Metadata.hidden AS Hidden
+      FROM artifact_definitions()
+      WHERE Name =~ '^Cortex\\.'

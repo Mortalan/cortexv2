@@ -1,0 +1,30 @@
+services:
+  ollama:
+    image: ollama/ollama:0.3.4
+    container_name: viki-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - netlock_netlock-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  netlock_netlock-network:
+    external: true
+
+volumes:
+  ollama_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/data_lake/ollama
