@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Float, Text, Sphere, MeshDistortMaterial, Stars } from "@react-three/drei";
+import * as THREE from "three";
 import "./App.css";
 
 interface ServiceStatus {
@@ -24,26 +27,280 @@ const servicesData = [
     category: "Operational Backbone",
     items: [
       { name: "NetLock RMM", subtitle: "Tactical Control", url: "https://rmm.rmmservice.co.za", icon: "⚡" },
-      { name: "GLPI Tickets", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
+      { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
       { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
     ],
   },
   {
     category: "Intelligence & Data",
     items: [
-      { name: "Data Lake", subtitle: "S3 Cold Storage", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
-      { name: "Neural Links", subtitle: "n8n Automation", url: "https://automation.rmmservice.co.za", icon: "🧠" },
+      { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
+      { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
       { name: "Ollama AI", subtitle: "Neural Inference", url: "http://10.0.0.240:11434", icon: "🤖" },
     ],
   },
   {
-    category: "Identity & Access",
+    category: "Network & Security",
     items: [
-      { name: "Identity Gate", subtitle: "Authelia Portal", url: "https://auth.rmmservice.co.za", icon: "🔑" },
-      { name: "User Command", subtitle: "Manage Identities", url: "https://auth-admin.rmmservice.co.za", icon: "👥" },
+      { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za", icon: "🚦" },
+      { name: "Authelia", subtitle: "Identity Gate", url: "https://auth.rmmservice.co.za", icon: "🔑" },
+      { name: "WireGuard", subtitle: "Secure Tunnel", url: "#", icon: "🛡️" },
     ],
   },
 ];
+
+function Connection({ start, end, status }: { start: [number, number, number], end: [number, number, number], status: string }) {
+  const points = useMemo(() => [
+    new THREE.Vector3(...start),
+    new THREE.Vector3(...end)
+  ], [start, end]);
+
+  return (
+    <mesh>
+      <tubeGeometry args={[new THREE.CatmullRomCurve3(points), 20, 0.02, 8, false]} />
+      <meshBasicMaterial 
+        color={status === "online" ? "#00f2ff" : "#333"} 
+        transparent 
+        opacity={status === "online" ? 0.6 : 0.1} 
+      />
+    </mesh>
+  );
+}
+
+function ServerRack({ position, isOnline, label }: { position: [number, number, number], isOnline: boolean, label: string }) {
+  const lights = useMemo(() => Array.from({ length: 8 }, (_, i) => ({
+    pos: [0.36, (i * 0.2) - 0.7, 0.01] as [number, number, number],
+    delay: Math.random() * 2
+  })), []);
+
+  return (
+    <group position={position}>
+      {/* Rack Body */}
+      <mesh>
+        <boxGeometry args={[0.8, 2, 0.5]} />
+        <meshStandardMaterial color="#0a0f1a" roughness={0.2} metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0, 0.26]}>
+        <planeGeometry args={[0.7, 1.9]} />
+        <meshStandardMaterial color="#05080f" roughness={0} metalness={1} />
+      </mesh>
+      
+      {/* Status Lights */}
+      {lights.map((light, i) => (
+        <StatusLight key={i} position={light.pos} isOnline={isOnline} delay={light.delay} />
+      ))}
+
+      {/* Label */}
+      <Text
+        position={[0, 1.2, 0]}
+        fontSize={0.15}
+        color={isOnline ? "#00f2ff" : "#555"}
+        font="https://fonts.gstatic.com/s/spacegrotesk/v15/V8mQoQDjQSkFtoSREU29XnE_E96ObeH59i0.woff"
+      >
+        {label}
+      </Text>
+    </group>
+  );
+}
+
+function StatusLight({ position, isOnline, delay }: { position: [number, number, number], isOnline: boolean, delay: number }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      const opacity = isOnline ? 0.4 + Math.sin(state.clock.elapsedTime * 2 + delay) * 0.4 : 0.1;
+      (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity;
+    }
+  });
+
+  return (
+    <mesh position={position} ref={meshRef}>
+      <planeGeometry args={[0.05, 0.05]} />
+      <meshBasicMaterial color={isOnline ? "#00ff9d" : "#ff4d4d"} transparent />
+    </mesh>
+  );
+}
+
+function DataCore({ status }: { status: "online" | "offline" }) {
+  const coreRef = useRef<THREE.Group>(null);
+  const isOnline = status === "online";
+
+  useFrame((state) => {
+    if (coreRef.current) {
+      coreRef.current.rotation.y = state.clock.elapsedTime * 0.1;
+    }
+  });
+
+  return (
+    <group position={[0, 0, -8]} ref={coreRef}>
+      {/* Central Chip */}
+      <mesh rotation={[0, 0, Math.PI / 4]}>
+        <boxGeometry args={[1.5, 1.5, 0.2]} />
+        <meshStandardMaterial 
+          color="#05080f" 
+          emissive={isOnline ? "#00f2ff" : "#111"} 
+          emissiveIntensity={isOnline ? 0.5 : 0.1}
+        />
+      </mesh>
+      
+      {/* AI Logo / Text */}
+      <Text
+        position={[0, 0, 0.15]}
+        fontSize={0.6}
+        color={isOnline ? "#00f2ff" : "#333"}
+        fontWeight="bold"
+      >
+        AI
+      </Text>
+
+      {/* Circuit Arms */}
+      {[0, Math.PI/2, Math.PI, Math.PI*1.5].map((rot, i) => (
+        <group key={i} rotation={[0, 0, rot]}>
+          <mesh position={[1.2, 0, 0]}>
+            <boxGeometry args={[1, 0.05, 0.05]} />
+            <meshBasicMaterial color={isOnline ? "#00f2ff" : "#222"} transparent opacity={0.6} />
+          </mesh>
+          <mesh position={[1.7, 0.2, 0]}>
+            <boxGeometry args={[0.05, 0.4, 0.05]} />
+            <meshBasicMaterial color={isOnline ? "#00f2ff" : "#222"} transparent opacity={0.4} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Outer Glow Spheres */}
+      <Sphere args={[2, 32, 32]}>
+        <meshBasicMaterial color="#00f2ff" transparent opacity={0.05} wireframe />
+      </Sphere>
+    </group>
+  );
+}
+
+function DataStream({ start, end, isOnline }: { start: [number, number, number], end: [number, number, number], isOnline: boolean }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const curve = useMemo(() => new THREE.CatmullRomCurve3([
+    new THREE.Vector3(...start),
+    new THREE.Vector3(start[0], start[1], (start[2] + end[2]) / 2),
+    new THREE.Vector3(...end)
+  ]), [start, end]);
+
+  useFrame((state) => {
+    if (meshRef.current && isOnline) {
+      const t = (state.clock.elapsedTime * 0.5) % 1;
+      const pos = curve.getPointAt(t);
+      meshRef.current.position.copy(pos);
+    }
+  });
+
+  if (!isOnline) return null;
+
+  return (
+    <mesh ref={meshRef}>
+      <sphereGeometry args={[0.04, 8, 8]} />
+      <meshBasicMaterial color="#00f2ff" />
+    </mesh>
+  );
+}
+
+function BinaryDust() {
+  const particles = useMemo(() => Array.from({ length: 50 }, () => ({
+    pos: [(Math.random() - 0.5) * 10, Math.random() * 5, -Math.random() * 15] as [number, number, number],
+    speed: 0.01 + Math.random() * 0.02,
+    val: Math.random() > 0.5 ? "1" : "0"
+  })), []);
+
+  return (
+    <group>
+      {particles.map((p, i) => (
+        <BinaryBit key={i} {...p} />
+      ))}
+    </group>
+  );
+}
+
+function BinaryBit({ pos, speed, val }: { pos: [number, number, number], speed: number, val: string }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (ref.current) {
+      ref.current.position.z += speed;
+      if (ref.current.position.z > 5) ref.current.position.z = -15;
+    }
+  });
+
+  return (
+    <group position={pos} ref={ref}>
+      <Text fontSize={0.1} color="#00f2ff" opacity={0.2} transparent>
+        {val}
+      </Text>
+    </group>
+  );
+}
+
+function Rig() {
+  return useFrame((state) => {
+    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, state.mouse.x * 2, 0.05);
+    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 1.5 + state.mouse.y, 0.05);
+    state.camera.lookAt(0, 0, -5);
+  });
+}
+
+function Topology({ status }: { status: ServiceStatus[] }) {
+  const getStatus = (name: string) => status.find(s => s.name === name || (name === "MinIO" && s.name === "Data Lake"))?.status || "offline";
+
+  const nodes = [
+    { id: "rmm", pos: [-3, 0, -2] as [number, number, number], name: "NetLock RMM", label: "RMM" },
+    { id: "edr", pos: [-3, 0, -4] as [number, number, number], name: "Velociraptor", label: "EDR" },
+    { id: "glpi", pos: [-3, 0, -6] as [number, number, number], name: "GLPI", label: "GLPI" },
+    { id: "s3", pos: [3, 0, -2] as [number, number, number], name: "MinIO", label: "S3" },
+    { id: "n8n", pos: [3, 0, -4] as [number, number, number], name: "n8n", label: "n8n" },
+    { id: "ai", pos: [3, 0, -6] as [number, number, number], name: "Ollama AI", label: "AI" },
+  ];
+
+  const coreStatus = "online"; // Keep core lit
+
+  return (
+    <div className="topology-container">
+      <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 40 }}>
+        <Suspense fallback={null}>
+          <Rig />
+          <color attach="background" args={["#010204"]} />
+          <fog attach="fog" args={["#010204", 5, 15]} />
+          
+          <ambientLight intensity={0.5} />
+          <pointLight position={[0, 5, -5]} intensity={2} color="#00f2ff" />
+          <spotLight position={[0, 10, 0]} angle={0.3} penumbra={1} intensity={2} castShadow />
+
+          {/* Hallway Floor */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, -5]}>
+            <planeGeometry args={[20, 20]} />
+            <meshStandardMaterial color="#05080f" roughness={0.1} metalness={0.9} />
+          </mesh>
+          <gridHelper args={[20, 40, "#00f2ff", "#001a1a"]} position={[0, -0.99, -5]} />
+
+          <DataCore status={coreStatus} />
+          <BinaryDust />
+          
+          {nodes.map(node => (
+            <group key={node.id}>
+              <ServerRack 
+                position={node.pos} 
+                isOnline={getStatus(node.name) === "online"} 
+                label={node.label} 
+              />
+              <DataStream 
+                start={[node.pos[0] > 0 ? node.pos[0] - 0.4 : node.pos[0] + 0.4, 0, node.pos[2]]} 
+                end={[0, 0, -7.8]} 
+                isOnline={getStatus(node.name) === "online"}
+              />
+            </group>
+          ))}
+
+          {/* Floating Binary Dust */}
+          <Stars radius={50} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+}
 
 function AlertOverlay({ alerts, onClear }: { alerts: Alert[], onClear: () => void }) {
   if (alerts.length === 0) return null;
@@ -72,81 +329,6 @@ function AlertOverlay({ alerts, onClear }: { alerts: Alert[], onClear: () => voi
   );
 }
 
-function Topology({ status }: { status: ServiceStatus[] }) {
-  const getStatus = (name: string) => status.find(s => s.name === name)?.status || "offline";
-
-  const nodes = [
-    { x: 200, y: 100, name: "NetLock RMM", path: "M400 200 L200 100" },
-    { x: 200, y: 200, name: "GLPI", path: "M400 200 L200 200" },
-    { x: 200, y: 300, name: "Velociraptor", path: "M400 200 L200 300" },
-    { x: 600, y: 100, name: "MinIO", path: "M400 200 L600 100" },
-    { x: 600, y: 200, name: "n8n", path: "M400 200 L600 200" },
-    { x: 600, y: 300, name: "Ollama AI", path: "M400 200 L600 300" },
-  ];
-
-  return (
-    <div className="topology-container">
-      <svg viewBox="0 0 800 400" className="topology-svg">
-        <defs>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-
-        <g className="connections">
-          {nodes.map(node => (
-            <path key={`line-${node.name}`} d={node.path} className="link-line" />
-          ))}
-        </g>
-
-        <g className="packets">
-          {nodes.map(node => {
-            const isOnline = getStatus(node.name) === "online";
-            if (!isOnline) return null;
-            return (
-              <circle key={`packet-${node.name}`} r="3" className="data-packet">
-                <animateMotion 
-                  dur={`${2 + Math.random() * 2}s`} 
-                  repeatCount="indefinite" 
-                  path={node.path} 
-                />
-              </circle>
-            );
-          })}
-        </g>
-
-        <g className="nodes">
-          <circle cx="400" cy="200" r="30" className="node central-node" />
-          <text x="400" y="245" textAnchor="middle" className="node-label">CORTEX</text>
-
-          {nodes.map((node) => (
-            <g key={node.name}>
-              <circle 
-                cx={node.x} 
-                cy={node.y} 
-                r="12" 
-                className={`node ${getStatus(node.name)}`} 
-              />
-              <text 
-                x={node.x} 
-                y={node.y + 25} 
-                textAnchor="middle" 
-                className="node-label-small"
-              >
-                {node.name}
-              </text>
-            </g>
-          ))}
-        </g>
-      </svg>
-    </div>
-  );
-}
-
 function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -170,9 +352,7 @@ function App() {
             setAlerts(criticalAlerts);
           }
         })
-        .catch(() => {
-          // Silent fail for alerts in dev/offline
-        });
+        .catch(() => {});
     };
 
     fetchStatus();
@@ -203,7 +383,7 @@ function App() {
               <h2 className="section-title">{section.category}</h2>
               <div className="grid">
                 {section.items.map((item) => {
-                  const isOnline = status.find(s => s.name === item.name || (item.name === "NetLock RMM" && s.name === "NetLock RMM") || (item.name === "Data Lake" && s.name === "MinIO"))?.status !== "offline";
+                  const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
                   return (
                     <a key={item.name} href={item.url} target="_blank" rel="noopener noreferrer" className={`card ${isOnline ? "online-card" : "offline-card"}`}>
                       <div className="icon">{item.icon}</div>

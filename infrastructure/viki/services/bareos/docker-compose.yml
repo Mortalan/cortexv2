@@ -1,0 +1,79 @@
+version: '3'
+
+services:
+  bareos-db:
+    image: postgres:15-alpine
+    container_name: bareos-db
+    restart: always
+    environment:
+      - POSTGRES_DB=bareos
+      - POSTGRES_USER=bareos
+      - POSTGRES_PASSWORD=bareos_db_password
+    volumes:
+      - /mnt/data_lake/bareos/db:/var/lib/postgresql/data
+    networks:
+      - netlock_netlock-network
+
+  bareos-dir:
+    image: barcus/bareos-director:latest
+    container_name: bareos-dir
+    restart: always
+    depends_on:
+      - bareos-db
+    environment:
+      - DB_HOST=bareos-db
+      - DB_PORT=5432
+      - DB_NAME=bareos
+      - DB_USER=bareos
+      - DB_PASSWORD=bareos_db_password
+      - BAREOS_FD_PASSWORD=bareos_fd_password
+      - BAREOS_SD_PASSWORD=bareos_sd_password
+      - BAREOS_WEBUI_PASSWORD=bareos_webui_password
+      - ADMIN_PASSWORD=admin_password
+    volumes:
+      - ./config/director:/etc/bareos
+    networks:
+      - netlock_netlock-network
+
+  bareos-sd:
+    image: barcus/bareos-storage:latest
+    container_name: bareos-sd
+    restart: always
+    environment:
+      - BAREOS_SD_PASSWORD=bareos_sd_password
+    volumes:
+      - ./config/storage:/etc/bareos
+      - /mnt/data_lake/backups:/var/lib/bareos/storage
+    networks:
+      - netlock_netlock-network
+
+  bareos-fd:
+    image: barcus/bareos-filedaemon:latest
+    container_name: bareos-fd
+    restart: always
+    environment:
+      - BAREOS_FD_PASSWORD=bareos_fd_password
+    volumes:
+      - ./config/filedaemon:/etc/bareos
+      - /mnt/data_lake:/mnt/data_lake:ro
+    networks:
+      - netlock_netlock-network
+
+  bareos-webui:
+    image: barcus/bareos-webui:latest
+    container_name: bareos-webui
+    restart: always
+    environment:
+      - BAREOS_DIR_HOST=bareos-dir
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bareos.rule=Host(`backup.rmmservice.co.za`)"
+      - "traefik.http.routers.bareos.entrypoints=web"
+      - "traefik.http.routers.bareos.middlewares=authelia@docker"
+      - "traefik.http.services.bareos.loadbalancer.server.port=80"
+    networks:
+      - netlock_netlock-network
+
+networks:
+  netlock_netlock-network:
+    external: true
