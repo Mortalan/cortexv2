@@ -8,8 +8,37 @@ app = Flask(__name__)
 
 BRAIN_TARGET = "traefik"
 BRAIN_PORT = 80
+ALERTS_PATH = "/mnt/data_lake/logs/alerts.json"
 STATE_PATH = "/mnt/data_lake/logs/reflex_state.json"
-PLAYBOOKS_DIR = "/opt/cortex/infrastructure/vaki/playbooks"
+PLAYBOOKS_DIR = "/opt/cortex/infrastructure/viki/playbooks"
+
+def get_alerts():
+    if os.path.exists(ALERTS_PATH):
+        with open(ALERTS_PATH, "r") as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    return []
+
+def save_alerts(alerts):
+    if not os.path.exists(os.path.dirname(ALERTS_PATH)):
+        os.makedirs(os.path.dirname(ALERTS_PATH), exist_ok=True)
+    with open(ALERTS_PATH, "w") as f:
+        json.dump(alerts, f)
+
+@app.route('/api/alerts', methods=['GET', 'POST'])
+def handle_alerts():
+    if request.method == 'POST':
+        data = request.get_json()
+        alerts = get_alerts()
+        data['id'] = str(int(time.time()))
+        data['timestamp'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        alerts.append(data)
+        alerts = alerts[-50:]
+        save_alerts(alerts)
+        return jsonify({"status": "ok", "alert_id": data['id']})
+    return jsonify(get_alerts())
 
 def set_mode(mode):
     print(f"Switching to {mode} mode...", flush=True)

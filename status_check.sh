@@ -18,7 +18,9 @@ services=(
   "authelia|Authelia"
   "viki-minio|MinIO"
   "viki-ollama|Ollama AI"
+  "reflex-daemon|Reflex Engine"
 )
+
 
 for i in "${!services[@]}"; do
   IFS="|" read -r container name <<< "${services[$i]}"

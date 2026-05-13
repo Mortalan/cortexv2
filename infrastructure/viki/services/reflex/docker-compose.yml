@@ -29,6 +29,11 @@ services:
       - netlock_netlock-network
     depends_on:
       - vector
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.reflex.rule=Host(`rmmservice.co.za`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.reflex.entrypoints=web"
+      - "traefik.http.services.reflex.loadbalancer.server.port=9090"
 
 networks:
   netlock_netlock-network:
