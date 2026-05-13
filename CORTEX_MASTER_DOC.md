@@ -1,5 +1,5 @@
 # CORTEX: THE MASTER REFERENCE BIBLE & OPERATIONAL MANUAL
-## [VERSION 1.3 - MAY 2026]
+## [VERSION 1.4 - MAY 2026]
 
 ---
 
@@ -31,22 +31,25 @@
 - **Roles:** Real-time management, Ingress, Persistent connectivity.
 
 ### 2.3 THE BRAIN (VIKI INTELLIGENCE NODE)
-- **Host:** Proxmox VE 9.x (192.168.50.240)
+- **Host:** Proxmox VE 9.x (192.168.50.240) - **FULLY OPERATIONAL**
 - **Hardware:** AMD Ryzen 7 5700, 32GB RAM.
-- **GPU:** NVIDIA RTX 4060 (Passed through to AI-VM).
+- **GPU:** NVIDIA RTX 4060 (Passed through to VM 101).
 - **Storage:**
-    - **Boot/VMs:** 500GB NVMe (ZFS Mirror recommended).
-    - **Data Lake:** 4TB HDD (Passed through to Forensic-VM) - Mounted at /mnt/data_lake (BTRFS).
-- **Architecture:** Virtualized Isolation (Snapshot-capable).
+    - **Boot/VMs:** 500GB NVMe (LVM-Thin).
+    - **Data Lake:** 4TB HDD (Passed through to VM 102) - Mounted at /mnt/data_lake (BTRFS).
+- **Architecture:** CORTEX VM Triad:
+    - **Core (100):** 192.168.50.241 (Service Stack)
+    - **AI (101):** 192.168.50.242 (Intelligence)
+    - **Lake (102):** 192.168.50.243 (Forensics)
 - **Roles:** Behavioral Triage, Historical Log Analysis, n8n decision logic.
 
 ---
 
 ## 3. THE CORTEX SOFTWARE STACK (DOCKER)
-- **Ingress:** Traefik (Internal routing behind HAProxy).
+- **Ingress:** Traefik (Internal routing on 192.168.50.241).
 - **RMM:** NetLock 3.0.0 (Unified remote access, patching, monitoring).
 - **Forensics/EDR:** Velociraptor (VQL-driven threat hunting).
-- **Ticketing:** GLPI (Manual support records & Asset DB).
+- **Ticketing:** GLPI (Manual support records & Asset DB) - **RESTORED**.
 - **Automation:** n8n + Redis (Queueing and AI orchestration).
 - **Backups:** Bareos (to Wasabi S3) + Restic (to Backblaze B2).
 - **AI Hub:** VIKI (Local LLM via RTX 4060).
@@ -55,7 +58,7 @@
 
 ## 4. NETWORK TOPOLOGY & DATA FLOW
 1. **Public/Local Ingress:** Client -> `rmmservice.co.za` -> Public IP -> HAProxy (192.168.50.239).
-2. **Reverse Proxy:** HAProxy (SSL Term) -> VIKI Traefik (192.168.50.240:80).
+2. **Reverse Proxy:** HAProxy (SSL Term) -> CORTEX-Core Traefik (192.168.50.241:80).
 3. **Telemetry Pipe:** VDS (Velociraptor/NetLock) -> Redis -> n8n -> VIKI.
 4. **Forensic Lake:** VDS Logs -> WireGuard Tunnel -> VIKI 4TB HDD.
 5. **Heartbeat:** VDS pings VIKI every 60s. If down, VDS enters **"Reflex Mode"** (Defender/ASR only) and queues logs in Redis.
@@ -81,11 +84,14 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 
 ---
 
-## 6. CURRENT PROJECT STATE (AS OF MAY 12, 2026)
+## 6. CURRENT PROJECT STATE (AS OF MAY 13, 2026)
 ### ACTIVE TASKS
-- [/] Phase 13.1: Automated NIST 2.0 Compliance Reporting via Bareos/Forensic Lake (INITIALIZED).
+- [/] Phase 13.2: Troubleshooting external DNS resolution for rmmservice.co.za (Gateway timeout).
 
 ### COMPLETED MILESTONES
+- [x] **Brain Resurrection:** Migrated VIKI to Proxmox VE 9.x and deployed VM Triad.
+- [x] **GPU Passthrough:** RTX 4060 successfully isolated and passed to AI-VM (101).
+- [x] **Core Restoration:** Docker stack and Traefik re-deployed on CORTEX-Core (100).
 - [x] **3D Neural-Core Redesign:** Implemented cinematic server room visualization with Three.js.
 - [x] **Pre-built Deployment:** Established 'Build-and-Sync' workflow to bypass remote container build issues.
 - [x] **Bareos Scaffold:** Deployed multi-container backup stack for Forensic Lake retention.
@@ -115,6 +121,7 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 2. **Fresh Scaffold:** Unified `/opt/cortex/` structure.
 3. **Core Services:** Re-deployed Traefik, Authelia, and GLPI.
 4. **User Management:** Integrated **LLDAP** (`auth-admin.rmmservice.co.za`).
+5. **Brain Resurrection:** Deployed **VM Triad** (Core, AI, Lake) on VIKI.
 
 ---
 
