@@ -2,6 +2,16 @@
   "ConnectionStrings": {
     "DefaultConnection": "Server=mysql-container;Database=w7cdks;Uid=root;Pwd=cortex_secure_netlock_pass;Charset=utf8mb4;"
   },
+  "Kestrel": {
+    "Endpoints": {
+      "Http": {
+        "Url": "http://*:80"
+      },
+      "Https": {
+        "Enabled": false
+      }
+    }
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
