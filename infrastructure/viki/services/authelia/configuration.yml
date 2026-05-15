@@ -15,8 +15,15 @@ totp:
 authentication_backend:
   password_reset:
     disable: true
-  file:
-    path: /config/users_database.yml
+  ldap:
+    implementation: lldap
+    address: ldap://lldap:3890
+    timeout: 5s
+    base_dn: dc=rmmservice,dc=co,dc=za
+    additional_users_dn: ou=people
+    additional_groups_dn: ou=groups
+    user: uid=admin,ou=people,dc=rmmservice,dc=co,dc=za
+    password: password
 
 access_control:
   default_policy: deny

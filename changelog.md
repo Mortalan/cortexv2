@@ -6,7 +6,9 @@
 - **Action:** Injected VIKI SSH key into VM Triad via `qm set --sshkey`.
 - **Status:** Project in "Recovery Mode" to restore RMM and AI acceleration.
 - **Mole Run: NetLock Stabilization:** Updated `netlock_server_settings.json` and `netlock_web_settings.json` to bypass certificate requirements (forced HTTP) and skip Members Portal sync (401 loop).
-- **Security Hardening:** Applied Authelia MFA protection label to `netlock-rmm-web-console` service in `docker-compose.yml`.
+- Security Hardening: Applied Authelia MFA protection label to `netlock-rmm-web-console` service in `docker-compose.yml`.
+- **Identity Integration:** Transitioned Authelia authentication backend from file-based to LLDAP (`ldap://lldap:3890`) for unified identity management.
+
 
 ## 2026-05-07
 - **Project Initiation:** Created `cortexproject.md` (Bible) and auxiliary tracking files.
