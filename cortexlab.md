@@ -16,6 +16,7 @@
 - [x] **NetLock Stability:** Server connecting to DB. Bypassed Members Portal (401) and Certificate check failures via `appsettings.json`.
 - [x] **Web Console:** Secured with Authelia MFA Gate.
 - [x] **Identity Integration:** Authelia transitioned to LLDAP backend for unified SSO.
+- [x] **Gateway Configuration:** Generated `haproxy.cfg` for SSL termination and ingress to `rmmservice.co.za`.
 
 ### 14.2 INTELLIGENCE (AI-101)
 - [x] **SSH Recovery:** Restored access via jump-host & key injection.
@@ -25,9 +26,9 @@
 - [x] **Model Verification:** Resolving `digest mismatch` on model pulls. (Fixed via disk expansion & cache clear)
 
 ## NEXT STEPS (RE-START)
-1. **Gateway:** Configure HAProxy (192.168.50.239) for external `rmmservice.co.za` access.
-2. **Telemetry:** Verify Vector flow from VDS to VIKI.
-3. **Intelligence:** Resolve Ollama model pull failures on AI-101.
+1. **Telemetry:** Verify Vector flow from VDS to VIKI.
+2. **Intelligence:** Resolve Ollama model pull failures on AI-101.
+3. **Compliance:** Execute NIST 2.0 automated audit.
 
 ---
 *Last Updated: Friday, 15 May 2026 (Session Close)*

@@ -8,6 +8,7 @@
 - **Mole Run: NetLock Stabilization:** Updated `netlock_server_settings.json` and `netlock_web_settings.json` to bypass certificate requirements (forced HTTP) and skip Members Portal sync (401 loop).
 - Security Hardening: Applied Authelia MFA protection label to `netlock-rmm-web-console` service in `docker-compose.yml`.
 - **Identity Integration:** Transitioned Authelia authentication backend from file-based to LLDAP (`ldap://lldap:3890`) for unified identity management.
+- **Gateway Restoration:** Generated `haproxy.cfg` for node `192.168.50.239`, enabling SSL termination and SNI routing for the `rmmservice.co.za` domain.
 
 
 ## 2026-05-07
