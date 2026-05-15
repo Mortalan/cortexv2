@@ -1,16 +1,38 @@
-# CORTEX TOPOLOGY
-## Network Map
-- **Gateway (HAProxy):** 192.168.50.239. Handles SSL termination for `*.rmmservice.co.za`.
-- **VDS (Isando):** Public-facing, hardened, Traefik Ingress.
-- **VIKI (Springs):** 192.168.50.240. Ryzen 5700 / RTX 4060.
-  - **Local Ingress (Traefik):** Listens on Port 80, receives traffic from HAProxy.
-- **Tunnel:** WireGuard (Point-to-Point) 10.10.10.1 (VDS) <-> 10.10.10.2 (VIKI).
+# CORTEX NETWORK TOPOLOGY & HARDWARE MAP [v1.5]
 
-## Data Flow (Lab)
-1. **Public/Local Ingress:** Client -> `rmmservice.co.za` -> Public IP -> HAProxy (192.168.50.239).
-2. **Reverse Proxy:** HAProxy (SSL Term) -> VIKI Traefik (192.168.50.240:80).
-- **Internal Routing:** Traefik -> Service (Authelia, GLPI, etc.).
-- **User Management (v2):** LLDAP (Web UI at `auth-admin.rmmservice.co.za`).
-- **Command Portal (v2):** React 19 Dashboard (`rmmservice.co.za`).
-- **AI Inference Engine:** Ollama (v0.3.4) running on VIKI, connected to `netlock_netlock-network` for n8n integration.
+## 1. PHYSICAL NODE: VIKI (192.168.50.240)
+- **CPU:** Intel i7-12700K (12C/20T)
+- **RAM:** 64GB DDR4
+- **GPU:** NVIDIA RTX 4060 8GB (Passthrough to 101)
+- **Storage:** 
+  - 1TB NVMe (OS / VM Root)
+  - 4TB HDD (Mounted at /mnt/data_lake)
+- **Hypervisor:** Proxmox VE 9.x
 
+## 2. VIRTUAL INFRASTRUCTURE (VM TRIAD)
+
+### VM 100: CORTEX-CORE (192.168.50.241)
+- **Role:** Management & Routing (Traefik, NetLock, Identity)
+- **CPU:** 4 Cores (x86-64-v2-AES) -> *Required for MySQL 8.0*
+- **RAM:** 8GB
+- **Storage:** 24GB NVMe
+- **OS:** Ubuntu 24.04 LTS (Noble)
+
+### VM 101: CORTEX-AI (192.168.50.242)
+- **Role:** Intelligence Hub (Ollama, Private LLM)
+- **CPU:** 4 Cores (Host)
+- **RAM:** 16GB
+- **GPU:** RTX 4060 8GB (CUDA Ready)
+- **Storage:** 20GB NVMe -> *Expanded from 3.5GB*
+- **OS:** Ubuntu 24.04 LTS (Noble)
+
+### VM 102: CORTEX-LAKE (192.168.50.243)
+- **Role:** Data Persistence & Backup Simulation
+- **CPU:** 2 Cores
+- **RAM:** 4GB
+- **Storage:** 20GB (Root) + Passthrough to 4TB HDD
+- **OS:** Ubuntu 24.04 LTS (Noble)
+
+## 3. EXTERNAL NODES
+- **GLPI Server:** 192.168.50.232 (Legacy / Maintenance)
+- **Reverse Proxy:** 192.168.50.239 (HAProxy)

@@ -126,3 +126,15 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 - **Aesthetic:** Cinematic 3D Neural-Core (Server Hallway).
 - **Deployment:** Pre-built locally -> Synced to `/opt/cortex/infrastructure/viki/services/dashboard-react/dist` -> Mounted to Nginx container.
 - **Maintenance:** Run `/opt/cortex/infrastructure/viki/deploy_dashboard.sh` after updating the `dist` folder.
+
+## [SESSION UPDATE - 15 MAY 2026]
+### INFRASTRUCTURE (CORE-100)
+- **CPU:** Updated to 'x86-64-v2-AES' to support MySQL 8.0 GLIBC requirements.
+- **NetLock:** Database restored to MySQL 8.0. 'appsettings.json' manually injected with connection strings. 
+- **Blocker:** NetLock Server requires valid 'members_portal_api_key' to download packages or a way to skip the sync.
+
+### INTELLIGENCE (AI-101)
+- **Status:** ACTIVE & ACCESSIBLE.
+- **Storage:** scsi0 expanded to 20GB. Partition 'sda1' resized online.
+- **Inference:** Ollama installed. NVIDIA RTX 4060 detected with 8GB VRAM available for inference.
+- **Blocker:** Model pulls (llama3/phi) failing with 'digest mismatch'. Diagnostic: Potential MTU mismatch or network cache corruption.

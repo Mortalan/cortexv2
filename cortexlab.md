@@ -6,37 +6,27 @@
 - **Hypervisor:** Proxmox VE 9.x (**ACTIVE**)
 - **Path:** /opt/cortex/ (Unified v2 Structure)
 - **GitHub:** https://github.com/Mortalan/cortexv2
-- **Services Map (v2 Operational):**
-    - Dashboard (React 19): https://rmmservice.co.za/ (**ONLINE**)
-    - NetLock RMM: https://rmm.rmmservice.co.za/ (**RESTART LOOP - Connection Failure**)
-    - Velociraptor EDR: https://edr.rmmservice.co.za/ (**ONLINE**)
-    - n8n Automation: https://automation.rmmservice.co.za/ (**ONLINE**)
-    - GLPI Ticketing: https://glpi.rmmservice.co.za/ (**ONLINE**)
-    - Authelia Identity: https://auth.rmmservice.co.za/ (**ONLINE**)
-    - MinIO S3: https://s3.rmmservice.co.za/ (**ONLINE**)
-    - Bareos Backup: (INITIALIZED)
-- **Data Lake:** /mnt/data_lake (BTRFS) - Passed to VM 102.
-- **Phase:** PHASE 14 - AI TRIAGE ACTIVATION (RECOVERY MODE)
+- **GPU:** RTX 4060 Passthrough to AI-VM (101) (**VERIFIED**)
 
-## CORTEX v2 MILESTONES
-1. [x] **Nuclear Wipe & Filesystem Purge** (Legacy Cleanup)
-2. [x] **Unified Scaffold** (/opt/cortex/)
-3. [x] **Unified Secrets** (/opt/cortex/.env)
-4. [x] **Core Ingress & Identity** (Traefik + Authelia + GLPI)
-5. [x] **Secondary Service Migration** (NetLock, Velociraptor, n8n)
-6. [x] **Next-Gen Dashboard** (React 19 + 3D Neural-Core Redesign)
-7. [x] **Network Migration:** Successfully moved to 192.168.50.X Subnet.
-8. [x] **VIKI Resurrection:** Deployed Proxmox VE 9.1 and VM Triad (100, 101, 102).
-9. [x] **Mole Run: Diagnostic Completion:** Identified post-migration regressions in NetLock config loading and AI-VM SSH availability.
+## PHASE 14: RECOVERY & STABILIZATION (MAY 2026)
 
-## NEXT IMMEDIATE STEP
-**Recover NetLock RMM and AI-VM Access.**
-- **Atomic Step 1:** Inject `ConnectionStrings__DefaultConnection` environment variable into `netlock-rmm-server` to bypass corrupted appsettings load.
-- **Atomic Step 2:** Access AI-VM (101) via Proxmox console to fix SSH "Connection refused" (Noble Cloud-Init hang).
-- **Validation:** Confirm NetLock is "Running" and `ssh ubuntu@192.168.50.242` succeeds.
+### 14.1 INFRASTRUCTURE (CORE-100)
+- [x] **MySQL 8.0 Crash:** Resolved by switching CPU to `x86-64-v2-AES`.
+- [x] **Data Corruption:** Wiped incompatible MariaDB data; re-initialized MySQL 8.0 schema.
+- [ ] **NetLock Stability:** Server connecting to DB but looping on Members Portal (401).
+- [ ] **Web Console:** Failing on certificate check (needs HTTP force).
 
-## MANUAL INTERVENTION REQUIRED
-- **PROXMOX CONSOLE:** Access AI-VM (101) manually if SSH remains refused after next boot.
+### 14.2 INTELLIGENCE (AI-101)
+- [x] **SSH Recovery:** Restored access via jump-host & key injection.
+- [x] **Disk Expansion:** Grew scsi0 from 3.5GB -> 20GB; resized `sda1` online.
+- [x] **GPU Driver:** `nvidia-container-toolkit` installed; `nvidia-smi` confirms RTX 4060.
+- [x] **Ollama:** Installed & Verified (`vram-based default context 8.0 GiB`).
+- [x] **Model Verification:** Resolving `digest mismatch` on model pulls. (Fixed via disk expansion & cache clear)
+
+## NEXT STEPS (RE-START)
+1. **NetLock:** Inject manual HTTP endpoints into `appsettings.json` to bypass certificate requirement.
+2. **AI:** Investigate model pull failures (MTU or Disk Buffer issues).
+3. **Identity:** Finalize Authelia MFA-Gate integration for Traefik.
 
 ---
 *Last Updated: Friday, 15 May 2026 (Session Close)*
