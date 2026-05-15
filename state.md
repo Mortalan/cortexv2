@@ -1,17 +1,18 @@
 # CORTEX STATE TRACKER
-## Current Phase: TRANSITION TO PSEUDO-PRODUCTION
+## Current Phase: PHASE 14.2 RECOVERY
 
 ## ACTIVE TASKS
+- [ ] Fix NetLock RMM restart loop (Core-VM 100).
+- [ ] Resolve SSH access to AI-VM (101) - Connection refused.
+- [ ] Finalize NVIDIA GPU Driver installation on AI-VM (101).
 - [ ] Configure HAProxy (192.168.50.239) for `rmmservice.co.za`.
-- [ ] Acquire Wildcard SSL Certificate via Certbot (DNS-01/HTTP-01).
-- [ ] Update VIKI service configurations to use `rmmservice.co.za`.
-- [ ] Perform security audit of all services under new domain.
 
 ## COMPLETED TASKS
-- [x] Phase 1-10 Lab Foundation.
-- [x] Security Audit Script creation.
-- [x] DNS Resolution Strategy locked (HAProxy + Split-DNS/Hosts).
-- [x] Strategic pivot to real domain for protocol stability.
+- [x] Phase 1-13 Lab Foundation.
+- [x] VM Triad Migration to 192.168.50.X.
+- [x] RTX 4060 GPU Passthrough isolation.
+- [x] Mole Run: Post-Migration Diagnosis.
 
 ## CURRENT BLOCKERS
-- None.
+- **SSH Access:** AI-VM (101) refuses connections on Port 22.
+- **Config Drift:** NetLock container fails to load host-side appsettings.json.
