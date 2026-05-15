@@ -1,4 +1,11 @@
 # CORTEX CHANGELOG
+
+## 2026-05-15
+- **Mole Run: Post-Migration Diagnosis:** Identified regression in NetLock RMM where `appsettings.json` bind-mount is ignored, resulting in empty DB configuration at runtime.
+- **Regression:** CORTEX-AI (101) SSH service in "Connection refused" state following Cloud-Init boot on 192.168.50.242.
+- **Action:** Injected VIKI SSH key into VM Triad via `qm set --sshkey`.
+- **Status:** Project in "Recovery Mode" to restore RMM and AI acceleration.
+
 ## 2026-05-07
 - **Project Initiation:** Created `cortexproject.md` (Bible) and auxiliary tracking files.
 - **Naming Convention:** Finalized project name as **CORTEX**.
