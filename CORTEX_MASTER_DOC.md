@@ -86,19 +86,20 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 
 ## 6. CURRENT PROJECT STATE (AS OF MAY 15, 2026)
 ### ACTIVE TASKS
-- [ ] **Phase 14.2 Recovery:** Resolve SSH "Connection refused" on AI-VM (101).
-- [ ] **Phase 14.2 Recovery:** Fix NetLock RMM restart loop on Core-VM (100) - Connection string load failure.
-- [ ] **Phase 14.2:** Install `nvidia-container-toolkit` on VM 101 and verify Ollama GPU acceleration.
+- [ ] **Phase 14.1 Recovery:** Fix NetLock RMM restart loop on Core-VM (100). Find a way to bypass Members Portal 401 and Certificate check failures.
+- [ ] **Phase 14.3:** Finalize Authelia MFA-Gate integration for Traefik.
+- [ ] **Phase 14.4:** Configure HAProxy (192.168.50.239) for `rmmservice.co.za`.
 
 ### COMPLETED MILESTONES
 - [x] **NIST 2.0 Baseline:** Established initial compliance status and resolved telemetry gaps.
 - [x] **EDR Restoration:** Successfully re-deployed Velociraptor to VDS with mTLS via Traefik TCP Passthrough.
 - [x] **Brain Resurrection:** Migrated VIKI to Proxmox VE 9.x and deployed VM Triad (100, 101, 102).
 - [x] **GPU Passthrough:** RTX 4060 successfully isolated and passed to AI-VM (101).
+- [x] **AI Stabilization:** Resolved SSH access and Ollama `digest mismatch` on AI-VM (101). Verified GPU-accelerated inference.
 - [x] **Core Restoration:** Docker stack and Traefik re-deployed on CORTEX-Core (100).
 - [x] **Network Migration:** Successfully moved to 192.168.50.X Subnet (Gateway: .239, Core: .241, AI: .242).
 - [x] **Identity & Ticketing:** Authelia, LLDAP, and GLPI successfully operational on new subnet.
-- [x] **Mole Run: Post-Migration Diagnosis:** Identified NetLock appsettings.json mount failure as root cause for RMM loop.
+- [x] **Mole Run: Post-Migration Diagnosis:** Identified NetLock appsettings.json mount failure and identified API/Cert blockers for RMM.
 
 ---
 
