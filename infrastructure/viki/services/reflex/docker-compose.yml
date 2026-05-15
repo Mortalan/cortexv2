@@ -4,6 +4,8 @@ services:
     container_name: vds-vector
     restart: always
     command: --watch-config
+    ports:
+      - "5140:5140"
     volumes:
       - ./vector.yaml:/etc/vector/vector.yaml
       - ./vector_normal.yaml:/etc/vector/vector_normal.yaml:ro

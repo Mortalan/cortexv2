@@ -3,10 +3,25 @@ sources:
     type: "docker_logs"
     include_containers: ["traefik"]
 
+  vds_telemetry:
+    type: "socket"
+    address: "0.0.0.0:5140"
+    mode: "tcp"
+    decoding:
+      codec: "json"
+
 sinks:
   forensic_lake:
     type: "file"
-    inputs: ["traefik_logs"]
-    path: "/mnt/data_lake/logs/traefik/%Y/%m/%d/access.log"
+    inputs: ["traefik_logs", "vds_telemetry"]
+    path: "/mnt/data_lake/logs/forensics/%Y/%m/%d/%H_telemetry.log"
+    encoding:
+      codec: "json"
+
+  n8n_triage:
+    type: "http"
+    inputs: ["vds_telemetry"]
+    uri: "http://n8n-automation:5678/rest/webhooks/triage"
+    method: "post"
     encoding:
       codec: "json"

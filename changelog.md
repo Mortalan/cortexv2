@@ -9,6 +9,8 @@
 - Security Hardening: Applied Authelia MFA protection label to `netlock-rmm-web-console` service in `docker-compose.yml`.
 - **Identity Integration:** Transitioned Authelia authentication backend from file-based to LLDAP (`ldap://lldap:3890`) for unified identity management.
 - **Gateway Restoration:** Generated `haproxy.cfg` for node `192.168.50.239`, enabling SSL termination and SNI routing for the `rmmservice.co.za` domain.
+- **Telemetry Verification:** Reconfigured Vector as a central aggregator. Added TCP socket source (Port 5140) for VDS telemetry offload and implemented dual sinks to the Forensic Lake and n8n triage webhook.
+- **Reflex Integration:** Synchronized Vector mode configurations (`vector_normal.yaml` and `vector_reflex.yaml`) with the new aggregator logic to ensure consistent telemetry flow during autonomous failover.
 
 
 ## 2026-05-07

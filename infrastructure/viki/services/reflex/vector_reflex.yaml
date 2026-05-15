@@ -3,12 +3,26 @@ sources:
     type: "docker_logs"
     include_containers: ["traefik"]
 
+  vds_telemetry:
+    type: "socket"
+    address: "0.0.0.0:5140"
+    mode: "tcp"
+    decoding:
+      codec: "json"
+
 sinks:
   redis_queue:
     type: "redis"
-    inputs: ["traefik_logs"]
+    inputs: ["traefik_logs", "vds_telemetry"]
     endpoint: "redis://redis-automation:6379"
     key: "cortex_reflex_logs"
     data_type: "list"
+    encoding:
+      codec: "json"
+
+  forensic_lake:
+    type: "file"
+    inputs: ["traefik_logs", "vds_telemetry"]
+    path: "/mnt/data_lake/logs/forensics/reflex/%Y/%m/%d/%H_telemetry.log"
     encoding:
       codec: "json"

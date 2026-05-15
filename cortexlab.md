@@ -17,6 +17,7 @@
 - [x] **Web Console:** Secured with Authelia MFA Gate.
 - [x] **Identity Integration:** Authelia transitioned to LLDAP backend for unified SSO.
 - [x] **Gateway Configuration:** Generated `haproxy.cfg` for SSL termination and ingress to `rmmservice.co.za`.
+- [x] **Telemetry Pipe:** Reconfigured Vector as central aggregator (Port 5140) with sinks to Forensic Lake and n8n.
 
 ### 14.2 INTELLIGENCE (AI-101)
 - [x] **SSH Recovery:** Restored access via jump-host & key injection.
@@ -26,9 +27,9 @@
 - [x] **Model Verification:** Resolving `digest mismatch` on model pulls. (Fixed via disk expansion & cache clear)
 
 ## NEXT STEPS (RE-START)
-1. **Telemetry:** Verify Vector flow from VDS to VIKI.
-2. **Intelligence:** Resolve Ollama model pull failures on AI-101.
-3. **Compliance:** Execute NIST 2.0 automated audit.
+1. **Intelligence:** Resolve Ollama model pull failures on AI-101.
+2. **Compliance:** Execute NIST 2.0 automated audit.
+3. **Forensics:** Verify BTRFS snapshots for the Forensic Lake.
 
 ---
 *Last Updated: Friday, 15 May 2026 (Session Close)*
