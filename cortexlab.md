@@ -13,8 +13,8 @@
 ### 14.1 INFRASTRUCTURE (CORE-100)
 - [x] **MySQL 8.0 Crash:** Resolved by switching CPU to `x86-64-v2-AES`.
 - [x] **Data Corruption:** Wiped incompatible MariaDB data; re-initialized MySQL 8.0 schema.
-- [ ] **NetLock Stability:** Server connecting to DB but looping on Members Portal (401).
-- [ ] **Web Console:** Failing on certificate check (needs HTTP force).
+- [x] **NetLock Stability:** Server connecting to DB. Bypassed Members Portal (401) and Certificate check failures via `appsettings.json`.
+- [x] **Web Console:** Secured with Authelia MFA Gate.
 
 ### 14.2 INTELLIGENCE (AI-101)
 - [x] **SSH Recovery:** Restored access via jump-host & key injection.
@@ -24,9 +24,9 @@
 - [x] **Model Verification:** Resolving `digest mismatch` on model pulls. (Fixed via disk expansion & cache clear)
 
 ## NEXT STEPS (RE-START)
-1. **NetLock:** Inject manual HTTP endpoints into `appsettings.json` to bypass certificate requirement.
-2. **AI:** Investigate model pull failures (MTU or Disk Buffer issues).
-3. **Identity:** Finalize Authelia MFA-Gate integration for Traefik.
+1. **Identity:** Finalize Authelia LLDAP backend integration.
+2. **Gateway:** Configure HAProxy (192.168.50.239) for external `rmmservice.co.za` access.
+3. **Telemetry:** Verify Vector flow from VDS to VIKI.
 
 ---
 *Last Updated: Friday, 15 May 2026 (Session Close)*
