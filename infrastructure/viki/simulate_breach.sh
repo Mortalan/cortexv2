@@ -2,15 +2,16 @@
 # CORTEX: AI Triage Simulation Script
 # Mimics a Velociraptor event being forwarded to n8n
 
-WEBHOOK_URL="http://192.168.50.241:5678/webhook/triage"
+WEBHOOK_URL="http://192.168.50.241:5678/webhook/89ecafed-8deb-4ed1-b2de-bbc526e25cb1/telemetry/triage"
 
 echo "[*] Constructing synthetic threat telemetry..."
 
-PAYLOAD=$(cat <<EOF
+TEMP_PAYLOAD=$(mktemp)
+cat <<'EOF' > "$TEMP_PAYLOAD"
 {
   "source": "Velociraptor",
   "artifact": "Cortex.Hunter.SuspiciousProcess",
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "timestamp": "2026-05-18T14:30:00Z",
   "hostname": "TEST-ENDPOINT-01",
   "client_id": "C.1234567890abcdef",
   "data": {
@@ -22,9 +23,10 @@ PAYLOAD=$(cat <<EOF
   }
 }
 EOF
-)
 
 echo "[*] Injecting telemetry into n8n Webhook..."
-curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
+curl -X POST -H "Content-Type: application/json" -d @"$TEMP_PAYLOAD" "$WEBHOOK_URL"
+
+rm "$TEMP_PAYLOAD"
 
 echo -e "\n[+] Injection complete. Check Reflex Daemon logs for AI classification and Playbook execution."

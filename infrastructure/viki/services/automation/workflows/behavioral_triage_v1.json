@@ -153,6 +153,24 @@
         400
       ],
       "id": "http-request-3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://reflex-daemon:9090/mode",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"mode\": \"REFLEX\"\n}",
+        "options": {}
+      },
+      "name": "Activate Reflex Mode",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1100,
+        600
+      ],
+      "id": "http-request-4"
     }
   ],
   "connections": {
@@ -212,6 +230,11 @@
         [
           {
             "node": "Trigger Playbook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Activate Reflex Mode",
             "type": "main",
             "index": 0
           }
