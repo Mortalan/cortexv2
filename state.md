@@ -7,6 +7,7 @@
 - [ ] Verify BTRFS snapshots for the Forensic Lake.
 
 ## COMPLETED TASKS
+- [x] Phase 14.6: Intelligence Workflow Activation (n8n + Ollama).
 - [x] Phase 1-13 Lab Foundation.
 - [x] VM Triad Migration to 192.168.50.X.
 - [x] RTX 4060 GPU Passthrough isolation.

@@ -6,6 +6,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "triage",
+        "webhookId": "triage",
         "options": {}
       },
       "name": "telemetry",
@@ -45,7 +46,7 @@
         "url": "http://viki-ollama:11434/api/generate",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"llama3:8b\",\n  \"prompt\": {{JSON.stringify($json.prompt)}},\n  \"stream\": false,\n  \"format\": \"json\"\n}",
+        "jsonBody": "={\n  \"model\": \"llama3:latest\",\n  \"prompt\": {{JSON.stringify($json.prompt)}},\n  \"stream\": false,\n  \"format\": \"json\"\n}",
         "options": {}
       },
       "name": "VIKI Analysis (Ollama)",

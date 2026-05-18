@@ -1,5 +1,13 @@
 # CORTEX CHANGELOG
 
+## 2026-05-18
+- **Intelligence Workflow Activation:** Successfully established communication between n8n (CORE-100) and Ollama (AI-101).
+- **Network Patch:** Reconfigured `ollama.service` to bind to `0.0.0.0:11434`, enabling cross-VM API calls.
+- **Webhook Gateway:** Implemented Traefik router bypass for n8n webhooks to allow automated telemetry ingestion without Authelia MFA blocking.
+- **Workflow Verification:** Successfully tested `CORTEX: Behavioral Triage v2` workflow using mock mimikatz telemetry.
+- **NetLock License Audit:** Investigated "License Expired" blocker. Confirmed sync failure (401) with Members Portal. Identified that `package.zip` and `metadata.json` were manually secured via `chattr +i` in a previous session to prevent cleanup loops. Found `members_portal_api_key` in DB but failed to locate the actual license blob.
+- **Tooling:** Installed `sqlite3` on CORE-100 for database-level telemetry and configuration auditing.
+
 ## 2026-05-15
 - **Mole Run: Post-Migration Diagnosis:** Identified regression in NetLock RMM where `appsettings.json` bind-mount is ignored, resulting in empty DB configuration at runtime.
 - **Regression:** CORTEX-AI (101) SSH service in "Connection refused" state following Cloud-Init boot on 192.168.50.242.

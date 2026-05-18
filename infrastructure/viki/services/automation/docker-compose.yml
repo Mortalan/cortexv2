@@ -21,13 +21,19 @@ services:
       - QUEUE_BULL_REDIS_HOST=redis
     ports:
       - '5678:5678'
+    extra_hosts:
+      - "viki-ollama:192.168.50.242"
     volumes:
       - /mnt/data_lake/automation/n8n:/home/node/.n8n
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.n8n.rule=Host(`automation.rmmservice.co.za`)'
+      - 'traefik.http.routers.n8n.rule=Host(`automation.rmmservice.co.za`) && !PathPrefix(`/webhook`)'
       - 'traefik.http.routers.n8n.entrypoints=web'
       - 'traefik.http.routers.n8n.middlewares=authelia@docker'
+      - 'traefik.http.routers.n8n.service=n8n'
+      - 'traefik.http.routers.n8n-webhook.rule=Host(`automation.rmmservice.co.za`) && PathPrefix(`/webhook`)'
+      - 'traefik.http.routers.n8n-webhook.entrypoints=web'
+      - 'traefik.http.routers.n8n-webhook.service=n8n'
       - 'traefik.http.services.n8n.loadbalancer.server.port=5678'
     networks:
       - netlock_netlock-network
