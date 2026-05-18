@@ -76,9 +76,9 @@
 
 ## 6. CURRENT PROJECT STATE (AS OF MAY 18, 2026)
 ### ACTIVE TASKS
-- [ ] **Phase 14.6:** Execute NIST 2.0 automated compliance audit.
 - [ ] **Phase 14.7:** Verify BTRFS snapshots for the Forensic Lake.
 - [ ] **Phase 14.8:** Validate Reflex Mode transition via `simulate_breach.sh`.
+- [ ] **Phase 14.9:** Review and optimize Status Monitor on the React 19 Dashboard.
 
 ### COMPLETED MILESTONES
 - [x] **Mole Run: Reflex Architecture:** Integrated Reflex Daemon (Port 9090) for autonomous mode switching and playbook execution.
