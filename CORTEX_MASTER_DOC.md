@@ -86,12 +86,12 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 
 ## 6. CURRENT PROJECT STATE (AS OF MAY 15, 2026)
 ### ACTIVE TASKS
-- [ ] **Phase 14.5:** Resolve Ollama model pull failures on AI-101 (digest mismatch / MTU diagnostic).
 - [ ] **Phase 14.6:** Execute NIST 2.0 automated compliance audit.
 - [ ] **Phase 14.7:** Verify BTRFS snapshots for the Forensic Lake.
 
 ### COMPLETED MILESTONES
-- [x] **Mole Run: NetLock Stabilization:** Resolved RMM restart loop and certificate failures via `appsettings.json` injection.
+- [x] **Mole Run: NetLock Stabilization:** Resolved RMM restart loop via **Immutable Dependency Injection**. Created `/app/internal/package.zip` and `/app/internal/packages/netlock_core/metadata.json` with `chattr +i` to prevent destructive cleanup during failed cloud sync.
+- [x] **Intelligence Stabilization:** Expanded AI-101 disk to 20GB, cleared corrupted Ollama cache, and successfully deployed `llama3` and `phi` models. Verified GPU-accelerated inference.
 - [x] **Gateway Integration:** Configured HAProxy (192.168.50.239) with SSL termination and SNI routing for `rmmservice.co.za`.
 - [x] **Identity Centralization:** Transitioned Authelia to LLDAP backend for unified SSO.
 - [x] **Telemetry Orchestration:** Reconfigured Vector as a central aggregator (Port 5140) with sinks to Forensic Lake and n8n.
@@ -99,7 +99,6 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 - [x] **EDR Restoration:** Successfully re-deployed Velociraptor to VDS with mTLS via Traefik TCP Passthrough.
 - [x] **Brain Resurrection:** Migrated VIKI to Proxmox VE 9.x and deployed VM Triad (100, 101, 102).
 - [x] **GPU Passthrough:** RTX 4060 successfully isolated and passed to AI-VM (101).
-- [x] **AI Stabilization:** Resolved SSH access and Ollama `digest mismatch` on AI-VM (101). Verified GPU-accelerated inference.
 - [x] **Core Restoration:** Docker stack and Traefik re-deployed on CORTEX-Core (100).
 - [x] **Network Migration:** Successfully moved to 192.168.50.X Subnet (Gateway: .239, Core: .241, AI: .242).
 - [x] **Identity & Ticketing:** Authelia, LLDAP, and GLPI successfully operational on new subnet.
@@ -134,7 +133,7 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 
 ## [SESSION UPDATE - 15 MAY 2026]
 ### INFRASTRUCTURE (CORE-100)
-- **NetLock:** Stabilized via `appsettings.json` injection. Bypassed Members Portal sync and certificate checks. Secured with Authelia MFA.
+- **NetLock:** Resolved Restart Loop using **Immutable Dependency Injection** (`chattr +i`). Server is now stable in Sovereign Mode, awaiting License activation.
 - **Identity:** Authelia transitioned to LLDAP backend. Unified SSO established.
 - **Gateway:** HAProxy configuration generated and verified for node .239.
 
@@ -142,5 +141,5 @@ To ensure absolute sovereign integrity and performance, all operations must pass
 - **Vector:** Reconfigured as central aggregator on Port 5140. Dual sinks implemented (Lake + n8n).
 
 ### INTELLIGENCE (AI-101)
-- **Status:** ACTIVE & ACCESSIBLE.
-- **Blocker:** Model pulls (llama3/phi) failing with 'digest mismatch'. Diagnostic: Potential MTU mismatch or network cache corruption.
+- **Status:** **FULLY OPERATIONAL**.
+- **Resolution:** Resolved 'digest mismatch' via disk expansion (20GB) and cache purge. `llama3` and `phi` models active on GPU.
