@@ -78,9 +78,11 @@
 ### ACTIVE TASKS
 - [ ] **Phase 14.8:** Validate Reflex Mode transition via `simulate_breach.sh`.
 - [ ] **Phase 14.9:** Review and optimize Status Monitor on the React 19 Dashboard.
-- [ ] **Phase 15.1:** Migrate Ollama to VM 101 (AI Hub) with NFS Lake mount.
+- [ ] **Phase 15.2:** Optimize NetLock Web Console certificate handshake.
 
 ### COMPLETED MILESTONES
+- [x] **Phase 15.1 (Forensic Lake Integration):** Migrated Ollama model storage to the 4TB Forensic Lake (AI-101) with persistent NFS mount.
+- [x] **Emergency Ingress Stabilization:** Migrated Traefik logs, Authelia config, and LLDAP data to local storage on CORE-100 to resolve NFS I/O saturation lockups.
 - [x] **Forensic Lake Alignment:** Migrated all service data from CORE-100 local storage to the 4TB BTRFS HDD on LAKE-102 via NFS.
 - [x] **NetLock Licensed:** Successfully activated NetLock 3.0.0 via API Key; license valid until 2030.
 - [x] **BTRFS Snapshot Baseline:** Verified metadata health and established initial snapshot `@snapshots/baseline_20260519`.

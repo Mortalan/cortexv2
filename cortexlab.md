@@ -27,13 +27,12 @@
 ### 14.3 INTELLIGENCE (AI-101)
 - [x] **SSH Recovery:** Restored access via cloud-init key injection.
 - [x] **GPU Driver:** Verified RTX 4060 with `nvidia-smi`.
-- [ ] **AI-NFS Mount:** (Next Step) Mount Lake via NFS and migrate Ollama.
+- [x] **Phase 15.1 (AI-NFS Mount):** Migrated Ollama models to the 4TB Forensic Lake; service verified active on NFS.
 
 ## NEXT STEPS (RE-START)
-1. **AI Hub:** Mount NFS Lake on AI-101 and migrate Ollama to utilize RTX 4060.
-2. **Dashboard:** Review and optimize the Status Monitor UI component.
-3. **Console:** Resolve NetLock Web Console certificate handshake.
-4. **Onboarding:** Prepare the first "VDS-Gold" template for endpoint deployment.
+1. **Dashboard:** Review and optimize the Status Monitor UI component.
+2. **Console:** Resolve NetLock Web Console certificate handshake.
+3. **Onboarding:** Prepare the first "VDS-Gold" template for endpoint deployment.
 
 ---
 *Last Updated: Monday, 18 May 2026 (Session Close)*

@@ -1,5 +1,14 @@
 # CORTEX CHANGELOG
 
+## 2026-05-19
+- **Phase 15.1 Completion:** Successfully migrated Ollama model storage (5.9GB) to the 4TB Forensic Lake (NFS) on AI-101. Updated `ollama.service` with persistent `OLLAMA_MODELS` environment variable.
+- **Emergency Ingress Restoration:** Resolved system-wide 504 errors caused by NFS I/O saturation.
+    - Migrated Traefik logs to local storage on CORE-100.
+    - Migrated Authelia config/DB to local storage on CORE-100.
+    - Restored LLDAP service with local storage and corrected JWT/Admin-Pass configuration.
+- **Monitoring Upgrade:** Updated `status_check.sh` to be multi-node aware, monitoring services across Core-100 and AI-101.
+- **Documentation Parity:** Updated `CORTEX_MASTER_DOC.md` and `cortexlab.md` to reflect the new local-storage hybrid architecture and Phase 15.1 completion.
+
 ## 2026-05-18
 - **Intelligence Workflow Activation:** Successfully established communication between n8n (CORE-100) and Ollama (AI-101).
 - **Network Patch:** Reconfigured `ollama.service` to bind to `0.0.0.0:11434`, enabling cross-VM API calls.
