@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Text, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
+import { VikiAvatarRenderer } from "./components/viki/VikiAvatarRenderer";
 import "./App.css";
 
 interface ServiceStatus {
@@ -304,8 +305,15 @@ function AlertOverlay({ alerts, onClear }: { alerts: Alert[], onClear: () => voi
 function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Check for admin mode in URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "admin") {
+      setIsAdmin(true);
+    }
+
     const fetchStatus = () => {
       fetch("/status.json")
         .then(res => res.json())
@@ -373,6 +381,12 @@ function App() {
         </main>
 
         <aside className="monitor-sidebar">
+          {isAdmin && (
+            <section className="section topology-section" style={{ marginBottom: "2rem" }}>
+              <h2 className="section-title">Cognitive Interface (VIKI)</h2>
+              <VikiAvatarRenderer assetPath="/assets/viki_android_real.glb" />
+            </section>
+          )}
           <section className="topology-section">
             <h2 className="section-title">Status Monitor</h2>
             <Topology status={status} />
