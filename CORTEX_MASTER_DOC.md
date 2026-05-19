@@ -74,27 +74,20 @@
 
 ---
 
-## 6. CURRENT PROJECT STATE (AS OF MAY 18, 2026)
+## 6. CURRENT PROJECT STATE (AS OF MAY 19, 2026)
 ### ACTIVE TASKS
-- [ ] **Phase 14.7:** Verify BTRFS snapshots for the Forensic Lake.
 - [ ] **Phase 14.8:** Validate Reflex Mode transition via `simulate_breach.sh`.
 - [ ] **Phase 14.9:** Review and optimize Status Monitor on the React 19 Dashboard.
+- [ ] **Phase 15.1:** Migrate Ollama to VM 101 (AI Hub) with NFS Lake mount.
 
 ### COMPLETED MILESTONES
+- [x] **Forensic Lake Alignment:** Migrated all service data from CORE-100 local storage to the 4TB BTRFS HDD on LAKE-102 via NFS.
+- [x] **NetLock Licensed:** Successfully activated NetLock 3.0.0 via API Key; license valid until 2030.
+- [x] **BTRFS Snapshot Baseline:** Verified metadata health and established initial snapshot `@snapshots/baseline_20260519`.
+- [x] **LAKE-102 Recovery:** Expanded root disk to 20GB and restored SSH access.
 - [x] **Mole Run: Reflex Architecture:** Integrated Reflex Daemon (Port 9090) for autonomous mode switching and playbook execution.
-- [x] **Mole Run: NetLock Stabilization:** Resolved RMM restart loop via **Immutable Dependency Injection**. Created `/app/internal/package.zip` and `/app/internal/packages/netlock_core/metadata.json` with `chattr +i` to prevent destructive cleanup during failed cloud sync.
-- [x] **Intelligence Stabilization:** Expanded AI-101 disk to 20GB, cleared corrupted Ollama cache, and successfully deployed `llama3` and `phi` models. Verified GPU-accelerated inference.
-- [x] **Gateway Integration:** Configured HAProxy (192.168.50.239) with SSL termination and SNI routing for `rmmservice.co.za`.
-- [x] **Identity Centralization:** Transitioned Authelia to LLDAP backend for unified SSO.
-- [x] **Telemetry Orchestration:** Reconfigured Vector as a central aggregator (Port 5140) with sinks to Forensic Lake and n8n.
-- [x] **NIST 2.0 Baseline:** Established initial compliance status and resolved telemetry gaps.
-- [x] **EDR Restoration:** Successfully re-deployed Velociraptor to VDS with mTLS via Traefik TCP Passthrough.
-- [x] **Brain Resurrection:** Migrated VIKI to Proxmox VE 9.x and deployed VM Triad (100, 101, 102).
-- [x] **GPU Passthrough:** RTX 4060 successfully isolated and passed to AI-VM (101).
-- [x] **Core Restoration:** Docker stack and Traefik re-deployed on CORTEX-Core (100).
-- [x] **Network Migration:** Successfully moved to 192.168.50.X Subnet (Gateway: .239, Core: .241, AI: .242).
-- [x] **Identity & Ticketing:** Authelia, LLDAP, and GLPI successfully operational on new subnet.
-- [x] **Mole Run: Post-Migration Diagnosis:** Identified NetLock appsettings.json mount failure and identified API/Cert blockers for RMM.
+- [x] **Mole Run: NetLock Stabilization:** Resolved RMM restart loop via **Immutable Dependency Injection**.
+- [x] **Gateway Integration:** Configured HAProxy (192.168.50.239) with SSL termination and SNI routing.
 
 ---
 
