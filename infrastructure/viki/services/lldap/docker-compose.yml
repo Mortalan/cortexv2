@@ -5,6 +5,8 @@ services:
     restart: always
     environment:
       - LLDAP_LDAP_BASE_DN=dc=rmmservice,dc=co,dc=za
+      - LLDAP_JWT_SECRET=6qZu@E]*_OzCvR#/tHWs]!tuO#8K6Awt
+      - LLDAP_LDAP_USER_PASS=password
     volumes:
       - /opt/cortex/data/lldap:/data
     networks:

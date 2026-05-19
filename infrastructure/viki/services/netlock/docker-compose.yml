@@ -21,8 +21,12 @@ services:
   netlock-rmm-web-console:
     image: nicomak101/netlock-rmm-web-console:latest
     container_name: netlock-rmm-web-console
+    user: root
     environment:
       - TZ=Africa/Johannesburg
+      - ASPNETCORE_URLS=http://+:80
+      - NetLock__CustomCertificatePath=/app/certificates/rmm.rmmservice.co.za.pfx
+      - NetLock__CustomCertificatePassword=dummy
     volumes:
       - '/home/netlock/web_console/appsettings.json:/app/appsettings.json'
       - '/home/netlock/web_console/internal:/app/internal'
@@ -47,6 +51,12 @@ services:
     container_name: netlock-rmm-server
     environment:
       - TZ=Africa/Johannesburg
+      - ASPNETCORE_URLS=http://+:80
+      - NetLock__CustomCertificatePath=/app/certificates/rmm.rmmservice.co.za.pfx
+      - NetLock__CustomCertificatePassword=dummy
+      - MembersPortalApi__ApiKeyOverride=764286af-438b-4f83-b4ed-b4936a45c853-71090d1d-73e4-43dd-908c-b8777fd54465
+      - MembersPortal__ApiKey=764286af-438b-4f83-b4ed-b4936a45c853-71090d1d-73e4-43dd-908c-b8777fd54465
+      - MembersPortal__SkipSync=false
     volumes:
       - '/home/netlock/server/appsettings.json:/app/appsettings.json'
       - '/home/netlock/server/internal:/app/internal'

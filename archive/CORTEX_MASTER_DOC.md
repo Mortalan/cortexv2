@@ -78,9 +78,12 @@
 ### ACTIVE TASKS
 - [x] **Phase 14.8:** Validated Reflex Mode transition via `simulate_breach.sh`.
 - [ ] **Phase 14.9:** Review and optimize Status Monitor on the React 19 Dashboard.
-- [ ] **Phase 15.2:** Optimize NetLock Web Console certificate handshake.
+- [x] **Phase 15.2:** Resolved NetLock certificate handshake via `NetLock__` ENV prefix and symlink alignment.
+- [x] **Identity Restoration:** Fixed dashboard 401 error by initializing LLDAP JWT secrets and admin passwords.
 
 ### COMPLETED MILESTONES
+- [x] **Auth Stability:** LLDAP is fully operational with persistent configuration synced to CORE-100.
+- [x] **NetLock Recovery:** Resolved certificate-driven exit loop; services now recognize `/app/certificates/rmm.rmmservice.co.za.pfx`.
 - [x] **Phase 14.8 (Reflex Mode Validation):** Verified end-to-end autonomous response loop (Telemetry -> n8n -> VIKI -> Reflex Daemon). Mimikatz now triggers immediate host isolation.
 - [x] **Tiered Storage Implementation:** Migrated performance-sensitive SQLite/MySQL/Redis databases from NFS (Lake) to Local NVMe (CORE-100) to resolve kernel-level I/O deadlocks.
 - [x] **Phase 15.1 (Forensic Lake Integration):** Migrated Ollama model storage to the 4TB Forensic Lake (AI-101) with persistent NFS mount.
@@ -90,7 +93,7 @@
 - [x] **BTRFS Snapshot Baseline:** Verified metadata health and established initial snapshot `@snapshots/baseline_20260519`.
 - [x] **LAKE-102 Recovery:** Expanded root disk to 20GB and restored SSH access.
 - [x] **Mole Run: Reflex Architecture:** Integrated Reflex Daemon (Port 9090) for autonomous mode switching and playbook execution.
-- [x] **Mole Run: NetLock Stabilization:** Resolved RMM restart loop via **Immutable Dependency Injection**.
+- [x] **Mole Run: NetLock Stabilization:** Resolved RMM restart loop via **Immutable Dependency Injection** and ENV alignment.
 - [x] **Gateway Integration:** Configured HAProxy (192.168.50.239) with SSL termination and SNI routing.
 
 ---
