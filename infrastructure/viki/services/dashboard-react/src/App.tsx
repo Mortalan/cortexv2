@@ -378,19 +378,21 @@ function App() {
               </div>
             </section>
           ))}
+
+          {/* Moved Status Monitor to the bottom of the main content area */}
+          <section className="section topology-section" style={{ marginTop: "3rem" }}>
+            <h2 className="section-title">Global Status Monitor</h2>
+            <Topology status={status} />
+          </section>
         </main>
 
         <aside className="monitor-sidebar">
           {isAdmin && (
-            <section className="section topology-section" style={{ marginBottom: "2rem" }}>
+            <section className="section topology-section" style={{ height: "calc(100vh - 200px)", minHeight: "600px" }}>
               <h2 className="section-title">Cognitive Interface (VIKI)</h2>
               <VikiAvatarRenderer assetPath="/assets/viki_android_real.glb" />
             </section>
           )}
-          <section className="topology-section">
-            <h2 className="section-title">Status Monitor</h2>
-            <Topology status={status} />
-          </section>
         </aside>
       </div>
 

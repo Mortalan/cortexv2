@@ -1,48 +1,71 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
+import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three/drei';
 
-// Component that handles loading the downloaded 3D asset
+// Component that handles loading and animating the 3D asset
 const AvatarModel = ({ modelPath }: { modelPath: string }) => {
-  // useGLTF automatically caches and loads the asset from your public folder
-  const { scene } = useGLTF(modelPath);
+  const { scene, animations } = useGLTF(modelPath);
+  const { actions } = useAnimations(animations, scene);
+
+  useEffect(() => {
+    // Play the first animation (usually Idle or Walk)
+    if (actions && Object.keys(actions).length > 0) {
+      const firstAction = actions[Object.keys(actions)[0]];
+      if (firstAction) {
+        firstAction.reset().fadeIn(0.5).play();
+      }
+    }
+  }, [actions]);
   
   return (
     <primitive 
       object={scene} 
-      position={[0, -1, 0]} 
-      scale={1} 
+      position={[0, -3.2, 0]} // Lowered further to bring the head into view
+      scale={1.3} // Slightly reduced to fit better
     />
   );
 };
 
 interface RendererProps {
-  // Path to your downloaded asset, e.g., "/assets/viki_android_real.glb"
   assetPath: string; 
 }
 
 export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath }) => {
   return (
-    <div className="viki-canvas-wrapper glassmorphic" style={{ width: '100%', height: '400px' }}>
-      <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
-        {/* Crisp, high-tech studio lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[2, 4, 2]} intensity={0.8} castShadow />
-        <pointLight position={[-2, -2, -2]} intensity={0.3} color="#9b5de5" /> {/* Subtle purple accent glow */}
+    <div 
+      className="viki-canvas-wrapper" 
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '100%', 
+        minHeight: '600px', 
+        overflow: 'hidden' 
+      }}
+    >
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+        <Canvas 
+          camera={{ position: [0, 0, 5.5], fov: 40 }} // Pulled back slightly more
+          style={{ width: '100%', height: '100%' }}
+          dpr={[1, 2]}
+        >
 
-        <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
-          <AvatarModel modelPath={assetPath} />
-          {/* Automatically pulls in pre-baked ambient lighting textures */}
-          <Environment preset="city" />
-        </Suspense>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[2, 4, 2]} intensity={1.2} castShadow />
+          <pointLight position={[-2, -2, -2]} intensity={0.5} color="#9b5de5" />
 
-        {/* Allows you to spin/pan the camera during prototyping; can be disabled later */}
-        <OrbitControls 
-          enableZoom={true} 
-          maxPolarAngle={Math.PI / 2} 
-          minPolarAngle={Math.PI / 3} 
-        />
-      </Canvas>
+          <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
+            <AvatarModel modelPath={assetPath} />
+            <Environment preset="city" />
+          </Suspense>
+
+          <OrbitControls 
+            enableZoom={false}
+            enablePan={false}
+            maxPolarAngle={Math.PI / 1.5} 
+            minPolarAngle={Math.PI / 3} 
+          />
+        </Canvas>
+      </div>
     </div>
   );
 };
