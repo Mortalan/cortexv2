@@ -10,7 +10,7 @@ services:
       - POSTGRES_USER=bareos
       - POSTGRES_PASSWORD=bareos_db_password
     volumes:
-      - /mnt/data_lake/bareos/db:/var/lib/postgresql/data
+      - /opt/cortex/data/bareos/db:/var/lib/postgresql/data
     networks:
       - netlock_netlock-network
 

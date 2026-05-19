@@ -9,7 +9,7 @@ services:
       MARIADB_USER: glpi_user
       MARIADB_PASSWORD: glpi_password
     volumes:
-      - /mnt/data_lake/glpi/db:/var/lib/mysql
+      - /opt/cortex/data/glpi/db:/var/lib/mysql
     networks:
       - netlock_netlock-network
 

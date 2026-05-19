@@ -6,7 +6,7 @@ services:
     environment:
       - LLDAP_LDAP_BASE_DN=dc=rmmservice,dc=co,dc=za
     volumes:
-      - /mnt/data_lake/lldap:/data
+      - /opt/cortex/data/lldap:/data
     networks:
       - netlock_netlock-network
     labels:
