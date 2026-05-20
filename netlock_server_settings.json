@@ -1,6 +1,6 @@
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=mysql-container;Database=w7cdks;Uid=root;Pwd=cortex_secure_netlock_pass;Charset=utf8mb4;"
+    "DefaultConnection": "Server=mysql-container;Database=w7cdks;Uid=root;Pwd=cortex_secure_netlock_pass;Charset=utf8mb4;AllowPublicKeyRetrieval=True;"
   },
   "Kestrel": {
     "Endpoints": {
@@ -11,6 +11,14 @@
         "Enabled": false
       }
     }
+  },
+  "MySQL": {
+    "Server": "mysql-container",
+    "Port": 3306,
+    "Database": "w7cdks",
+    "User": "root",
+    "Password": "cortex_secure_netlock_pass",
+    "AdditionalParameters": "AllowPublicKeyRetrieval=True"
   },
   "MembersPortal": {
     "BaseUrl": "http://localhost",
