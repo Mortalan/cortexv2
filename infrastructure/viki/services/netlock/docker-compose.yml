@@ -27,6 +27,10 @@ services:
       - ASPNETCORE_URLS=http://+:80
       - NetLock__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - NetLock__CustomCertificatePassword=dummy
+      - CustomCertificatePath=/app/certificates/cortex_dummy.pfx
+      - CustomCertificatePassword=dummy
+      - CustomCertificatePath=/app/certificates/cortex_dummy.pfx
+      - CustomCertificatePassword=dummy
     volumes:
       - '/home/netlock/web_console/appsettings.json:/app/appsettings.json'
       - '/home/netlock/web_console/internal:/app/internal'
