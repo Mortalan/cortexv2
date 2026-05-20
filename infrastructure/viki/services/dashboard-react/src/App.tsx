@@ -632,7 +632,7 @@ function App() {
                 {section.items.map((item) => {
                   const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
                   return (
-                    <a key={item.name} href={item.url} target="_blank" rel="noopener noreferrer" className={`card ${isOnline ? "online-card" : "offline-card"}`}>
+                    <a key={item.name} href={item.url} target={item.url.startsWith('javascript') ? "_self" : "_blank"} rel="noopener noreferrer" className={`card ${isOnline ? "online-card" : "offline-card"}`}>
                       <div className="icon">{item.icon}</div>
                       <div className="info">
                         <h3>{item.name}</h3>

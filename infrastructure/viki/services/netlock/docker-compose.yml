@@ -25,7 +25,7 @@ services:
     environment:
       - TZ=Africa/Johannesburg
       - ASPNETCORE_URLS=http://+:80
-      - NetLock__CustomCertificatePath=/app/certificates/rmm.rmmservice.co.za.pfx
+      - NetLock__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - NetLock__CustomCertificatePassword=dummy
     volumes:
       - '/home/netlock/web_console/appsettings.json:/app/appsettings.json'
@@ -51,7 +51,7 @@ services:
     environment:
       - TZ=Africa/Johannesburg
       - ASPNETCORE_URLS=http://+:80
-      - NetLock__CustomCertificatePath=/app/certificates/rmm.rmmservice.co.za.pfx
+      - NetLock__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - NetLock__CustomCertificatePassword=dummy
       - MembersPortalApi__ApiKeyOverride=764286af-438b-4f83-b4ed-b4936a45c853-71090d1d-73e4-43dd-908c-b8777fd54465
       - MembersPortal__ApiKey=764286af-438b-4f83-b4ed-b4936a45c853-71090d1d-73e4-43dd-908c-b8777fd54465
