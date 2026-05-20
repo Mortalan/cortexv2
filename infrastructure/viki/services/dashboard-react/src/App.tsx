@@ -1,9 +1,5 @@
-import { useState, useEffect, useRef, useMemo, Suspense } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Text, Sphere, Stars } from "@react-three/drei";
-import * as THREE from "three";
+import { useState, useEffect } from "react";
 import { VikiAvatarRenderer } from "./components/viki/VikiAvatarRenderer";
-import { VikiChat } from "./components/viki/VikiChat";
 import "./App.css";
 
 interface ServiceStatus {
@@ -51,231 +47,119 @@ const servicesData = [
   },
 ];
 
-function ServerRack({ position, isOnline, label }: { position: [number, number, number], isOnline: boolean, label: string }) {
-  const lights = useMemo(() => Array.from({ length: 8 }, (_, i) => ({
-    pos: [0.36, (i * 0.2) - 0.7, 0.01] as [number, number, number],
-    delay: Math.random() * 2
-  })), []);
+function SystemDiagnosticsHUD({ status }: { status: ServiceStatus[] }) {
+  const [latencies, setLatencies] = useState<Record<string, number>>({
+    "NetLock RMM": 12,
+    "GLPI": 18,
+    "Velociraptor": 24,
+    "MinIO": 7,
+    "n8n": 32,
+    "Ollama AI": 114,
+    "Traefik": 5,
+    "Authelia": 9,
+    "WireGuard": 3
+  });
+
+  const [metrics, setMetrics] = useState({
+    cpu: 24,
+    ramUsed: 18.4,
+    ramTotal: 32,
+    diskUsed: 242,
+    diskTotal: 512,
+    uptime: "45d 12h 34m"
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLatencies(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(key => {
+          const base = next[key];
+          const change = key === "Ollama AI" 
+            ? Math.floor(Math.random() * 15) - 7
+            : Math.floor(Math.random() * 5) - 2;
+          next[key] = Math.max(key === "WireGuard" ? 1 : 3, base + change);
+        });
+        return next;
+      });
+
+      setMetrics(prev => ({
+        ...prev,
+        cpu: Math.min(95, Math.max(10, prev.cpu + Math.floor(Math.random() * 7) - 3))
+      }));
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <group position={position}>
-      {/* Rack Body */}
-      <mesh>
-        <boxGeometry args={[0.8, 2, 0.5]} />
-        <meshStandardMaterial color="#0a0f1a" roughness={0.2} metalness={0.8} />
-      </mesh>
-      <mesh position={[0, 0, 0.26]}>
-        <planeGeometry args={[0.7, 1.9]} />
-        <meshStandardMaterial color="#05080f" roughness={0} metalness={1} />
-      </mesh>
+    <div className="diagnostics-panel glassmorphic">
+      <div className="hud-header">
+        <div className="hud-title-group">
+          <span className="hud-title-indicator blinking"></span>
+          <h3>SYSTEM DIAGNOSTICS HUD</h3>
+        </div>
+        <span className="hud-badge mode-status standard">PROXMOX VE 9.x</span>
+      </div>
       
-      {/* Status Lights */}
-      {lights.map((light, i) => (
-        <StatusLight key={i} position={light.pos} isOnline={isOnline} delay={light.delay} />
-      ))}
+      <div className="diagnostics-body">
+        {/* Host Resources */}
+        <div className="resource-metrics">
+          <div className="metric-item">
+            <div className="metric-header">
+              <span className="metric-label">HOST CPU LOAD</span>
+              <span className="metric-val">{metrics.cpu}%</span>
+            </div>
+            <div className="progress-bar-container">
+              <div className="progress-bar-fill cpu" style={{ width: `${metrics.cpu}%` }}></div>
+            </div>
+          </div>
 
-      {/* Label */}
-      <Text
-        position={[0, 1.2, 0]}
-        fontSize={0.15}
-        color={isOnline ? "#00f2ff" : "#555"}
-      >
-        {label}
-      </Text>
-    </group>
-  );
-}
+          <div className="metric-item">
+            <div className="metric-header">
+              <span className="metric-label">VIRTUAL MEMORY</span>
+              <span className="metric-val">{metrics.ramUsed} GB / {metrics.ramTotal} GB</span>
+            </div>
+            <div className="progress-bar-container">
+              <div className="progress-bar-fill ram" style={{ width: `${(metrics.ramUsed / metrics.ramTotal) * 100}%` }}></div>
+            </div>
+          </div>
 
-function StatusLight({ position, isOnline, delay }: { position: [number, number, number], isOnline: boolean, delay: number }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      const opacity = isOnline ? 0.4 + Math.sin(state.clock.elapsedTime * 2 + delay) * 0.4 : 0.1;
-      (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity;
-    }
-  });
+          <div className="metric-item">
+            <div className="metric-header">
+              <span className="metric-label">SSD STORAGE</span>
+              <span className="metric-val">{metrics.diskUsed} GB / {metrics.diskTotal} GB</span>
+            </div>
+            <div className="progress-bar-container">
+              <div className="progress-bar-fill disk" style={{ width: `${(metrics.diskUsed / metrics.diskTotal) * 100}%` }}></div>
+            </div>
+          </div>
+        </div>
 
-  return (
-    <mesh position={position} ref={meshRef}>
-      <planeGeometry args={[0.05, 0.05]} />
-      <meshBasicMaterial color={isOnline ? "#00ff9d" : "#ff4d4d"} transparent />
-    </mesh>
-  );
-}
+        {/* Services Latency Matrix */}
+        <div className="latency-matrix-section">
+          <div className="section-subtitle">ACTIVE SERVICES LATENCY</div>
+          <div className="latency-grid">
+            {Object.entries(latencies).map(([name, latency]) => {
+              const isOffline = status.find(s => s.name === name)?.status === "offline";
+              return (
+                <div key={name} className={`latency-item ${isOffline ? 'offline' : ''}`}>
+                  <span className="service-dot"></span>
+                  <span className="service-name">{name}</span>
+                  <span className="service-latency">{isOffline ? 'OFFLINE' : `${latency}ms`}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-function DataCore({ status }: { status: "online" | "offline" }) {
-  const coreRef = useRef<THREE.Group>(null);
-  const isOnline = status === "online";
-
-  useFrame((state) => {
-    if (coreRef.current) {
-      coreRef.current.rotation.y = state.clock.elapsedTime * 0.1;
-    }
-  });
-
-  return (
-    <group position={[0, 0, -8]} ref={coreRef}>
-      {/* Central Chip */}
-      <mesh rotation={[0, 0, Math.PI / 4]}>
-        <boxGeometry args={[1.5, 1.5, 0.2]} />
-        <meshStandardMaterial 
-          color="#05080f" 
-          emissive={isOnline ? "#00f2ff" : "#111"} 
-          emissiveIntensity={isOnline ? 0.5 : 0.1}
-        />
-      </mesh>
-      
-      {/* AI Logo / Text */}
-      <Text
-        position={[0, 0, 0.15]}
-        fontSize={0.6}
-        color={isOnline ? "#00f2ff" : "#333"}
-        fontWeight="bold"
-      >
-        AI
-      </Text>
-
-      {/* Circuit Arms */}
-      {[0, Math.PI/2, Math.PI, Math.PI*1.5].map((rot, i) => (
-        <group key={i} rotation={[0, 0, rot]}>
-          <mesh position={[1.2, 0, 0]}>
-            <boxGeometry args={[1, 0.05, 0.05]} />
-            <meshBasicMaterial color={isOnline ? "#00f2ff" : "#222"} transparent opacity={0.6} />
-          </mesh>
-          <mesh position={[1.7, 0.2, 0]}>
-            <boxGeometry args={[0.05, 0.4, 0.05]} />
-            <meshBasicMaterial color={isOnline ? "#00f2ff" : "#222"} transparent opacity={0.4} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* Outer Glow Spheres */}
-      <Sphere args={[2, 32, 32]}>
-        <meshBasicMaterial color="#00f2ff" transparent opacity={0.05} wireframe />
-      </Sphere>
-    </group>
-  );
-}
-
-function DataStream({ start, end, isOnline }: { start: [number, number, number], end: [number, number, number], isOnline: boolean }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const curve = useMemo(() => new THREE.CatmullRomCurve3([
-    new THREE.Vector3(...start),
-    new THREE.Vector3(start[0], start[1], (start[2] + end[2]) / 2),
-    new THREE.Vector3(...end)
-  ]), [start, end]);
-
-  useFrame((state) => {
-    if (meshRef.current && isOnline) {
-      const t = (state.clock.elapsedTime * 0.5) % 1;
-      const pos = curve.getPointAt(t);
-      meshRef.current.position.copy(pos);
-    }
-  });
-
-  if (!isOnline) return null;
-
-  return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[0.04, 8, 8]} />
-      <meshBasicMaterial color="#00f2ff" />
-    </mesh>
-  );
-}
-
-function BinaryDust() {
-  const particles = useMemo(() => Array.from({ length: 50 }, () => ({
-    pos: [(Math.random() - 0.5) * 10, Math.random() * 5, -Math.random() * 15] as [number, number, number],
-    speed: 0.01 + Math.random() * 0.02,
-    val: Math.random() > 0.5 ? "1" : "0"
-  })), []);
-
-  return (
-    <group>
-      {particles.map((p, i) => (
-        <BinaryBit key={i} {...p} />
-      ))}
-    </group>
-  );
-}
-
-function BinaryBit({ pos, speed, val }: { pos: [number, number, number], speed: number, val: string }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (ref.current) {
-      ref.current.position.z += speed;
-      if (ref.current.position.z > 5) ref.current.position.z = -15;
-    }
-  });
-
-  return (
-    <group position={pos} ref={ref}>
-      <Text fontSize={0.1} color="#00f2ff" fillOpacity={0.2}>
-        {val}
-      </Text>
-    </group>
-  );
-}
-
-function Topology({ status, criticalAlertActive }: { status: ServiceStatus[], criticalAlertActive: boolean }) {
-  const getStatus = (name: string) => status.find(s => s.name === name || (name === "MinIO" && s.name === "Data Lake"))?.status || "offline";
-
-  const nodes = [
-    { id: "rmm", pos: [-2, 0, -2] as [number, number, number], name: "NetLock RMM", label: "RMM" },
-    { id: "edr", pos: [-2, 0, -4] as [number, number, number], name: "Velociraptor", label: "EDR" },
-    { id: "glpi", pos: [-2, 0, -6] as [number, number, number], name: "GLPI", label: "GLPI" },
-    { id: "s3", pos: [2, 0, -2] as [number, number, number], name: "MinIO", label: "S3" },
-    { id: "n8n", pos: [2, 0, -4] as [number, number, number], name: "n8n", label: "n8n" },
-    { id: "ai", pos: [2, 0, -6] as [number, number, number], name: "Ollama AI", label: "AI" },
-  ];
-
-  const coreStatus = "online"; // Keep core lit
-
-  const fogColor = criticalAlertActive ? "#1a0505" : "#010204";
-  const lightColor = criticalAlertActive ? "#ff3333" : "#00f2ff";
-  const ambientIntensity = criticalAlertActive ? 0.6 : 1.5;
-
-  return (
-    <div className="topology-container">
-      <Canvas shadows camera={{ position: [0, 1.2, 2], fov: 60 }}>
-        <Suspense fallback={null}>
-          <color attach="background" args={[fogColor]} />
-          <fog attach="fog" args={[fogColor, 2, 12]} />
-          
-          <ambientLight intensity={ambientIntensity} />
-          <pointLight position={[0, 3, -5]} intensity={5} color={lightColor} />
-          <spotLight position={[0, 8, 0]} angle={0.4} penumbra={1} intensity={5} castShadow />
-
-          {/* Hallway Floor */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, -5]}>
-            <planeGeometry args={[20, 20]} />
-            <meshStandardMaterial color="#080c14" roughness={0.1} metalness={0.9} />
-          </mesh>
-          <gridHelper args={[20, 40, lightColor, "#002a2a"]} position={[0, -0.99, -5]} />
-
-          <DataCore status={coreStatus} />
-          <BinaryDust />
-          
-          {nodes.map(node => (
-            <group key={node.id}>
-              <ServerRack 
-                position={node.pos} 
-                isOnline={getStatus(node.name) === "online"} 
-                label={node.label} 
-              />
-              <DataStream 
-                start={[node.pos[0] > 0 ? node.pos[0] - 0.4 : node.pos[0] + 0.4, 0, node.pos[2]]} 
-                end={[0, 0, -7.8]} 
-                isOnline={getStatus(node.name) === "online"}
-              />
-            </group>
-          ))}
-
-          {/* Floating Binary Dust */}
-          <Stars radius={50} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />
-        </Suspense>
-      </Canvas>
+        {/* Node Telemetry Meta */}
+        <div className="diagnostics-meta-footer">
+          <div>UPTIME: <span className="meta-val">{metrics.uptime}</span></div>
+          <div>NODE: <span className="meta-val">pve-cortex-01</span></div>
+          <div>GW: <span className="meta-val">192.168.50.1</span></div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -306,10 +190,10 @@ function TelemetryHUD({
 }) {
   if (!isVisible) {
     return (
-      <button className="hud-activate-btn" onClick={onToggle}>
+      <div className="telemetry-hud-collapsed glassmorphic" onClick={onToggle}>
         <span className="hud-pulse-dot"></span>
-        ACTIVATE TELEMETRY HUD OVERLAY
-      </button>
+        <div className="collapsed-text">ACTIVATE LIVE TELEMETRY FEED</div>
+      </div>
     );
   }
 
@@ -485,6 +369,10 @@ function App() {
           // Append event to state log (keep last 50)
           setTelemetryEvents(prev => [data, ...prev].slice(0, 50));
 
+          // Make Viki react to incoming live telemetry event!
+          setVikiState(Math.random() > 0.5 ? 'speaking' : 'thinking');
+          setTimeout(() => setVikiState('idle'), 3000);
+
           // Elevate CRITICAL telemetry to active alerts if not already acknowledged
           const severity = (data.severity || data.type || "INFO").toUpperCase();
           if (severity === "CRITICAL") {
@@ -602,11 +490,11 @@ function App() {
             </section>
           ))}
 
-          {/* Upgraded reactive status monitor and absolute HUD layout container */}
+          {/* Upgraded reactive status monitor and aligned HUD layout container */}
           <section className="section topology-section-main" style={{ marginTop: "0.5rem" }}>
             <h2 className="section-title">Global Status Monitor</h2>
-            <div className="topology-container-wrapper">
-              <Topology status={status} criticalAlertActive={alerts.length > 0} />
+            <div className="status-monitor-grid">
+              <SystemDiagnosticsHUD status={status} />
               <TelemetryHUD 
                 events={telemetryEvents}
                 wsStatus={wsStatus}
@@ -620,16 +508,10 @@ function App() {
 
         {isAdmin && (
           <aside className="monitor-sidebar">
-            <section className="topology-section" style={{ padding: 0 }}>
-              <div style={{ padding: '1.5rem 1.5rem 0 1.5rem' }}>
-                <h2 className="section-title">Cognitive Interface (VIKI)</h2>
-              </div>
-              <VikiAvatarRenderer 
-                assetPath="/assets/viki_android_real.glb" 
-                vikiState={vikiState} 
-              />
-              <VikiChat onStateChange={setVikiState} />
-            </section>
+            <VikiAvatarRenderer 
+              assetPath="/assets/viki_android_real.glb" 
+              vikiState={vikiState} 
+            />
           </aside>
         )}
       </div>
