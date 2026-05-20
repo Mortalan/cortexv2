@@ -60,7 +60,7 @@ const servicesData = [
     items: [
       { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za/dashboard/", icon: "🚦" },
       { name: "Authelia", subtitle: "Identity Gate", url: "https://auth.rmmservice.co.za", icon: "🔑" },
-      { name: "WireGuard", subtitle: "Secure Tunnel", url: "javascript:void(0)", icon: "🛡️" },
+      { name: "WireGuard", subtitle: "Secure Tunnel", url: "disabled", icon: "🛡️" },
     ],
   },
 ];
@@ -632,7 +632,14 @@ function App() {
                 {section.items.map((item) => {
                   const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
                   return (
-                    <a key={item.name} href={item.url} target={item.url.startsWith('javascript') ? "_self" : "_blank"} rel="noopener noreferrer" className={`card ${isOnline ? "online-card" : "offline-card"}`}>
+                    <a 
+                      key={item.name} 
+                      href={item.url === "disabled" ? undefined : item.url} 
+                      target={item.url === "disabled" ? undefined : "_blank"} 
+                      rel="noopener noreferrer" 
+                      className={`card ${isOnline ? "online-card" : "offline-card"}`}
+                      onClick={(e) => { if (item.url === "disabled") e.preventDefault(); }}
+                    >
                       <div className="icon">{item.icon}</div>
                       <div className="info">
                         <h3>{item.name}</h3>
