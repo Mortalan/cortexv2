@@ -8,6 +8,7 @@
 - [x] Reflex Mode Validation.
 - [x] **CLI Migration (Gemini -> Antigravity) Prep.**
 - [x] **Real-time Telemetry HUD (Phase 16.1) Completed.**
+- [x] **Sovereign Control & Active Mitigation Console (Phase 16.2) Completed.**
 
 ### CURRENT PHASE: COGNITIVE INTEGRATION
 **Phase 15.3: Visualizing VIKI**
@@ -30,6 +31,14 @@
 4. [x] Upgrade React Dashboard to connect to telemetry socket and consume logs.
 5. [x] Build glassmorphic cybernetic TelemetryHUD overlay component.
 6. [x] Link 3D Canvas lighting, fog, and grid colors to respond dynamically to critical threat states.
+
+**Phase 16.2: Sovereign Control & Active Mitigation Console**
+1. [x] Align manual daemon control routes to `/api/mode` and `/api/playbook`.
+2. [x] Add strict Python type annotations to all method signatures in `reflex_daemon.py`.
+3. [x] Implement WebSocket mode-change state broadcasting inside `set_mode`.
+4. [x] Declare a strict `TelemetryEvent` interface in `App.tsx` and eliminate all loose `any` types.
+5. [x] Design and implement a glassmorphic Active Mitigation Console panel inside the React dashboard.
+6. [x] Implement manual security state toggling and target host isolation commands using high-fidelity overlays.
 
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.

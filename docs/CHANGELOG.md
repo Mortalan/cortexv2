@@ -1,6 +1,13 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 20 MAY 2026 - SOVEREIGN CONTROL & ACTIVE MITIGATION CONSOLE (PHASE 16.2)
+- **Reflex Daemon Route Alignment:** Refactored daemon endpoint controls (`/mode` and `/playbook`) to `/api/mode` and `/api/playbook` to ensure structural alignment with Traefik reverse proxy and the dashboard UI.
+- **Python Type Annotations:** Enhanced `reflex_daemon.py` codebase integrity by declaring strict type hints on all helper and route handler functions.
+- **Real-time Synchronization:** Built state broadcasting (`MODE_CHANGE` payload) into WebSocket streams to instantly update connected dashboard HUDs when changing security states.
+- **Active Response HUD Overlay:** Built the **Active Mitigation Console** React component featuring a custom glassmorphic layout. Enabled administrators to trigger system lockdown (Standard Ops vs Reflex Mode) and run isolation playbooks (`Windows.Remediation.Quarantine`) against specific client targets.
+- **TypeScript Strict Typing:** Replaced all `any` and `any[]` declarations in dashboard telemetry, status, and alert listeners with strict `TelemetryEvent`, `Alert`, and `ServiceStatus` interfaces.
+
 ### 20 MAY 2026 - PROCEDURAL 3D INTERACTION & GLASSMORPHIC HUD (PHASE 15.3 & 16.1 REFINEMENTS)
 - **3D Avatar:** Implemented custom `@react-three/fiber` priority-based render updates to prevent the base idle sway animation from overriding procedural bones. Added manual `threeState.gl.render` callback execution inside `useFrame(..., 1)`.
 - **Procedural Animations:** Programmed interactive head and neck tracking (`CC_Base_Head_039`/`CC_Base_NeckTwist01_037`) dynamically tracking mouse cursor coordinates, chest expansion breathing cycles (`CC_Base_Spine02_036`), and state-driven conversational nodding (idle/thinking/speaking).

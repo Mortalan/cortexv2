@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { VikiAvatarRenderer } from "./components/viki/VikiAvatarRenderer";
+import { VikiChat } from "./components/viki/VikiChat";
 import "./App.css";
 
 interface ServiceStatus {
@@ -18,6 +19,23 @@ interface Alert {
   source: string;
   message: string;
   timestamp: string;
+}
+
+interface TelemetryEvent {
+  id?: string;
+  timestamp?: string;
+  type?: string;
+  severity?: string;
+  source?: string;
+  message?: string;
+  data?: {
+    ProcessName?: string;
+    CommandLine?: string;
+    Username?: string;
+  };
+  hostname?: string;
+  mode?: string;
+  security_status?: string;
 }
 
 const servicesData = [
@@ -164,7 +182,7 @@ function SystemDiagnosticsHUD({ status }: { status: ServiceStatus[] }) {
   );
 }
 
-const formatLogMessage = (event: any) => {
+const formatLogMessage = (event: TelemetryEvent) => {
   if (event.message) return event.message;
   if (event.data) {
     const d = event.data;
@@ -182,8 +200,8 @@ function TelemetryHUD({
   onToggle, 
   mode 
 }: { 
-  events: any[], 
-  wsStatus: string, 
+  events: TelemetryEvent[], 
+  wsStatus: "connecting" | "connected" | "disconnected", 
   isVisible: boolean, 
   onToggle: () => void, 
   mode: string 
@@ -228,7 +246,7 @@ function TelemetryHUD({
               return (
                 <div key={event.id} className={`hud-log-entry ${severity.toLowerCase()}`}>
                   <div className="hud-log-meta">
-                    <span className="hud-log-time">{new Date(event.timestamp).toLocaleTimeString()}</span>
+                    <span className="hud-log-time">{event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : ""}</span>
                     <span className="hud-log-source">[{event.source || 'VECTOR'}]</span>
                     <span className={`hud-log-level ${severity.toLowerCase()}`}>{severity}</span>
                   </div>
@@ -243,8 +261,12 @@ function TelemetryHUD({
   );
 }
 
+interface AlertOverlayProps {
+  alerts: Alert[];
+  onClear: () => void;
+}
 
-function AlertOverlay({ alerts, onClear }: { alerts: Alert[], onClear: () => void }) {
+function AlertOverlay({ alerts, onClear }: AlertOverlayProps) {
   if (alerts.length === 0) return null;
 
   return (
@@ -271,6 +293,108 @@ function AlertOverlay({ alerts, onClear }: { alerts: Alert[], onClear: () => voi
   );
 }
 
+interface ActiveMitigationConsoleProps {
+  currentMode: string;
+  onModeToggle: (newMode: "NORMAL" | "REFLEX") => void;
+  onExecutePlaybook: (playbook: string, target: string) => Promise<boolean>;
+}
+
+function ActiveMitigationConsole({
+  currentMode,
+  onModeToggle,
+  onExecutePlaybook
+}: ActiveMitigationConsoleProps) {
+  const [targetHost, setTargetHost] = useState("");
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleIsolateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetHost.trim() || isExecuting) return;
+
+    setIsExecuting(true);
+    setStatus(null);
+
+    const success = await onExecutePlaybook("isolate_host", targetHost.trim());
+    setIsExecuting(false);
+
+    if (success) {
+      setStatus({ type: "success", text: `Quarantine playbook triggered for ${targetHost}` });
+      setTargetHost("");
+    } else {
+      setStatus({ type: "error", text: "Link failure: isolation playbook failed to launch" });
+    }
+
+    setTimeout(() => setStatus(null), 5000);
+  };
+
+  const isHardened = currentMode === "HARDENED" || currentMode === "REFLEX";
+
+  return (
+    <div className={`mitigation-panel glassmorphic ${isHardened ? "hardened" : ""}`}>
+      <div className="hud-header">
+        <div className="hud-title-group">
+          <span className="hud-title-indicator blinking"></span>
+          <h3>ACTIVE MITIGATION CONSOLE</h3>
+        </div>
+        <span className={`hud-badge mode-status ${isHardened ? "hardened" : "standard"}`}>
+          {currentMode}
+        </span>
+      </div>
+
+      <div className="mitigation-body">
+        {/* Manual Hardening Trigger */}
+        <div className="mitigation-control-section">
+          <span className="mitigation-control-label">SYSTEM LOCKDOWN MODE</span>
+          <div className="mode-toggle-buttons">
+            <button 
+              className={`mode-btn ${!isHardened ? "standard-active" : ""}`}
+              onClick={() => onModeToggle("NORMAL")}
+            >
+              Standard Ops
+            </button>
+            <button 
+              className={`mode-btn ${isHardened ? "hardened-active" : ""}`}
+              onClick={() => onModeToggle("REFLEX")}
+            >
+              Reflex Mode
+            </button>
+          </div>
+        </div>
+
+        {/* Quarantine Form */}
+        <div className="mitigation-control-section">
+          <span className="mitigation-control-label">HOST QUARANTINE CONTROLS</span>
+          <form onSubmit={handleIsolateSubmit} className="mitigation-form">
+            <div className="mitigation-form-group">
+              <input
+                type="text"
+                className="mitigation-input"
+                placeholder="Target Client ID (e.g. C-101)..."
+                value={targetHost}
+                onChange={(e) => setTargetHost(e.target.value)}
+                disabled={isExecuting}
+              />
+              <button 
+                type="submit" 
+                className="mitigation-btn"
+                disabled={isExecuting || !targetHost.trim()}
+              >
+                {isExecuting ? "Executing..." : "Isolate"}
+              </button>
+            </div>
+            {status && (
+              <div className={`mitigation-status-msg ${status.type}`}>
+                {status.text}
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -278,7 +402,7 @@ function App() {
   const [vikiState, setVikiState] = useState<'idle' | 'thinking' | 'speaking'>('idle');
 
   // Real-time HUD states
-  const [telemetryEvents, setTelemetryEvents] = useState<any[]>([]);
+  const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [isHudVisible, setIsHudVisible] = useState(true);
   const [securityMode, setSecurityMode] = useState<string>("STANDARD");
@@ -287,7 +411,7 @@ function App() {
   const [, setAcknowledgedAlerts] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("cortex_acknowledged_alerts");
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
     } catch {
       return [];
     }
@@ -344,7 +468,7 @@ function App() {
     const wsUrl = `${protocol}//${wsHost}/api/ws/telemetry`;
 
     let ws: WebSocket;
-    let reconnectTimeout: any;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
 
     const connectWS = () => {
       setWsStatus('connecting');
@@ -357,7 +481,7 @@ function App() {
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data) as TelemetryEvent;
           
           if (!data.timestamp) {
             data.timestamp = new Date().toISOString();
@@ -408,7 +532,7 @@ function App() {
           }
 
           // Dynamically sync security mode
-          if (data.mode) {
+          if (data.type === "MODE_CHANGE" || data.mode) {
             setSecurityMode(data.security_status || (data.mode === "REFLEX" ? "HARDENED" : "STANDARD"));
           }
         } catch (e) {
@@ -458,6 +582,38 @@ function App() {
     setAlerts([]);
   };
 
+  const handleModeToggle = async (newMode: "NORMAL" | "REFLEX") => {
+    try {
+      const response = await fetch('/api/mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode })
+      });
+      if (!response.ok) throw new Error('Failed to toggle security state');
+      // The server will broadcast the new mode via WS, but let's update locally for instant responsiveness
+      setSecurityMode(newMode === "REFLEX" ? "HARDENED" : "STANDARD");
+      console.log(`[+] Security mode transitioned to ${newMode}`);
+    } catch (e) {
+      console.error("[-] Error toggling security state:", e);
+    }
+  };
+
+  const handleExecutePlaybook = async (playbook: string, target: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/playbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playbook, target })
+      });
+      if (!response.ok) throw new Error('Playbook execution failed');
+      console.log(`[+] Playbook ${playbook} executed successfully on ${target}`);
+      return true;
+    } catch (e) {
+      console.error("[-] Playbook execution failure:", e);
+      return false;
+    }
+  };
+
   return (
     <div className={`dashboard ${alerts.length > 0 ? "critical-state" : ""}`}>
       <AlertOverlay alerts={alerts} onClear={clearAlerts} />
@@ -502,6 +658,11 @@ function App() {
                 onToggle={() => setIsHudVisible(!isHudVisible)}
                 mode={securityMode}
               />
+              <ActiveMitigationConsole 
+                currentMode={securityMode}
+                onModeToggle={handleModeToggle}
+                onExecutePlaybook={handleExecutePlaybook}
+              />
             </div>
           </section>
         </main>
@@ -512,6 +673,7 @@ function App() {
               assetPath="/assets/viki_android_real.glb" 
               vikiState={vikiState} 
             />
+            <VikiChat onStateChange={(s) => setVikiState(s)} />
           </aside>
         )}
       </div>

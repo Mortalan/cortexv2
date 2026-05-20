@@ -17,7 +17,7 @@ ALERTS_PATH = "/mnt/data_lake/logs/alerts.json"
 STATE_PATH = "/mnt/data_lake/logs/reflex_state.json"
 PLAYBOOKS_DIR = "/opt/cortex/infrastructure/viki/playbooks"
 
-def get_alerts():
+def get_alerts() -> list:
     if os.path.exists(ALERTS_PATH):
         with open(ALERTS_PATH, "r") as f:
             try:
@@ -26,13 +26,13 @@ def get_alerts():
                 return []
     return []
 
-def save_alerts(alerts):
+def save_alerts(alerts: list) -> None:
     if not os.path.exists(os.path.dirname(ALERTS_PATH)):
         os.makedirs(os.path.dirname(ALERTS_PATH), exist_ok=True)
     with open(ALERTS_PATH, "w") as f:
         json.dump(alerts, f)
 
-def broadcast_event(payload):
+def broadcast_event(payload: dict) -> None:
     """Send JSON payload to all active WebSocket clients."""
     event_str = json.dumps(payload)
     disconnected_clients = []
@@ -49,7 +49,7 @@ def broadcast_event(payload):
             connections.remove(ws)
 
 @sock.route('/api/ws/telemetry')
-def telemetry_ws(ws):
+def telemetry_ws(ws: object) -> None:
     """Handle incoming WebSocket connections for live telemetry streaming."""
     connections.add(ws)
     print(f"[+] WebSocket client connected. Active connections: {len(connections)}", flush=True)
@@ -66,7 +66,7 @@ def telemetry_ws(ws):
         print(f"[x] WebSocket connection closed. Active connections: {len(connections)}", flush=True)
 
 @app.route('/api/alerts', methods=['GET', 'POST'])
-def handle_alerts():
+def handle_alerts() -> object:
     if request.method == 'POST':
         data = request.get_json()
         alerts = get_alerts()
@@ -91,7 +91,7 @@ def handle_alerts():
     return jsonify(get_alerts())
 
 @app.route('/api/telemetry', methods=['POST'])
-def handle_telemetry():
+def handle_telemetry() -> object:
     """Ingest telemetry data from Vector/n8n and broadcast to dashboard."""
     data = request.get_json()
     if not data:
@@ -111,7 +111,7 @@ def handle_telemetry():
     broadcast_event(data)
     return jsonify({"status": "ok"})
 
-def set_mode(mode):
+def set_mode(mode: str) -> None:
     print(f"Switching to {mode} mode...", flush=True)
     status = "HARDENED" if mode == "REFLEX" else "STANDARD"
     data = {
@@ -129,8 +129,17 @@ def set_mode(mode):
         os.system(f"cp {config_file} /etc/vector/vector.yaml")
         print(f"Vector config updated to {mode}", flush=True)
 
-@app.route('/mode', methods=['POST'])
-def api_set_mode():
+    # Broadcast the mode event to all WebSocket clients instantly
+    mode_event = {
+        "type": "MODE_CHANGE",
+        "mode": mode,
+        "security_status": status,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    broadcast_event(mode_event)
+
+@app.route('/api/mode', methods=['POST'])
+def api_set_mode() -> object:
     data = request.get_json()
     mode = data.get("mode")
     if mode not in ["NORMAL", "REFLEX"]:
@@ -138,8 +147,8 @@ def api_set_mode():
     set_mode(mode)
     return jsonify({"status": "ok"})
 
-@app.route('/playbook', methods=['POST'])
-def execute_playbook():
+@app.route('/api/playbook', methods=['POST'])
+def execute_playbook() -> object:
     data = request.get_json()
     playbook = data.get("playbook")
     target = data.get("target")
