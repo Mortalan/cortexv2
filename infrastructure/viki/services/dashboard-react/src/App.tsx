@@ -52,15 +52,15 @@ const servicesData = [
     items: [
       { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
       { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
-      { name: "Ollama AI", subtitle: "Neural Inference", url: "http://192.168.50.242:11434", icon: "🤖" },
+      { name: "Ollama AI", subtitle: "Neural Inference", url: "https://cortex.rmmservice.co.za/api/viki/", icon: "🤖" },
     ],
   },
   {
     category: "Network & Security",
     items: [
-      { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za", icon: "🚦" },
+      { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za/dashboard/", icon: "🚦" },
       { name: "Authelia", subtitle: "Identity Gate", url: "https://auth.rmmservice.co.za", icon: "🔑" },
-      { name: "WireGuard", subtitle: "Secure Tunnel", url: "#", icon: "🛡️" },
+      { name: "WireGuard", subtitle: "Secure Tunnel", url: "javascript:void(0)", icon: "🛡️" },
     ],
   },
 ];
