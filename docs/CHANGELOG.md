@@ -1,6 +1,13 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 20 MAY 2026 - PROCEDURAL 3D INTERACTION & GLASSMORPHIC HUD (PHASE 15.3 & 16.1 REFINEMENTS)
+- **3D Avatar:** Implemented custom `@react-three/fiber` priority-based render updates to prevent the base idle sway animation from overriding procedural bones. Added manual `threeState.gl.render` callback execution inside `useFrame(..., 1)`.
+- **Procedural Animations:** Programmed interactive head and neck tracking (`CC_Base_Head_039`/`CC_Base_NeckTwist01_037`) dynamically tracking mouse cursor coordinates, chest expansion breathing cycles (`CC_Base_Spine02_036`), and state-driven conversational nodding (idle/thinking/speaking).
+- **Proportions & Framing:** Re-engineered spatial properties to primitive scale `1.5`, Y-anchor `-3.1`, and camera coordinate `[0, 0.0, 6.2]`. Centered and enlarged Viki to float transparently in the sidebar without cropping or clipping boundaries.
+- **Diagnostics HUD:** Integrated host performance progress metrics (CPU, RAM, SSD) alongside service latency grids fluctuating in real-time.
+- **HUD Layout:** Re-arranged Diagnostics and Telemetry log streams side-by-side inside a flattened, glassmorphic layout grid, ensuring zero viewport scrollbars.
+
 ### 20 MAY 2026 - REAL-TIME TELEMETRY HUD (PHASE 16.1)
 - **API:** Upgraded Reflex Daemon with WebSocket support (`flask-sock`) and the `/api/telemetry` ingestion endpoint.
 - **Sinks:** Configured Vector sinks (`vector_normal.yaml`/`vector_reflex.yaml`) to stream threat events.
