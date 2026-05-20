@@ -4,7 +4,6 @@ services:
     container_name: viki-dashboard-react
     restart: always
     volumes:
-      - ./dist:/usr/share/nginx/html
       - /opt/cortex/status.json:/usr/share/nginx/html/status.json
     labels:
       - "traefik.enable=true"
