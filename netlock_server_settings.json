@@ -2,6 +2,10 @@
   "ConnectionStrings": {
     "DefaultConnection": "Server=mysql-container;Database=w7cdks;Uid=root;Pwd=cortex_secure_netlock_pass;Charset=utf8mb4;AllowPublicKeyRetrieval=True;"
   },
+  "NetLock": {
+    "CustomCertificatePath": "/app/certificates/cortex_dummy.pfx",
+    "CustomCertificatePassword": "dummy"
+  },
   "Kestrel": {
     "Endpoints": {
       "Http": {
