@@ -120,7 +120,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       neckBoneRef.current.rotation.y = THREE.MathUtils.lerp(neckBoneRef.current.rotation.y, targetHeadYaw * 0.25, 0.06);
       neckBoneRef.current.rotation.x = THREE.MathUtils.lerp(neckBoneRef.current.rotation.x, targetHeadPitch * 0.25, 0.06);
     }
-  }, 1);
+  });
   
   return (
     <group ref={group}>
