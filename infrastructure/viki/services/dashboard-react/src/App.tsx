@@ -399,6 +399,16 @@ function App() {
   const [isHudVisible, setIsHudVisible] = useState(true);
   const [securityMode, setSecurityMode] = useState<string>("STANDARD");
 
+  // Track acknowledged alert IDs in state
+  const [, setAcknowledgedAlerts] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("cortex_acknowledged_alerts");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     // Check for admin mode in URL
     const params = new URLSearchParams(window.location.search);
@@ -419,10 +429,22 @@ function App() {
       fetch("/api/alerts")
         .then(res => res.json())
         .then((data: Alert[]) => {
-          const criticalAlerts = data.filter(a => a.type === "CRITICAL");
-          if (criticalAlerts.length > 0) {
-            setAlerts(criticalAlerts);
-          }
+          // Get fresh acknowledged list from localStorage
+          const acked = (() => {
+            try {
+              const saved = localStorage.getItem("cortex_acknowledged_alerts");
+              return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+            } catch {
+              return [];
+            }
+          })();
+          const activeCritical = data
+            .map(a => ({
+              ...a,
+              id: a.id ? String(a.id) : `${a.source}_${a.timestamp}_${a.message}`
+            }))
+            .filter(a => a.type === "CRITICAL" && !acked.includes(a.id));
+          setAlerts(activeCritical);
         })
         .catch(() => {});
     };
@@ -463,23 +485,38 @@ function App() {
           // Append event to state log (keep last 50)
           setTelemetryEvents(prev => [data, ...prev].slice(0, 50));
 
-          // Elevate CRITICAL telemetry to active alerts
+          // Elevate CRITICAL telemetry to active alerts if not already acknowledged
           const severity = (data.severity || data.type || "INFO").toUpperCase();
           if (severity === "CRITICAL") {
             const message = data.message || (data.data && data.data.CommandLine) || "CRITICAL EVENT DETECTED";
             const source = data.source || "Vector";
+            const timestamp = data.timestamp || new Date().toISOString();
+            const rawId = data.id || `${source}_${timestamp}_${message}`;
+            const alertId = String(rawId);
             
-            setAlerts(prev => {
-              const isDuplicate = prev.some(a => a.message === message && a.source === source);
-              if (isDuplicate) return prev;
-              return [{
-                id: data.id,
-                type: "CRITICAL",
-                source: source,
-                message: message,
-                timestamp: data.timestamp
-              }, ...prev];
-            });
+            // Get fresh acknowledged list
+            const acked = (() => {
+              try {
+                const saved = localStorage.getItem("cortex_acknowledged_alerts");
+                return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+              } catch {
+                return [];
+              }
+            })();
+
+            if (!acked.includes(alertId)) {
+              setAlerts(prev => {
+                const isDuplicate = prev.some(a => String(a.id) === alertId || (a.message === message && a.source === source));
+                if (isDuplicate) return prev;
+                return [{
+                  id: alertId,
+                  type: "CRITICAL",
+                  source: source,
+                  message: message,
+                  timestamp: timestamp
+                }, ...prev];
+              });
+            }
           }
 
           // Dynamically sync security mode
@@ -513,7 +550,25 @@ function App() {
     };
   }, []);
 
-  const clearAlerts = () => setAlerts([]);
+  const clearAlerts = () => {
+    const idsToAck = alerts.map(a => a.id ? String(a.id) : `${a.source}_${a.timestamp}_${a.message}`);
+    const acked = (() => {
+      try {
+        const saved = localStorage.getItem("cortex_acknowledged_alerts");
+        return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+      } catch {
+        return [];
+      }
+    })();
+    const updated = Array.from(new Set([...acked, ...idsToAck]));
+    try {
+      localStorage.setItem("cortex_acknowledged_alerts", JSON.stringify(updated));
+    } catch (e) {
+      console.error("[-] Error saving acknowledged alerts:", e);
+    }
+    setAcknowledgedAlerts(updated);
+    setAlerts([]);
+  };
 
   return (
     <div className={`dashboard ${alerts.length > 0 ? "critical-state" : ""}`}>
@@ -548,7 +603,7 @@ function App() {
           ))}
 
           {/* Upgraded reactive status monitor and absolute HUD layout container */}
-          <section className="section topology-section" style={{ marginTop: "3rem" }}>
+          <section className="section topology-section-main" style={{ marginTop: "0.5rem" }}>
             <h2 className="section-title">Global Status Monitor</h2>
             <div className="topology-container-wrapper">
               <Topology status={status} criticalAlertActive={alerts.length > 0} />
