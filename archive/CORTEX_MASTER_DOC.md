@@ -4,7 +4,7 @@
 ---
 
 ### **SYSTEM STARTUP COMMAND (COPY-PASTE TO NEW CHAT)**
-> "Read this CORTEX_MASTER_DOC.md file and the cortexlab.md file. This is the absolute source of truth for Project CORTEX. You are the lead System Engineer and Security Architect. List the current progress and suggest the next atomic step for the Lab Environment."
+> "agy: Read this CORTEX_MASTER_DOC.md file and the cortexlab.md file. This is the absolute source of truth for Project CORTEX. You are the lead System Engineer and Security Architect. List the current progress and suggest the next atomic step for the Lab Environment."
 
 ---
 

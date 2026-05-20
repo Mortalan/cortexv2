@@ -1,8 +1,8 @@
 # CORTEX: SYSTEM MAP & INDEX
-## [VERSION 2.0 - MAY 2026]
+## [VERSION 2.1 - MAY 2026] - ANTIGRAVITY TRANSITION
 
-### **SESSION STARTUP COMMAND**
-> "Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and continue with the next phase. Do not read unrelated files."
+### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
+> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and continue with the next phase. Do not read unrelated files."
 
 ---
 
@@ -12,6 +12,8 @@
 - **Core (NetLock/Identity):** 192.168.50.241 - **STABLE/LICENSED**
 - **AI (Intelligence):** 192.168.50.242 - **ACTIVE**
 - **Lake (Forensics):** 192.168.50.243 - **ACTIVE**
+- **Interface (VIKI Chat):** Integrated with Ollama & 3D Avatar - **ACTIVE**
+- **Tooling:** Transitioning to **Antigravity CLI (agy)** - **IN PROGRESS**
 
 ---
 
@@ -23,12 +25,13 @@
 | **Security Ops** | `docs/SEC_OPS.md` | Reflex Daemon, Velociraptor, Forensics, NIST 2.0. |
 | **Execution Lab** | `docs/LAB_LOG.md` | Current Phase, Atomic Steps, and Progress Tracker. |
 | **Change History** | `docs/CHANGELOG.md` | Version history and session summaries. |
+| **Migration** | `docs/MIGRATION_AGY.md` | Notes on Gemini CLI -> Antigravity migration. |
 
 ---
 
-## 3. NEXT PHASE: COGNITIVE CORE INTEGRATION
-- **Goal:** Visualizing VIKI (3D Avatar) and synchronizing project context to the LLM.
-- **Next Step:** Implement `VikiAvatarRenderer.tsx` and `viki_sync.py`.
+## 3. NEXT PHASE: OPERATIONAL OVERLAY (HUD)
+- **Goal:** Integrating real-time telemetry from n8n/Vector into the 3D Dashboard as a HUD overlay.
+- **Next Step:** Implement WebSocket listener in Dashboard for live event streaming.
 
 ---
-*Last Updated: Tuesday, 19 May 2026*
+*Last Updated: Wednesday, 20 May 2026*

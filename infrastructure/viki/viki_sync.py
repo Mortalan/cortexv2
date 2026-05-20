@@ -3,8 +3,15 @@ import os
 import subprocess
 
 # Adjusted for local workspace path
-DOCS_PATH = "/home/louis/cortex/archive/"
-REQUIRED_FILES = ["CORTEX_MASTER_DOC.md", "cortexlab.md", "state.md", "changelog.md"]
+DOCS_PATH = "/home/louis/cortex/"
+REQUIRED_FILES = [
+    "CORTEX_MAP.md",
+    "docs/INFRA.md",
+    "docs/INTEL.md",
+    "docs/SEC_OPS.md",
+    "docs/LAB_LOG.md",
+    "docs/CHANGELOG.md"
+]
 MODEL_NAME = "viki"
 
 def compile_context():

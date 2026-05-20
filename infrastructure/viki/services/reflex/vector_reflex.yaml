@@ -26,3 +26,11 @@ sinks:
     path: "/mnt/data_lake/logs/forensics/reflex/%Y/%m/%d/%H_telemetry.log"
     encoding:
       codec: "json"
+
+  reflex_daemon_sink:
+    type: "http"
+    inputs: ["vds_telemetry"]
+    uri: "http://reflex-daemon:9090/api/telemetry"
+    method: "post"
+    encoding:
+      codec: "json"

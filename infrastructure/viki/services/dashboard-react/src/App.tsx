@@ -3,6 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Text, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { VikiAvatarRenderer } from "./components/viki/VikiAvatarRenderer";
+import { VikiChat } from "./components/viki/VikiChat";
 import "./App.css";
 
 interface ServiceStatus {
@@ -217,7 +218,7 @@ function BinaryBit({ pos, speed, val }: { pos: [number, number, number], speed: 
   );
 }
 
-function Topology({ status }: { status: ServiceStatus[] }) {
+function Topology({ status, criticalAlertActive }: { status: ServiceStatus[], criticalAlertActive: boolean }) {
   const getStatus = (name: string) => status.find(s => s.name === name || (name === "MinIO" && s.name === "Data Lake"))?.status || "offline";
 
   const nodes = [
@@ -231,15 +232,19 @@ function Topology({ status }: { status: ServiceStatus[] }) {
 
   const coreStatus = "online"; // Keep core lit
 
+  const fogColor = criticalAlertActive ? "#1a0505" : "#010204";
+  const lightColor = criticalAlertActive ? "#ff3333" : "#00f2ff";
+  const ambientIntensity = criticalAlertActive ? 0.6 : 1.5;
+
   return (
     <div className="topology-container">
       <Canvas shadows camera={{ position: [0, 1.2, 2], fov: 60 }}>
         <Suspense fallback={null}>
-          <color attach="background" args={["#010204"]} />
-          <fog attach="fog" args={["#010204", 2, 12]} />
+          <color attach="background" args={[fogColor]} />
+          <fog attach="fog" args={[fogColor, 2, 12]} />
           
-          <ambientLight intensity={1.5} />
-          <pointLight position={[0, 3, -5]} intensity={5} color="#00f2ff" />
+          <ambientLight intensity={ambientIntensity} />
+          <pointLight position={[0, 3, -5]} intensity={5} color={lightColor} />
           <spotLight position={[0, 8, 0]} angle={0.4} penumbra={1} intensity={5} castShadow />
 
           {/* Hallway Floor */}
@@ -247,7 +252,7 @@ function Topology({ status }: { status: ServiceStatus[] }) {
             <planeGeometry args={[20, 20]} />
             <meshStandardMaterial color="#080c14" roughness={0.1} metalness={0.9} />
           </mesh>
-          <gridHelper args={[20, 40, "#00f2ff", "#002a2a"]} position={[0, -0.99, -5]} />
+          <gridHelper args={[20, 40, lightColor, "#002a2a"]} position={[0, -0.99, -5]} />
 
           <DataCore status={coreStatus} />
           <BinaryDust />
@@ -274,6 +279,86 @@ function Topology({ status }: { status: ServiceStatus[] }) {
     </div>
   );
 }
+
+const formatLogMessage = (event: any) => {
+  if (event.message) return event.message;
+  if (event.data) {
+    const d = event.data;
+    if (d.ProcessName) {
+      return `Suspicious process ${d.ProcessName} (CMD: ${d.CommandLine || 'N/A'}) executed by user ${d.Username || 'unknown'} on host ${event.hostname || 'endpoint'}`;
+    }
+  }
+  return JSON.stringify(event);
+};
+
+function TelemetryHUD({ 
+  events, 
+  wsStatus, 
+  isVisible, 
+  onToggle, 
+  mode 
+}: { 
+  events: any[], 
+  wsStatus: string, 
+  isVisible: boolean, 
+  onToggle: () => void, 
+  mode: string 
+}) {
+  if (!isVisible) {
+    return (
+      <button className="hud-activate-btn" onClick={onToggle}>
+        <span className="hud-pulse-dot"></span>
+        ACTIVATE TELEMETRY HUD OVERLAY
+      </button>
+    );
+  }
+
+  return (
+    <div className="telemetry-hud glassmorphic">
+      <div className="hud-header">
+        <div className="hud-title-group">
+          <span className="hud-title-indicator blinking"></span>
+          <h3>SYSTEM TELEMETRY HUD</h3>
+        </div>
+        <div className="hud-actions">
+          <span className={`hud-badge ws-status ${wsStatus}`}>
+            {wsStatus.toUpperCase()}
+          </span>
+          <span className={`hud-badge mode-status ${mode.toLowerCase()}`}>
+            {mode}
+          </span>
+          <button className="hud-toggle-close" onClick={onToggle}>✖</button>
+        </div>
+      </div>
+      
+      <div className="hud-body">
+        {events.length === 0 ? (
+          <div className="hud-empty">
+            <span className="hud-scan-line"></span>
+            LISTENING FOR TELEMETRY STREAM...
+          </div>
+        ) : (
+          <div className="hud-log-stream">
+            {events.map((event) => {
+              const severity = (event.severity || event.type || "INFO").toUpperCase();
+              return (
+                <div key={event.id} className={`hud-log-entry ${severity.toLowerCase()}`}>
+                  <div className="hud-log-meta">
+                    <span className="hud-log-time">{new Date(event.timestamp).toLocaleTimeString()}</span>
+                    <span className="hud-log-source">[{event.source || 'VECTOR'}]</span>
+                    <span className={`hud-log-level ${severity.toLowerCase()}`}>{severity}</span>
+                  </div>
+                  <p className="hud-log-text">{formatLogMessage(event)}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 function AlertOverlay({ alerts, onClear }: { alerts: Alert[], onClear: () => void }) {
   if (alerts.length === 0) return null;
@@ -306,6 +391,13 @@ function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [vikiState, setVikiState] = useState<'idle' | 'thinking' | 'speaking'>('idle');
+
+  // Real-time HUD states
+  const [telemetryEvents, setTelemetryEvents] = useState<any[]>([]);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [isHudVisible, setIsHudVisible] = useState(true);
+  const [securityMode, setSecurityMode] = useState<string>("STANDARD");
 
   useEffect(() => {
     // Check for admin mode in URL
@@ -339,9 +431,85 @@ function App() {
     fetchAlerts();
     const statusInterval = setInterval(fetchStatus, 30000);
     const alertInterval = setInterval(fetchAlerts, 10000);
+
+    // --- TELEMETRY WEBSOCKET INTEGRATION ---
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsHost = window.location.host;
+    const wsUrl = `${protocol}//${wsHost}/api/ws/telemetry`;
+
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+
+    const connectWS = () => {
+      setWsStatus('connecting');
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setWsStatus('connected');
+        console.log("[+] Connected to CORTEX live telemetry stream.");
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (!data.timestamp) {
+            data.timestamp = new Date().toISOString();
+          }
+          if (!data.id) {
+            data.id = String(Date.now());
+          }
+
+          // Append event to state log (keep last 50)
+          setTelemetryEvents(prev => [data, ...prev].slice(0, 50));
+
+          // Elevate CRITICAL telemetry to active alerts
+          const severity = (data.severity || data.type || "INFO").toUpperCase();
+          if (severity === "CRITICAL") {
+            const message = data.message || (data.data && data.data.CommandLine) || "CRITICAL EVENT DETECTED";
+            const source = data.source || "Vector";
+            
+            setAlerts(prev => {
+              const isDuplicate = prev.some(a => a.message === message && a.source === source);
+              if (isDuplicate) return prev;
+              return [{
+                id: data.id,
+                type: "CRITICAL",
+                source: source,
+                message: message,
+                timestamp: data.timestamp
+              }, ...prev];
+            });
+          }
+
+          // Dynamically sync security mode
+          if (data.mode) {
+            setSecurityMode(data.security_status || (data.mode === "REFLEX" ? "HARDENED" : "STANDARD"));
+          }
+        } catch (e) {
+          console.error("[-] Error parsing WS telemetry payload:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        setWsStatus('disconnected');
+        console.log("[-] Telemetry WebSocket disconnected. Reconnecting in 3s...");
+        reconnectTimeout = setTimeout(connectWS, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("[-] WebSocket connection error:", err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
     return () => {
       clearInterval(statusInterval);
       clearInterval(alertInterval);
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, []);
 
@@ -379,21 +547,36 @@ function App() {
             </section>
           ))}
 
-          {/* Moved Status Monitor to the bottom of the main content area */}
+          {/* Upgraded reactive status monitor and absolute HUD layout container */}
           <section className="section topology-section" style={{ marginTop: "3rem" }}>
             <h2 className="section-title">Global Status Monitor</h2>
-            <Topology status={status} />
+            <div className="topology-container-wrapper">
+              <Topology status={status} criticalAlertActive={alerts.length > 0} />
+              <TelemetryHUD 
+                events={telemetryEvents}
+                wsStatus={wsStatus}
+                isVisible={isHudVisible}
+                onToggle={() => setIsHudVisible(!isHudVisible)}
+                mode={securityMode}
+              />
+            </div>
           </section>
         </main>
 
-        <aside className="monitor-sidebar">
-          {isAdmin && (
-            <section className="section topology-section" style={{ height: "calc(100vh - 200px)", minHeight: "600px" }}>
-              <h2 className="section-title">Cognitive Interface (VIKI)</h2>
-              <VikiAvatarRenderer assetPath="/assets/viki_android_real.glb" />
+        {isAdmin && (
+          <aside className="monitor-sidebar">
+            <section className="topology-section" style={{ padding: 0 }}>
+              <div style={{ padding: '1.5rem 1.5rem 0 1.5rem' }}>
+                <h2 className="section-title">Cognitive Interface (VIKI)</h2>
+              </div>
+              <VikiAvatarRenderer 
+                assetPath="/assets/viki_android_real.glb" 
+                vikiState={vikiState} 
+              />
+              <VikiChat onStateChange={setVikiState} />
             </section>
-          )}
-        </aside>
+          </aside>
+        )}
       </div>
 
       <footer className="footer">

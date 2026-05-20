@@ -1,36 +1,60 @@
-import React, { Suspense, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { Suspense, useEffect, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three/drei';
+import * as THREE from 'three';
 
 // Component that handles loading and animating the 3D asset
-const AvatarModel = ({ modelPath }: { modelPath: string }) => {
+const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' }) => {
+  const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   const { actions } = useAnimations(animations, scene);
 
   useEffect(() => {
-    // Play the first animation (usually Idle or Walk)
-    if (actions && Object.keys(actions).length > 0) {
-      const firstAction = actions[Object.keys(actions)[0]];
-      if (firstAction) {
-        firstAction.reset().fadeIn(0.5).play();
-      }
+    if (!actions) return;
+
+    // Map internal states to animation names (assuming these exist in the GLB)
+    const animationMap: Record<string, string> = {
+      idle: 'Idle',
+      thinking: 'Thinking',
+      speaking: 'Talking'
+    };
+
+    const targetAnim = animationMap[state] || Object.keys(actions)[0];
+    const action = actions[targetAnim] || actions[Object.keys(actions)[0]];
+
+    if (action) {
+      // Stop all other actions
+      Object.values(actions).forEach(a => a?.fadeOut(0.5));
+      action.reset().fadeIn(0.5).play();
     }
-  }, [actions]);
+  }, [actions, state]);
+
+  useFrame((state) => {
+    if (group.current) {
+      // Subtle floating movement
+      group.current.position.y = -3.2 + Math.sin(state.clock.elapsedTime * 0.5) * 0.05;
+      // Very slight rotation sway
+      group.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.2) * 0.02;
+    }
+  });
   
   return (
-    <primitive 
-      object={scene} 
-      position={[0, -3.2, 0]} // Lowered further to bring the head into view
-      scale={1.3} // Slightly reduced to fit better
-    />
+    <group ref={group}>
+      <primitive 
+        object={scene} 
+        position={[0, 0, 0]} 
+        scale={1.3} 
+      />
+    </group>
   );
 };
 
 interface RendererProps {
   assetPath: string; 
+  vikiState?: 'idle' | 'thinking' | 'speaking';
 }
 
-export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath }) => {
+export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiState = 'idle' }) => {
   return (
     <div 
       className="viki-canvas-wrapper" 
@@ -38,7 +62,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath }) => {
         position: 'relative', 
         width: '100%', 
         height: '100%', 
-        minHeight: '600px', 
+        minHeight: '400px', 
         overflow: 'hidden' 
       }}
     >
@@ -54,7 +78,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath }) => {
           <pointLight position={[-2, -2, -2]} intensity={0.5} color="#9b5de5" />
 
           <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
-            <AvatarModel modelPath={assetPath} />
+            <AvatarModel modelPath={assetPath} state={vikiState} />
             <Environment preset="city" />
           </Suspense>
 

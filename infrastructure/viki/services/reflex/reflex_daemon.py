@@ -3,8 +3,13 @@ import time
 import socket
 import json
 from flask import Flask, request, jsonify
+from flask_sock import Sock
 
 app = Flask(__name__)
+sock = Sock(app)
+
+# Active WebSocket connections
+connections = set()
 
 BRAIN_TARGET = "traefik"
 BRAIN_PORT = 80
@@ -27,6 +32,39 @@ def save_alerts(alerts):
     with open(ALERTS_PATH, "w") as f:
         json.dump(alerts, f)
 
+def broadcast_event(payload):
+    """Send JSON payload to all active WebSocket clients."""
+    event_str = json.dumps(payload)
+    disconnected_clients = []
+    
+    for ws in list(connections):
+        try:
+            ws.send(event_str)
+        except Exception as e:
+            print(f"[!] Error sending WS event: {e}", flush=True)
+            disconnected_clients.append(ws)
+            
+    for ws in disconnected_clients:
+        if ws in connections:
+            connections.remove(ws)
+
+@sock.route('/api/ws/telemetry')
+def telemetry_ws(ws):
+    """Handle incoming WebSocket connections for live telemetry streaming."""
+    connections.add(ws)
+    print(f"[+] WebSocket client connected. Active connections: {len(connections)}", flush=True)
+    try:
+        while True:
+            # Sleep/ping interval to keep the websocket alive and detect closures
+            # We don't expect incoming messages, but receive will block until close or ping timeout
+            ws.receive(timeout=30)
+    except Exception as e:
+        print(f"[-] WebSocket connection error: {e}", flush=True)
+    finally:
+        if ws in connections:
+            connections.remove(ws)
+        print(f"[x] WebSocket connection closed. Active connections: {len(connections)}", flush=True)
+
 @app.route('/api/alerts', methods=['GET', 'POST'])
 def handle_alerts():
     if request.method == 'POST':
@@ -37,8 +75,41 @@ def handle_alerts():
         alerts.append(data)
         alerts = alerts[-50:]
         save_alerts(alerts)
+        
+        # Broadcast the alert event to all WebSocket clients
+        alert_event = {
+            "type": "ALERT",
+            "id": data['id'],
+            "timestamp": data['timestamp'],
+            "source": data.get('source', 'Unknown'),
+            "message": data.get('message', ''),
+            "severity": data.get('type', 'INFO')
+        }
+        broadcast_event(alert_event)
+        
         return jsonify({"status": "ok", "alert_id": data['id']})
     return jsonify(get_alerts())
+
+@app.route('/api/telemetry', methods=['POST'])
+def handle_telemetry():
+    """Ingest telemetry data from Vector/n8n and broadcast to dashboard."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data"}), 400
+        
+    # Standardize data fields for the frontend HUD
+    if 'timestamp' not in data:
+        data['timestamp'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if 'id' not in data:
+        data['id'] = str(int(time.time() * 1000))
+    if 'type' not in data:
+        data['type'] = "TELEMETRY"
+    if 'severity' not in data:
+        # Infer severity if absent
+        data['severity'] = data.get('level', 'INFO')
+        
+    broadcast_event(data)
+    return jsonify({"status": "ok"})
 
 def set_mode(mode):
     print(f"Switching to {mode} mode...", flush=True)
@@ -84,3 +155,4 @@ def execute_playbook():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9090)
+
