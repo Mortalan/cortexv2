@@ -40,5 +40,12 @@
 5. [x] Design and implement a glassmorphic Active Mitigation Console panel inside the React dashboard.
 6. [x] Implement manual security state toggling and target host isolation commands using high-fidelity overlays.
 
+**Emergency Ingress & Gateway Stabilization (Mole Run)**
+1. [x] Restored NetLock RMM Web Console: Fixed CustomCertificatePath fatal crash, database binding settings, and root-level SSL bypass environment overrides.
+2. [x] Resolved Velociraptor 401 Loop: Terminated authelia@docker double-wrapping on the native EDR basic auth layer.
+3. [x] Restored Ollama AI API Integration: Established dynamic Traefik file provider routing (`dynamic/ollama.yml`) to proxy to AI-101 (`192.168.50.242:11434`).
+4. [x] Fixed WireGuard Dashboard Interaction: Implemented safe `"disabled"` href/target handling and React preventDefault to bypass JS-blocking.
+5. [x] Cleaned Up Ingress Overlaps: Set `traefik.enable=false` on the legacy dashboard service.
+
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.

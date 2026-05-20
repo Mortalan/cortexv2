@@ -1,6 +1,13 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 20 MAY 2026 - EMERGENCY INGRESS & GATEWAY STABILIZATION (MOLE RUN)
+- **NetLock RMM Core Stability:** Injected missing `AllowPublicKeyRetrieval=True` MySQL parameters, bypass options, and dual environment variables to bypass strict boot validation and C# binding flaws. Resolved 404/502 Gateway crashes.
+- **Velociraptor EDR Restoration:** Removed `authelia@docker` middleware wrapper from Velociraptor to resolve the 401 loop caused by double-wrapping native basic authentication.
+- **Ollama AI Proxying:** Deployed a file provider configuration (`dynamic/ollama.yml`) to correctly route external LLM requests through Traefik to `192.168.50.242:11434`, fixing the 404 API connection error.
+- **WireGuard UX Fix:** Programmed clean `"disabled"` state parameters inside `App.tsx` and custom `onClick` logic calling `e.preventDefault()`, resolving React security JS-blocking errors on standard browser events.
+- **Traefik Route Cleanup:** Appended trailing slash to the Traefik dashboard link inside React state, and disabled the obsolete legacy HTML dashboard container labels to resolve route conflict overlaps.
+
 ### 20 MAY 2026 - SOVEREIGN CONTROL & ACTIVE MITIGATION CONSOLE (PHASE 16.2)
 - **Reflex Daemon Route Alignment:** Refactored daemon endpoint controls (`/mode` and `/playbook`) to `/api/mode` and `/api/playbook` to ensure structural alignment with Traefik reverse proxy and the dashboard UI.
 - **Python Type Annotations:** Enhanced `reflex_daemon.py` codebase integrity by declaring strict type hints on all helper and route handler functions.
