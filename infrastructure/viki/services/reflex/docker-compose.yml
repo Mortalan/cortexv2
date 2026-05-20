@@ -33,7 +33,7 @@ services:
       - vector
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.reflex.rule=Host(`rmmservice.co.za`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.reflex.rule=(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api`)"
       - "traefik.http.routers.reflex.entrypoints=web"
       - "traefik.http.services.reflex.loadbalancer.server.port=9090"
 
