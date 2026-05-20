@@ -60,8 +60,8 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     const time = threeState.clock.getElapsedTime();
 
     if (group.current) {
-      // Subtle float offset in Y
-      group.current.position.y = -3.8 + Math.sin(time * 0.5) * 0.05;
+      // Subtle float offset in Y - raised from -3.8 to -2.6 to prevent bottom cut-off
+      group.current.position.y = -2.6 + Math.sin(time * 0.5) * 0.05;
       // Soft floating yaw sway
       group.current.rotation.y = Math.sin(time * 0.2) * 0.02;
     }
@@ -120,14 +120,18 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       neckBoneRef.current.rotation.y = THREE.MathUtils.lerp(neckBoneRef.current.rotation.y, targetHeadYaw * 0.25, 0.06);
       neckBoneRef.current.rotation.x = THREE.MathUtils.lerp(neckBoneRef.current.rotation.x, targetHeadPitch * 0.25, 0.06);
     }
-  });
+
+    // IMPORTANT: Since we specified a positive render loop priority (1),
+    // we must manually trigger the WebGL renderer after all our bone updates.
+    threeState.gl.render(threeState.scene, threeState.camera);
+  }, 1);
   
   return (
     <group ref={group}>
       <primitive 
         object={scene} 
         position={[0, 0, 0]} 
-        scale={1.2} 
+        scale={1.9} 
       />
     </group>
   );
@@ -152,7 +156,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, 0.2, 7.8], fov: 40 }} // Framed to capture hips, torso, legs cleanly
+          camera={{ position: [0, -0.2, 5.2], fov: 40 }} // Framed closer to enlarge her and capture waist-up perfectly
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
