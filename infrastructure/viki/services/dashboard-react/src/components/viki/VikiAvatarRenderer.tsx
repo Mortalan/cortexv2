@@ -4,7 +4,7 @@ import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three
 import * as THREE from 'three';
 
 // Component that handles loading and animating the 3D asset
-const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' }) => {
+const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   const { actions } = useAnimations(animations, scene);
@@ -13,6 +13,15 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const headBoneRef = useRef<THREE.Object3D | null>(null);
   const neckBoneRef = useRef<THREE.Object3D | null>(null);
   const spineBoneRef = useRef<THREE.Object3D | null>(null);
+  const lClavicleBoneRef = useRef<THREE.Object3D | null>(null);
+  const rClavicleBoneRef = useRef<THREE.Object3D | null>(null);
+  const lEyeBoneRef = useRef<THREE.Object3D | null>(null);
+  const rEyeBoneRef = useRef<THREE.Object3D | null>(null);
+  const rUpperarmBoneRef = useRef<THREE.Object3D | null>(null);
+  const rForearmBoneRef = useRef<THREE.Object3D | null>(null);
+
+  // Gesture state tracking
+  const gestureStateRef = useRef<{ name: 'none' | 'wave' | 'jolt'; startTime: number }>({ name: 'none', startTime: 0 });
 
   // Track mouse position globally
   const mouseRef = useRef({ x: 0, y: 0, lastMoved: 0 });
@@ -35,11 +44,23 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       headBoneRef.current = scene.getObjectByName('CC_Base_Head_039') || null;
       neckBoneRef.current = scene.getObjectByName('CC_Base_NeckTwist01_037') || null;
       spineBoneRef.current = scene.getObjectByName('CC_Base_Spine02_036') || null;
+      lClavicleBoneRef.current = scene.getObjectByName('CC_Base_L_Clavicle_050') || null;
+      rClavicleBoneRef.current = scene.getObjectByName('CC_Base_R_Clavicle_062') || null;
+      lEyeBoneRef.current = scene.getObjectByName('CC_Base_L_Eye_047') || null;
+      rEyeBoneRef.current = scene.getObjectByName('CC_Base_R_Eye_046') || null;
+      rUpperarmBoneRef.current = scene.getObjectByName('CC_Base_R_Upperarm_063') || null;
+      rForearmBoneRef.current = scene.getObjectByName('CC_Base_R_Forearm_064') || null;
 
       // Reset default rotations
       if (headBoneRef.current) headBoneRef.current.rotation.set(0, 0, 0);
       if (neckBoneRef.current) neckBoneRef.current.rotation.set(0, 0, 0);
       if (spineBoneRef.current) spineBoneRef.current.rotation.set(0, 0, 0);
+      if (lClavicleBoneRef.current) lClavicleBoneRef.current.rotation.set(0, 0, 0);
+      if (rClavicleBoneRef.current) rClavicleBoneRef.current.rotation.set(0, 0, 0);
+      if (lEyeBoneRef.current) lEyeBoneRef.current.rotation.set(0, 0, 0);
+      if (rEyeBoneRef.current) rEyeBoneRef.current.rotation.set(0, 0, 0);
+      if (rUpperarmBoneRef.current) rUpperarmBoneRef.current.rotation.set(0, 0, 0);
+      if (rForearmBoneRef.current) rForearmBoneRef.current.rotation.set(0, 0, 0);
     }
   }, [scene]);
 
@@ -72,6 +93,16 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       spineBoneRef.current.rotation.x = breathing;
     }
 
+    // Procedural Clavicle (Shoulder) Breathing elevation
+    if (lClavicleBoneRef.current) {
+      lClavicleBoneRef.current.rotation.z = -Math.sin(time * 1.5) * 0.005;
+      lClavicleBoneRef.current.rotation.x = Math.sin(time * 1.5) * 0.003;
+    }
+    if (rClavicleBoneRef.current) {
+      rClavicleBoneRef.current.rotation.z = Math.sin(time * 1.5) * 0.005;
+      rClavicleBoneRef.current.rotation.x = Math.sin(time * 1.5) * 0.003;
+    }
+
     // Determine target head angles based on mouse tracking or random sways
     let targetHeadYaw = 0;
     let targetHeadPitch = 0;
@@ -79,6 +110,11 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
 
     const now = Date.now();
     const isMouseActive = now - mouseRef.current.lastMoved < 4000; // active in last 4 seconds
+
+    // Automatically trigger alert jolt gesture on state change
+    if (state === 'alert' && gestureStateRef.current.name !== 'jolt') {
+      gestureStateRef.current = { name: 'jolt', startTime: Date.now() };
+    }
 
     if (state === 'thinking') {
       // Thinking state: Analytical gaze, looking upward and slightly to the left
@@ -121,13 +157,95 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       neckBoneRef.current.rotation.x = THREE.MathUtils.lerp(neckBoneRef.current.rotation.x, targetHeadPitch * 0.25, 0.06);
     }
 
+    // Procedural Eye Gaze Tracking
+    let targetEyeYaw = 0;
+    let targetEyePitch = 0;
+    if (state === 'idle' && isMouseActive) {
+      targetEyeYaw = mouseRef.current.x * 0.25;
+      targetEyePitch = mouseRef.current.y * 0.15;
+    } else {
+      targetEyeYaw = Math.sin(time * 0.4) * 0.04;
+      targetEyePitch = Math.cos(time * 0.3) * 0.02;
+    }
+
+    if (lEyeBoneRef.current) {
+      lEyeBoneRef.current.rotation.y = THREE.MathUtils.lerp(lEyeBoneRef.current.rotation.y, targetEyeYaw, 0.1);
+      lEyeBoneRef.current.rotation.x = THREE.MathUtils.lerp(lEyeBoneRef.current.rotation.x, targetEyePitch, 0.1);
+    }
+    if (rEyeBoneRef.current) {
+      rEyeBoneRef.current.rotation.y = THREE.MathUtils.lerp(rEyeBoneRef.current.rotation.y, targetEyeYaw, 0.1);
+      rEyeBoneRef.current.rotation.x = THREE.MathUtils.lerp(rEyeBoneRef.current.rotation.x, targetEyePitch, 0.1);
+    }
+
+    // Procedural Interactive Gestures
+    let targetUpperarmX = 0;
+    let targetUpperarmY = 0;
+    let targetUpperarmZ = 0;
+    let targetForearmX = 0;
+    let targetForearmY = 0;
+    let targetForearmZ = 0;
+
+    const gesture = gestureStateRef.current.name;
+    const gestureElapsed = (Date.now() - gestureStateRef.current.startTime) / 1000;
+
+    if (gesture === 'wave') {
+      if (gestureElapsed < 2.5) {
+        // Animate arm lift
+        targetUpperarmX = -0.4;
+        targetUpperarmZ = -1.2;
+        targetForearmY = 0.9;
+        // sinus waving
+        targetForearmZ = Math.sin(time * 10) * 0.35;
+      } else {
+        gestureStateRef.current.name = 'none';
+      }
+    } else if (gesture === 'jolt') {
+      if (gestureElapsed < 1.0) {
+        const joltIntensity = Math.sin(time * 50) * 0.05;
+        targetUpperarmZ = joltIntensity;
+        
+        // Rapid head shiver
+        if (headBoneRef.current) {
+          headBoneRef.current.rotation.y += Math.sin(time * 60) * 0.1;
+          headBoneRef.current.rotation.x += Math.cos(time * 60) * 0.06;
+        }
+        if (lClavicleBoneRef.current) {
+          lClavicleBoneRef.current.rotation.z += Math.sin(time * 55) * 0.04;
+        }
+        if (rClavicleBoneRef.current) {
+          rClavicleBoneRef.current.rotation.z -= Math.sin(time * 55) * 0.04;
+        }
+      } else {
+        gestureStateRef.current.name = 'none';
+      }
+    }
+
+    if (rUpperarmBoneRef.current) {
+      rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetUpperarmX, 0.08);
+      rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetUpperarmY, 0.08);
+      rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetUpperarmZ, 0.08);
+    }
+    if (rForearmBoneRef.current) {
+      rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetForearmX, 0.08);
+      rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetForearmY, 0.08);
+      rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetForearmZ, 0.08);
+    }
+
     // IMPORTANT: Since we specified a positive render loop priority (1),
     // we must manually trigger the WebGL renderer after all our bone updates.
     threeState.gl.render(threeState.scene, threeState.camera);
   }, 1);
   
+  const handlePointerDown = (e: any) => {
+    e.stopPropagation();
+    // Do not overwrite an ongoing jolt alert gesture
+    if (gestureStateRef.current.name !== 'jolt') {
+      gestureStateRef.current = { name: 'wave', startTime: Date.now() };
+    }
+  };
+
   return (
-    <group ref={group}>
+    <group ref={group} onPointerDown={handlePointerDown}>
       <primitive 
         object={scene} 
         position={[0, 0, 0]} 
@@ -139,7 +257,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
 
 interface RendererProps {
   assetPath: string; 
-  vikiState?: 'idle' | 'thinking' | 'speaking';
+  vikiState?: 'idle' | 'thinking' | 'speaking' | 'alert';
 }
 
 export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiState = 'idle' }) => {

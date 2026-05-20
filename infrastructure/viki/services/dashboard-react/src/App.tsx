@@ -399,7 +399,7 @@ function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [vikiState, setVikiState] = useState<'idle' | 'thinking' | 'speaking'>('idle');
+  const [vikiState, setVikiState] = useState<'idle' | 'thinking' | 'speaking' | 'alert'>('idle');
 
   // Real-time HUD states
   const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
@@ -494,11 +494,16 @@ function App() {
           setTelemetryEvents(prev => [data, ...prev].slice(0, 50));
 
           // Make Viki react to incoming live telemetry event!
-          setVikiState(Math.random() > 0.5 ? 'speaking' : 'thinking');
-          setTimeout(() => setVikiState('idle'), 3000);
+          const severity = (data.severity || data.type || "INFO").toUpperCase();
+          if (severity === "CRITICAL") {
+            setVikiState('alert');
+            setTimeout(() => setVikiState('idle'), 2000);
+          } else {
+            setVikiState(Math.random() > 0.5 ? 'speaking' : 'thinking');
+            setTimeout(() => setVikiState('idle'), 3000);
+          }
 
           // Elevate CRITICAL telemetry to active alerts if not already acknowledged
-          const severity = (data.severity || data.type || "INFO").toUpperCase();
           if (severity === "CRITICAL") {
             const message = data.message || (data.data && data.data.CommandLine) || "CRITICAL EVENT DETECTED";
             const source = data.source || "Vector";
