@@ -21,6 +21,9 @@ providers:
     endpoint: 'unix:///var/run/docker.sock'
     exposedByDefault: false
     network: netlock_netlock-network
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
 
 accessLog:
   filePath: '/var/log/traefik/access.log'

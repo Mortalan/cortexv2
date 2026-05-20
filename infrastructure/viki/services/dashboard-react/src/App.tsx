@@ -52,7 +52,7 @@ const servicesData = [
     items: [
       { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
       { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
-      { name: "Ollama AI", subtitle: "Neural Inference", url: "http://192.168.50.240:11434", icon: "🤖" },
+      { name: "Ollama AI", subtitle: "Neural Inference", url: "http://192.168.50.242:11434", icon: "🤖" },
     ],
   },
   {

@@ -6,11 +6,7 @@ services:
     volumes:
       - /mnt/data_lake/dashboard:/www/assets
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)"
-      - "traefik.http.routers.dashboard.entrypoints=web"
-      - "traefik.http.routers.dashboard.middlewares=authelia@docker"
-      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+      - "traefik.enable=false"
     networks:
       - netlock_netlock-network
 

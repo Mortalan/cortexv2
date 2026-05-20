@@ -1,0 +1,21 @@
+http:
+  middlewares:
+    strip-viki:
+      stripPrefix:
+        prefixes:
+          - "/api/viki"
+
+  routers:
+    viki-ollama:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/viki`)"
+      entryPoints:
+        - web
+      service: viki-ollama-service
+      middlewares:
+        - strip-viki
+
+  services:
+    viki-ollama-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.242:11434"
