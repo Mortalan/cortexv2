@@ -60,8 +60,8 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     const time = threeState.clock.getElapsedTime();
 
     if (group.current) {
-      // Subtle float offset in Y - raised from -3.8 to -2.6 to prevent bottom cut-off
-      group.current.position.y = -2.6 + Math.sin(time * 0.5) * 0.05;
+      // Subtle float offset in Y - set to -3.1 for a balanced vertical framing
+      group.current.position.y = -3.1 + Math.sin(time * 0.5) * 0.05;
       // Soft floating yaw sway
       group.current.rotation.y = Math.sin(time * 0.2) * 0.02;
     }
@@ -131,7 +131,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       <primitive 
         object={scene} 
         position={[0, 0, 0]} 
-        scale={1.9} 
+        scale={1.5} 
       />
     </group>
   );
@@ -156,7 +156,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, -0.2, 5.2], fov: 40 }} // Framed closer to enlarge her and capture waist-up perfectly
+          camera={{ position: [0, 0.0, 6.2], fov: 40 }} // Adjusted distance and vertical center to capture waist-up perfectly without clipping
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
