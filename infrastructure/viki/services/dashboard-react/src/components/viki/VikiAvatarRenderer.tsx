@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { Suspense, useEffect, useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,7 +7,21 @@ import * as THREE from 'three';
 const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
-  const { actions } = useAnimations(animations, group);
+  
+  // Clone and filter out upperarm and forearm animation tracks so they don't override our procedural controls
+  const filteredAnimations = useMemo(() => {
+    if (!animations) return [];
+    return animations.map(clip => {
+      const clonedClip = clip.clone();
+      clonedClip.tracks = clonedClip.tracks.filter(track => {
+        const name = track.name.toLowerCase();
+        return !name.includes('upperarm') && !name.includes('forearm');
+      });
+      return clonedClip;
+    });
+  }, [animations]);
+
+  const { actions } = useAnimations(filteredAnimations, group);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -377,14 +391,14 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       
       targetRUpperarmX = 0.1;
       targetRUpperarmY = 0.05;
-      targetRUpperarmZ = 1.35 + armSway;
+      targetRUpperarmZ = -1.35 - armSway;
       targetRForearmX = 0.0;
       targetRForearmY = 0.25;
       targetRForearmZ = 0.0;
 
       targetLUpperarmX = 0.1;
       targetLUpperarmY = -0.05;
-      targetLUpperarmZ = -1.35 - armSway;
+      targetLUpperarmZ = 1.35 + armSway;
       targetLForearmX = 0.0;
       targetLForearmY = -0.25;
       targetLForearmZ = 0.0;
@@ -400,7 +414,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
         // Keep left arm relaxed
         targetLUpperarmX = 0.1;
         targetLUpperarmY = -0.05;
-        targetLUpperarmZ = -1.35;
+        targetLUpperarmZ = 1.35;
         targetLForearmY = -0.25;
       } else {
         gestureStateRef.current.name = 'none';
@@ -410,9 +424,9 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
         const joltIntensity = Math.sin(time * 50) * 0.05;
         // Shiver while keeping them hanging downwards
         targetRUpperarmX = 0.1;
-        targetRUpperarmZ = 1.35 + joltIntensity;
+        targetRUpperarmZ = -1.35 - joltIntensity;
         targetLUpperarmX = 0.1;
-        targetLUpperarmZ = -1.35 - joltIntensity;
+        targetLUpperarmZ = 1.35 + joltIntensity;
         
         // Rapid head shiver
         if (headBoneRef.current) {
@@ -633,7 +647,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, -0.65, 6.7], fov: 42 }} // Lowered and pulled back to encompass the whole holographic platform and lower legs without clipping
+          camera={{ position: [0, -0.8, 7.8], fov: 40 }} // Lowered and pulled further back to encompass the whole avatar and platform without any clipping in narrow containers
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
@@ -649,7 +663,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
           </Suspense>
 
           <OrbitControls 
-            target={[0, -1.45, 0]}
+            target={[0, -1.5, 0]}
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.5} 
