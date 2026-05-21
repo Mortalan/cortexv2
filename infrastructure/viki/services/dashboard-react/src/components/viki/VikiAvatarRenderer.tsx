@@ -7,7 +7,7 @@ import * as THREE from 'three';
 const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
-  const { actions } = useAnimations(animations, scene);
+  const { actions } = useAnimations(animations, group);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -138,8 +138,8 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     const nowMs = Date.now();
 
     if (group.current) {
-      // Subtle float offset in Y - set to -3.1 for a balanced vertical framing
-      group.current.position.y = -3.1 + Math.sin(time * 0.5) * 0.05;
+      // Subtle float offset in Y - lowered base to -3.35 and reduced bobbing amplitude to 0.015 to feel grounded on platform
+      group.current.position.y = -3.35 + Math.sin(time * 0.4) * 0.015;
       // Soft floating yaw sway
       group.current.rotation.y = Math.sin(time * 0.2) * 0.02;
     }
@@ -390,15 +390,17 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       }
     }
 
-    if (rUpperarmBoneRef.current) {
-      rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetUpperarmX, 0.08);
-      rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetUpperarmY, 0.08);
-      rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetUpperarmZ, 0.08);
-    }
-    if (rForearmBoneRef.current) {
-      rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetForearmX, 0.08);
-      rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetForearmY, 0.08);
-      rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetForearmZ, 0.08);
+    if (gesture !== 'none') {
+      if (rUpperarmBoneRef.current) {
+        rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetUpperarmX, 0.08);
+        rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetUpperarmY, 0.08);
+        rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetUpperarmZ, 0.08);
+      }
+      if (rForearmBoneRef.current) {
+        rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetForearmX, 0.08);
+        rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetForearmY, 0.08);
+        rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetForearmZ, 0.08);
+      }
     }
 
     // IMPORTANT: Since we specified a positive render loop priority (1),
@@ -454,7 +456,7 @@ const CyberParticles = ({ count = 40, state }: { count?: number; state: 'idle' |
       array[i * 3 + 1] += speed;
       // Reset if float out of screen
       if (array[i * 3 + 1] > 3.0) {
-        array[i * 3 + 1] = -3.2;
+        array[i * 3 + 1] = -3.4;
         array[i * 3] = (Math.random() - 0.5) * 5;
       }
       // Subtle horizontal sway
@@ -517,7 +519,7 @@ const HolographicPlatform = ({ state }: { state: 'idle' | 'thinking' | 'speaking
   else if (state === 'speaking') color = '#ffb703';
 
   return (
-    <group position={[0, -3.2, 0]}>
+    <group position={[0, -3.4, 0]}>
       {/* Coordinate grid */}
       <gridHelper ref={gridRef} args={[7, 18, color, color]} />
       
@@ -586,7 +588,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, 0.0, 6.2], fov: 40 }} // Adjusted distance and vertical center to capture waist-up perfectly without clipping
+          camera={{ position: [0, -0.65, 6.7], fov: 42 }} // Lowered and pulled back to encompass the whole holographic platform and lower legs without clipping
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
