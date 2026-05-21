@@ -396,14 +396,14 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       
       targetRUpperarmX = 0.1;
       targetRUpperarmY = 0.05;
-      targetRUpperarmZ = -1.35 - armSway;
+      targetRUpperarmZ = 1.35 - armSway;
       targetRForearmX = 0.0;
       targetRForearmY = 0.25;
       targetRForearmZ = 0.0;
 
       targetLUpperarmX = 0.1;
       targetLUpperarmY = -0.05;
-      targetLUpperarmZ = 1.35 + armSway;
+      targetLUpperarmZ = -1.35 + armSway;
       targetLForearmX = 0.0;
       targetLForearmY = -0.25;
       targetLForearmZ = 0.0;
@@ -419,7 +419,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
         // Keep left arm relaxed
         targetLUpperarmX = 0.1;
         targetLUpperarmY = -0.05;
-        targetLUpperarmZ = 1.35;
+        targetLUpperarmZ = -1.35;
         targetLForearmY = -0.25;
       } else {
         gestureStateRef.current.name = 'none';
@@ -429,9 +429,9 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
         const joltIntensity = Math.sin(time * 50) * 0.05;
         // Shiver while keeping them hanging downwards
         targetRUpperarmX = 0.1;
-        targetRUpperarmZ = -1.35 - joltIntensity;
+        targetRUpperarmZ = 1.35 - joltIntensity;
         targetLUpperarmX = 0.1;
-        targetLUpperarmZ = 1.35 + joltIntensity;
+        targetLUpperarmZ = -1.35 + joltIntensity;
         
         // Rapid head shiver
         if (headBoneRef.current) {
@@ -485,7 +485,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       <primitive 
         object={scene} 
         position={[0, 0, 0]} 
-        scale={1.5} 
+        scale={1.15} 
       />
     </group>
   );
@@ -652,7 +652,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, -0.8, 7.8], fov: 40 }} // Lowered and pulled further back to encompass the whole avatar and platform without any clipping in narrow containers
+          camera={{ position: [0, -0.8, 5.0], fov: 40 }} // Closer and beautifully aligned waist-up framing
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
@@ -668,7 +668,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
           </Suspense>
 
           <OrbitControls 
-            target={[0, -1.5, 0]}
+            target={[0, -1.1, 0]}
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.5} 
