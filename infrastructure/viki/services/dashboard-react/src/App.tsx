@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { VikiAvatarRenderer } from "./components/viki/VikiAvatarRenderer";
-import { VikiChat } from "./components/viki/VikiChat";
 import "./App.css";
 
 interface ServiceStatus {
@@ -692,7 +691,6 @@ function App() {
                 vikiState={vikiState} 
               />
             </div>
-            <VikiChat onStateChange={(s) => setVikiState(s)} />
           </aside>
         )}
       </div>
