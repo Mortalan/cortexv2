@@ -7,7 +7,7 @@ import * as THREE from 'three';
 const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
-  const { actions } = useAnimations(animations, group);
+  const { actions } = useAnimations(animations, scene);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -17,6 +17,8 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const rClavicleBoneRef = useRef<THREE.Object3D | null>(null);
   const lEyeBoneRef = useRef<THREE.Object3D | null>(null);
   const rEyeBoneRef = useRef<THREE.Object3D | null>(null);
+  const lUpperarmBoneRef = useRef<THREE.Object3D | null>(null);
+  const lForearmBoneRef = useRef<THREE.Object3D | null>(null);
   const rUpperarmBoneRef = useRef<THREE.Object3D | null>(null);
   const rForearmBoneRef = useRef<THREE.Object3D | null>(null);
 
@@ -79,6 +81,8 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       rClavicleBoneRef.current = scene.getObjectByName('CC_Base_R_Clavicle_062') || null;
       lEyeBoneRef.current = scene.getObjectByName('CC_Base_L_Eye_047') || null;
       rEyeBoneRef.current = scene.getObjectByName('CC_Base_R_Eye_046') || null;
+      lUpperarmBoneRef.current = scene.getObjectByName('CC_Base_L_Upperarm_051') || null;
+      lForearmBoneRef.current = scene.getObjectByName('CC_Base_L_Forearm_052') || null;
       rUpperarmBoneRef.current = scene.getObjectByName('CC_Base_R_Upperarm_063') || null;
       rForearmBoneRef.current = scene.getObjectByName('CC_Base_R_Forearm_064') || null;
 
@@ -115,6 +119,8 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       if (rClavicleBoneRef.current) rClavicleBoneRef.current.rotation.set(0, 0, 0);
       if (lEyeBoneRef.current) lEyeBoneRef.current.rotation.set(0, 0, 0);
       if (rEyeBoneRef.current) rEyeBoneRef.current.rotation.set(0, 0, 0);
+      if (lUpperarmBoneRef.current) lUpperarmBoneRef.current.rotation.set(0, 0, 0);
+      if (lForearmBoneRef.current) lForearmBoneRef.current.rotation.set(0, 0, 0);
       if (rUpperarmBoneRef.current) rUpperarmBoneRef.current.rotation.set(0, 0, 0);
       if (rForearmBoneRef.current) rForearmBoneRef.current.rotation.set(0, 0, 0);
     }
@@ -347,32 +353,66 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       );
     }
 
-    // Procedural Interactive Gestures
-    let targetUpperarmX = 0;
-    let targetUpperarmY = 0;
-    let targetUpperarmZ = 0;
-    let targetForearmX = 0;
-    let targetForearmY = 0;
-    let targetForearmZ = 0;
+    // Procedural Interactive Gestures & natural, premium relaxed resting arm pose (hanging down by the side)
+    let targetRUpperarmX = 0;
+    let targetRUpperarmY = 0;
+    let targetRUpperarmZ = 0;
+    let targetRForearmX = 0;
+    let targetRForearmY = 0;
+    let targetRForearmZ = 0;
+
+    let targetLUpperarmX = 0;
+    let targetLUpperarmY = 0;
+    let targetLUpperarmZ = 0;
+    let targetLForearmX = 0;
+    let targetLForearmY = 0;
+    let targetLForearmZ = 0;
 
     const gesture = gestureStateRef.current.name;
     const gestureElapsed = (Date.now() - gestureStateRef.current.startTime) / 1000;
 
-    if (gesture === 'wave') {
+    if (gesture === 'none') {
+      // Natural resting arm pose with a very subtle breathing sway to look fluid and alive
+      const armSway = Math.sin(time * breathingSpeed) * 0.025;
+      
+      targetRUpperarmX = 0.1;
+      targetRUpperarmY = 0.05;
+      targetRUpperarmZ = 1.35 + armSway;
+      targetRForearmX = 0.0;
+      targetRForearmY = 0.25;
+      targetRForearmZ = 0.0;
+
+      targetLUpperarmX = 0.1;
+      targetLUpperarmY = -0.05;
+      targetLUpperarmZ = -1.35 - armSway;
+      targetLForearmX = 0.0;
+      targetLForearmY = -0.25;
+      targetLForearmZ = 0.0;
+    } else if (gesture === 'wave') {
       if (gestureElapsed < 2.5) {
-        // Animate arm lift
-        targetUpperarmX = -0.4;
-        targetUpperarmZ = -1.2;
-        targetForearmY = 0.9;
+        // Animate right arm lift
+        targetRUpperarmX = -0.4;
+        targetRUpperarmZ = -1.2;
+        targetRForearmY = 0.9;
         // sinus waving
-        targetForearmZ = Math.sin(time * 10) * 0.35;
+        targetRForearmZ = Math.sin(time * 10) * 0.35;
+
+        // Keep left arm relaxed
+        targetLUpperarmX = 0.1;
+        targetLUpperarmY = -0.05;
+        targetLUpperarmZ = -1.35;
+        targetLForearmY = -0.25;
       } else {
         gestureStateRef.current.name = 'none';
       }
     } else if (gesture === 'jolt') {
       if (gestureElapsed < 1.0) {
         const joltIntensity = Math.sin(time * 50) * 0.05;
-        targetUpperarmZ = joltIntensity;
+        // Shiver while keeping them hanging downwards
+        targetRUpperarmX = 0.1;
+        targetRUpperarmZ = 1.35 + joltIntensity;
+        targetLUpperarmX = 0.1;
+        targetLUpperarmZ = -1.35 - joltIntensity;
         
         // Rapid head shiver
         if (headBoneRef.current) {
@@ -390,17 +430,25 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       }
     }
 
-    if (gesture !== 'none') {
-      if (rUpperarmBoneRef.current) {
-        rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetUpperarmX, 0.08);
-        rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetUpperarmY, 0.08);
-        rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetUpperarmZ, 0.08);
-      }
-      if (rForearmBoneRef.current) {
-        rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetForearmX, 0.08);
-        rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetForearmY, 0.08);
-        rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetForearmZ, 0.08);
-      }
+    if (rUpperarmBoneRef.current) {
+      rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetRUpperarmX, 0.08);
+      rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetRUpperarmY, 0.08);
+      rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetRUpperarmZ, 0.08);
+    }
+    if (rForearmBoneRef.current) {
+      rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetRForearmX, 0.08);
+      rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetRForearmY, 0.08);
+      rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetRForearmZ, 0.08);
+    }
+    if (lUpperarmBoneRef.current) {
+      lUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.x, targetLUpperarmX, 0.08);
+      lUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.y, targetLUpperarmY, 0.08);
+      lUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.z, targetLUpperarmZ, 0.08);
+    }
+    if (lForearmBoneRef.current) {
+      lForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.x, targetLForearmX, 0.08);
+      lForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.y, targetLForearmY, 0.08);
+      lForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.z, targetLForearmZ, 0.08);
     }
 
     // IMPORTANT: Since we specified a positive render loop priority (1),
