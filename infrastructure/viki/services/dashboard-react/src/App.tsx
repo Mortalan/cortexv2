@@ -681,10 +681,17 @@ function App() {
 
         {isAdmin && (
           <aside className="monitor-sidebar">
-            <VikiAvatarRenderer 
-              assetPath="/assets/viki_android_real.glb" 
-              vikiState={vikiState} 
-            />
+            <div 
+              onClick={() => window.open("/?mode=viki-chat", "_blank")}
+              className="viki-sidebar-trigger-wrapper"
+              title="Click to establish dedicated quantum neural link"
+            >
+              <div className="viki-trigger-hint font-space">QUANTUM LINK ACCESS</div>
+              <VikiAvatarRenderer 
+                assetPath="/assets/viki_android_real.glb" 
+                vikiState={vikiState} 
+              />
+            </div>
             <VikiChat onStateChange={(s) => setVikiState(s)} />
           </aside>
         )}
