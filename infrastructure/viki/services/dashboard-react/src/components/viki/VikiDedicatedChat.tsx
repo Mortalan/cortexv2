@@ -5,17 +5,32 @@ import './VikiDedicatedChat.css';
 interface Message {
   role: 'user' | 'viki';
   content: string;
-  modelUsed?: 'viki' | 'codellama';
+  modelUsed?: 'viki' | 'codellama' | 'gpt-4o';
 }
 
 export const VikiDedicatedChat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    { 
-      role: 'viki', 
-      content: 'CORTEX sovereign systems activated. Cognitive bridge established. I am VIKI, your cybernetic command intelligence. Transmit query, technician.',
-      modelUsed: 'viki'
+  // Initialize state from localStorage for persistent chat logs
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem('viki_chat_history');
+      return saved ? JSON.parse(saved) : [
+        { 
+          role: 'viki', 
+          content: 'CORTEX sovereign systems activated. Cognitive bridge established. I am VIKI, your cybernetic command intelligence. Transmit query, technician.',
+          modelUsed: 'viki'
+        }
+      ];
+    } catch {
+      return [
+        { 
+          role: 'viki', 
+          content: 'CORTEX sovereign systems activated. Cognitive bridge established. I am VIKI, your cybernetic command intelligence. Transmit query, technician.',
+          modelUsed: 'viki'
+        }
+      ];
     }
-  ]);
+  });
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [vikiState, setVikiState] = useState<'idle' | 'thinking' | 'speaking' | 'alert'>('idle');
@@ -25,9 +40,32 @@ export const VikiDedicatedChat: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // Hybrid Core and Model Override States
+  const [modelMode, setModelMode] = useState<'auto' | 'viki' | 'codellama' | 'gpt-4o'>(() => {
+    return (localStorage.getItem('viki_model_mode') as any) || 'auto';
+  });
+  const [openaiKey, setOpenaiKey] = useState(() => {
+    return localStorage.getItem('viki_openai_key') || '';
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
   // References
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Save chat history and settings to localStorage on state changes
+  useEffect(() => {
+    localStorage.setItem('viki_chat_history', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('viki_model_mode', modelMode);
+  }, [modelMode]);
+
+  useEffect(() => {
+    localStorage.setItem('viki_openai_key', openaiKey);
+  }, [openaiKey]);
 
   // Auto Scroll
   useEffect(() => {
@@ -86,7 +124,14 @@ export const VikiDedicatedChat: React.FC = () => {
     return codeKeywords.some(keyword => lowerText.includes(keyword));
   };
 
-  const currentTypingModel = detectCodingNeed(input) ? 'codellama' : 'viki';
+  // Determine active model to showcase in Badge or route to
+  const getActiveModel = (textInput: string): 'viki' | 'codellama' | 'gpt-4o' => {
+    if (modelMode !== 'auto') {
+      return modelMode === 'gpt-4o' ? 'gpt-4o' : (modelMode as 'viki' | 'codellama');
+    }
+    return detectCodingNeed(textInput) ? 'codellama' : 'viki';
+  };
+
 
   // Speech Synthesis
   const speakResponse = (text: string) => {
@@ -137,44 +182,95 @@ export const VikiDedicatedChat: React.FC = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  const sendMessage = async (textToSend?: string) => {
-    const rawMessage = textToSend || input;
-    if (!rawMessage.trim() || isLoading) return;
+  const updateLastMessage = (content: string) => {
+    setMessages(prev => {
+      const next = [...prev];
+      if (next.length > 0) {
+        next[next.length - 1] = {
+          ...next[next.length - 1],
+          content: content
+        };
+      }
+      return next;
+    });
+  };
+
+  const sendMessage = async (textToSend?: string, forceChatGPT: boolean = false) => {
+    const rawMessage = textToSend !== undefined ? textToSend : input;
+    if (textToSend === undefined && !rawMessage.trim()) return;
+    if (isLoading) return;
 
     const userQuery = rawMessage.trim();
-    setInput('');
+    if (textToSend !== undefined || rawMessage.trim()) {
+      setInput('');
+    }
     
-    // Detect which model to send to
-    const modelToUse = detectCodingNeed(userQuery) ? 'codellama' : 'viki';
+    // Choose model
+    const modelToUse = forceChatGPT ? 'gpt-4o' : getActiveModel(userQuery);
 
-    setMessages(prev => [...prev, { role: 'user', content: userQuery }]);
+    if (modelToUse === 'gpt-4o' && !openaiKey.trim()) {
+      alert('OpenAI Key is missing. Please configure it in settings to enable the ChatGPT Hybrid Core.');
+      setShowSettings(true);
+      return;
+    }
+
+    // Only append user message if it is not a retry
+    if (textToSend !== undefined || rawMessage.trim()) {
+      setMessages(prev => [...prev, { role: 'user', content: userQuery }]);
+    }
+    
     setIsLoading(true);
     setVikiState('thinking');
 
     try {
+      // Gather clean chat history
       const chatHistory = messages.map(m => ({
         role: m.role === 'viki' ? 'assistant' : 'user',
         content: m.content
       }));
 
-      const response = await fetch('/api/viki/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages: [...chatHistory, { role: 'user', content: userQuery }],
-          stream: true,
-          keep_alive: -1
-        }),
-      });
+      let response;
+      if (modelToUse === 'gpt-4o') {
+        // Stream directly from OpenAI API
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: chatHistory.map(h => ({
+              role: h.role === 'assistant' ? 'assistant' : 'user',
+              content: h.content
+            })).concat({ role: 'user', content: userQuery }),
+            stream: true
+          })
+        });
+      } else {
+        // Stream from Local Ollama Core
+        response = await fetch('/api/viki/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: modelToUse,
+            messages: [...chatHistory, { role: 'user', content: userQuery }],
+            stream: true,
+            keep_alive: -1
+          }),
+        });
+      }
 
-      if (!response.ok) throw new Error('Neural link failure');
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Neural link failure');
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       if (!reader) throw new Error('No reader interface available');
 
-      // Append initial empty Viki bubble so we can stream into it
+      // Append placeholder Viki bubble
       setMessages(prev => [...prev, { 
         role: 'viki', 
         content: '',
@@ -191,44 +287,58 @@ export const VikiDedicatedChat: React.FC = () => {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep partial line in buffer
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const parsed = JSON.parse(line);
-            const delta = parsed.message?.content || '';
-            if (delta) {
-              if (!hasStartedStreaming) {
-                hasStartedStreaming = true;
-                setVikiState('idle'); // Stop thinking, text is flowing!
-              }
-              fullContent += delta;
-              setMessages(prev => {
-                const next = [...prev];
-                if (next.length > 0) {
-                  next[next.length - 1] = {
-                    ...next[next.length - 1],
-                    content: fullContent
-                  };
+          const cleanLine = line.trim();
+          if (!cleanLine) continue;
+
+          if (modelToUse === 'gpt-4o') {
+            if (cleanLine === 'data: [DONE]') continue;
+            if (cleanLine.startsWith('data: ')) {
+              try {
+                const jsonStr = cleanLine.substring(6);
+                const parsed = JSON.parse(jsonStr);
+                const delta = parsed.choices?.[0]?.delta?.content || '';
+                if (delta) {
+                  if (!hasStartedStreaming) {
+                    hasStartedStreaming = true;
+                    setVikiState('idle');
+                  }
+                  fullContent += delta;
+                  updateLastMessage(fullContent);
                 }
-                return next;
-              });
+              } catch (e) {
+                // Buffer line segment
+              }
             }
-          } catch (e) {
-            console.error('Error parsing stream chunk:', e);
+          } else {
+            try {
+              const parsed = JSON.parse(cleanLine);
+              const delta = parsed.message?.content || '';
+              if (delta) {
+                if (!hasStartedStreaming) {
+                  hasStartedStreaming = true;
+                  setVikiState('idle');
+                }
+                fullContent += delta;
+                updateLastMessage(fullContent);
+              }
+            } catch (e) {
+              // Buffer segment
+            }
           }
         }
       }
 
-      // Read-back once stream completely finishes
       speakResponse(fullContent);
       
-    } catch (error) {
+    } catch (error: any) {
+      console.error('API Error:', error);
       setMessages(prev => [...prev, { 
         role: 'viki', 
-        content: 'Emergency Alert: Connection to neural cortex has been severed.',
-        modelUsed: 'viki'
+        content: `Emergency Alert: Neural link failure. ${error.message || 'Connection severed.'}`,
+        modelUsed: modelToUse
       }]);
       setVikiState('alert');
       setTimeout(() => setVikiState('idle'), 3000);
@@ -257,13 +367,56 @@ export const VikiDedicatedChat: React.FC = () => {
     });
   };
 
+  const handleClearHistory = () => {
+    if (window.confirm("Are you sure you want to purge all neural logs? This action is irreversible.")) {
+      const initial: Message[] = [
+        { 
+          role: 'viki', 
+          content: 'CORTEX neural logs purged. Systems restarted. Ready for fresh operations, technician.',
+          modelUsed: 'viki'
+        }
+      ];
+      setMessages(initial);
+      localStorage.setItem('viki_chat_history', JSON.stringify(initial));
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setVikiState('idle');
+    }
+  };
+
   const handleBack = () => {
-    // Mute/Cancel voice when exiting
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-    // Return to main dashboard
     window.location.search = '';
+  };
+
+  // Find last user query to support retry feature
+  const getLastUserQuery = (index: number): string | null => {
+    for (let i = index - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        return messages[i].content;
+      }
+    }
+    return null;
+  };
+
+  const handleOffloadRetry = (index: number) => {
+    const query = getLastUserQuery(index);
+    if (!query) return;
+
+    if (!openaiKey.trim()) {
+      alert('OpenAI Key is missing. Please configure it in settings to retry with ChatGPT.');
+      setShowSettings(true);
+      return;
+    }
+
+    // Remove Viki's failed/unsatisfactory response
+    setMessages(prev => prev.filter((_, i) => i !== index));
+    
+    // Trigger ChatGPT query
+    sendMessage(query, true);
   };
 
   return (
@@ -276,6 +429,25 @@ export const VikiDedicatedChat: React.FC = () => {
         <button className="back-btn" onClick={handleBack}>
           <span className="btn-arrow">«</span> RETURN TO COMMAND CONSOLE
         </button>
+        
+        <div className="header-actions">
+          <button 
+            className={`settings-toggle-btn ${showSettings ? 'active' : ''}`}
+            onClick={() => setShowSettings(!showSettings)}
+            title="Configure Hybrid Core Settings"
+          >
+            ⚙ HYBRID SYSTEM SETTINGS
+          </button>
+          
+          <button 
+            className="clear-logs-btn"
+            onClick={handleClearHistory}
+            title="Purge all local neural logs"
+          >
+            ☣ PURGE NEURAL LOGS
+          </button>
+        </div>
+
         <div className="header-info">
           <div className="status-label">
             <span className="blinking-dot"></span>
@@ -314,18 +486,83 @@ export const VikiDedicatedChat: React.FC = () => {
 
         {/* Right Side: Interactive Dialogue box */}
         <div className="chat-console-viewport glassmorphic">
-          {/* Active Model Indicator Strip */}
+          
+          {/* Slide-down Settings Panel */}
+          {showSettings && (
+            <div className="hybrid-settings-panel glassmorphic">
+              <h3 className="font-space">⚙ HYBRID COGNITIVE CORE CONFIGURATION</h3>
+              <p className="settings-desc font-space">
+                Configure cloud-based cognitive nodes to offload complex analytical, scripting, or logical tasks when local models require expansion.
+              </p>
+              
+              <div className="settings-form font-space">
+                <div className="settings-group">
+                  <label htmlFor="openai-key">OPENAI API KEY (GPT-4o):</label>
+                  <div className="key-input-wrapper">
+                    <input
+                      id="openai-key"
+                      type={showKey ? 'text' : 'password'}
+                      value={openaiKey}
+                      onChange={(e) => setOpenaiKey(e.target.value)}
+                      placeholder="sk-proj-..."
+                    />
+                    <button 
+                      type="button" 
+                      className="key-visible-btn"
+                      onClick={() => setShowKey(!showKey)}
+                    >
+                      {showKey ? 'HIDE' : 'SHOW'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="settings-info-badge">
+                  <span className="badge-bullet"></span>
+                  API Key is stored locally and securely in your browser's LocalStorage.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Active Model Selector Strip */}
           <div className="model-indicator-bar">
-            <span className="node-label font-space">NEURAL COGNITIVE BRIDGES:</span>
+            <span className="node-label font-space">NEURAL ROUTING CONTROL:</span>
             <div className="node-badges">
-              <div className={`node-badge viki ${currentTypingModel === 'viki' ? 'active' : ''}`}>
+              <button 
+                className={`node-badge pill auto ${modelMode === 'auto' ? 'active' : ''}`}
+                onClick={() => setModelMode('auto')}
+                title="Automatically route queries based on keyword heuristic analysis"
+              >
                 <span className="badge-glow"></span>
-                VIKI COGNITRON (viki)
-              </div>
-              <div className={`node-badge codellama ${currentTypingModel === 'codellama' ? 'active' : ''}`}>
+                [🤖 AUTO COGNITION]
+              </button>
+              
+              <button 
+                className={`node-badge pill viki ${modelMode === 'viki' ? 'active' : ''}`}
+                onClick={() => setModelMode('viki')}
+                title="Force routing to local Viki customized cognitive base"
+              >
                 <span className="badge-glow"></span>
-                CODER SPECIALIST (codellama)
-              </div>
+                VIKI (LOCAL)
+              </button>
+              
+              <button 
+                className={`node-badge pill codellama ${modelMode === 'codellama' ? 'active' : ''}`}
+                onClick={() => setModelMode('codellama')}
+                title="Force routing to local CodeLlama model"
+              >
+                <span className="badge-glow"></span>
+                CODER SPECIALIST (LOCAL)
+              </button>
+              
+              <button 
+                className={`node-badge pill gpt4o ${modelMode === 'gpt-4o' ? 'active' : ''}`}
+                onClick={() => setModelMode('gpt-4o')}
+                title="Force routing to OpenAI GPT-4o Hybrid Core"
+              >
+                <span className="badge-glow"></span>
+                GPT-4o (HYBRID)
+              </button>
             </div>
           </div>
 
@@ -343,7 +580,7 @@ export const VikiDedicatedChat: React.FC = () => {
                     </span>
                     {msg.role === 'viki' && msg.modelUsed && (
                       <span className={`model-tag ${msg.modelUsed}`}>
-                        {msg.modelUsed === 'codellama' ? 'codellama' : 'viki'}
+                        {msg.modelUsed === 'codellama' ? 'codellama' : msg.modelUsed === 'gpt-4o' ? 'gpt-4o' : 'viki'}
                       </span>
                     )}
                   </div>
@@ -353,13 +590,26 @@ export const VikiDedicatedChat: React.FC = () => {
                   </div>
 
                   {msg.role === 'viki' && (
-                    <button 
-                      className="copy-bubble-btn"
-                      onClick={() => handleCopy(msg.content, i)}
-                      title="Copy Output"
-                    >
-                      {copiedIndex === i ? '✓ COPIED' : '⧉ COPY OUTPUT'}
-                    </button>
+                    <div className="bubble-actions">
+                      <button 
+                        className="copy-bubble-btn"
+                        onClick={() => handleCopy(msg.content, i)}
+                        title="Copy Output"
+                      >
+                        {copiedIndex === i ? '✓ COPIED' : '⧉ COPY OUTPUT'}
+                      </button>
+                      
+                      {/* Show Offload Retry button for Viki replies if OpenAI Key is configured and it was local */}
+                      {msg.modelUsed !== 'gpt-4o' && openaiKey.trim() && (
+                        <button 
+                          className="offload-retry-btn"
+                          onClick={() => handleOffloadRetry(i)}
+                          title="Offload this complex prompt to ChatGPT GPT-4o core"
+                        >
+                          ⚡ OFFLOAD TO GPT-4o
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -375,7 +625,11 @@ export const VikiDedicatedChat: React.FC = () => {
                   </div>
                   <div className="neural-thinking-loader">
                     <div className="pulse-circle"></div>
-                    <span className="font-space">SYNTHESIZING COGNITIVE RESPONSE...</span>
+                    <span className="font-space">
+                      {modelMode === 'gpt-4o' || (modelMode === 'auto' && detectCodingNeed(input))
+                        ? 'SYNTHESIZING ADVANCED COGNITIVE STRUCTURE...'
+                        : 'SYNTHESIZING LOCAL COGNITIVE RESPONSE...'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -409,7 +663,6 @@ export const VikiDedicatedChat: React.FC = () => {
               className={`mute-trigger-btn ${isMuted ? 'muted' : ''}`}
               onClick={() => {
                 if (!isMuted) {
-                  // Cancel if active
                   if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     setVikiState('idle');
