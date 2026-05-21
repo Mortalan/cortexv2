@@ -11,14 +11,19 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   // Clone and filter out upperarm and forearm animation tracks so they don't override our procedural controls
   const filteredAnimations = useMemo(() => {
     if (!animations) return [];
-    return animations.map(clip => {
+    console.log("Original tracks count:", animations[0]?.tracks.length);
+    const filtered = animations.map(clip => {
       const clonedClip = clip.clone();
       clonedClip.tracks = clonedClip.tracks.filter(track => {
         const name = track.name.toLowerCase();
-        return !name.includes('upperarm') && !name.includes('forearm');
+        const shouldKeep = !name.includes('upperarm') && !name.includes('forearm');
+        return shouldKeep;
       });
       return clonedClip;
     });
+    console.log("Filtered tracks count:", filtered[0]?.tracks.length);
+    console.log("Filtered track names:", filtered[0]?.tracks.map(t => t.name));
+    return filtered;
   }, [animations]);
 
   const { actions } = useAnimations(filteredAnimations, group);
