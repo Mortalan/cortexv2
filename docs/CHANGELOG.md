@@ -1,6 +1,13 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 21 MAY 2026 - VIKI DEDICATED COCKPIT, VOICE INTERFACE & NEURAL ARCHIVE (MOLE RUN)
+- **Dedicated Chat Cockpit (`/?mode=viki-chat`):** Deployed a dedicated fullscreen glassmorphic conversation workspace for VIKI, separating full dialog interfaces from standard dashboard widgets.
+- **Bi-Directional Voice Interface (STT/TTS):** Wired real-time Speech-to-Text microphone capturing using Web Speech Recognition, and Speech-to-Synthesis output mapping to premium female vocal profiles, with toggleable mute controls.
+- **Hybrid Cognitive Routing:** Implemented intelligent prompt analysis that dynamically routes tasks between local Viki LLM, CodeLlama coding specialist, or OpenAI GPT-4o hybrid core (utilizing secure local API keys). Appended manual routing override buttons.
+- **Neural Archive Sidebar:** Engineered a collapsible multi-session sidebar allowing technicians to CRUD conversations. Includes dynamic auto-naming from user queries and an auto-migration script converting legacy history to "Restored Operational Log".
+- **Avatar Kinetics Realignment:** Corrected mesh rigging, bone rotation matrices, and priority render cycles to resolve arm alignment glitches, rendering natural cybernetic posturing and tracking.
+
 ### 21 MAY 2026 - NETLOCK WEB CONSOLE DIAGNOSTICS & VIKI PREPARATION
 - **NetLock Certificate Restoration:** Substituted fragile symlinks in remote `/home/netlock/certificates/` with direct copies of the production wild-card certificates (`dummy.pfx` and `cortex_dummy.pfx`), decryptable under password `"dummy"`.
 - **Members Portal Sync Bypass:** Integrated `MembersPortal__SkipSync=true` environment parameters for `netlock-rmm-server`, bypassing 429 API rate limits that crashed the backend service loop.
