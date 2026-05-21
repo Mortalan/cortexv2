@@ -8,7 +8,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   
-  const { actions } = useAnimations(animations, group);
+  const { actions } = useAnimations(animations, scene);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -120,10 +120,6 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       if (rClavicleBoneRef.current) rClavicleBoneRef.current.rotation.set(0, 0, 0);
       if (lEyeBoneRef.current) lEyeBoneRef.current.rotation.set(0, 0, 0);
       if (rEyeBoneRef.current) rEyeBoneRef.current.rotation.set(0, 0, 0);
-      if (lUpperarmBoneRef.current) lUpperarmBoneRef.current.rotation.set(0, 0, 0);
-      if (lForearmBoneRef.current) lForearmBoneRef.current.rotation.set(0, 0, 0);
-      if (rUpperarmBoneRef.current) rUpperarmBoneRef.current.rotation.set(0, 0, 0);
-      if (rForearmBoneRef.current) rForearmBoneRef.current.rotation.set(0, 0, 0);
     }
   }, [scene]);
 
