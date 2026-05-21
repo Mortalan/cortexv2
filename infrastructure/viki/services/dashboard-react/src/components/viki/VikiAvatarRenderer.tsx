@@ -352,32 +352,61 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       );
     }
 
-    // Procedural Interactive Gestures & built-in natural arm posture
+    // Procedural Interactive Gestures & relaxed resting arm drape
+    let targetRUpperarmX = 0;
+    let targetRUpperarmY = 0;
+    let targetRUpperarmZ = 0;
+    let targetRForearmX = 0;
+    let targetRForearmY = 0;
+    let targetRForearmZ = 0;
+
+    let targetLUpperarmX = 0;
+    let targetLUpperarmY = 0;
+    let targetLUpperarmZ = 0;
+    let targetLForearmX = 0;
+    let targetLForearmY = 0;
+    let targetLForearmZ = 0;
+
+    // Default left arm resting drape (relaxed hanging at the side with subtle breathing motion)
+    const leftArmSway = Math.sin(time * breathingSpeed) * 0.025;
+    targetLUpperarmZ = 1.3 + leftArmSway;
+    targetLUpperarmY = 0.15;
+    targetLUpperarmX = 0.0;
+    targetLForearmX = 0.45;
+    targetLForearmY = 0.0;
+    targetLForearmZ = 0.0;
+
+    // Default right arm resting drape (relaxed hanging at the side with subtle breathing motion)
+    const rightArmSway = Math.sin(time * breathingSpeed) * 0.025;
+    targetRUpperarmZ = -1.3 - rightArmSway;
+    targetRUpperarmY = -0.15;
+    targetRUpperarmX = 0.0;
+    targetRForearmX = 0.45;
+    targetRForearmY = 0.0;
+    targetRForearmZ = 0.0;
+
     const gesture = gestureStateRef.current.name;
     const gestureElapsed = (Date.now() - gestureStateRef.current.startTime) / 1000;
 
     if (gesture === 'wave') {
       if (gestureElapsed < 2.5) {
-        // Animate right arm lift for hello greeting gesture
-        const targetRUpperarmX = -0.4;
-        const targetRUpperarmZ = -1.2;
-        const targetRForearmY = 0.9;
-        const targetRForearmZ = Math.sin(time * 10) * 0.35; // Waving motion
-
-        if (rUpperarmBoneRef.current) {
-          rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetRUpperarmX, 0.08);
-          rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetRUpperarmZ, 0.08);
-        }
-        if (rForearmBoneRef.current) {
-          rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetRForearmY, 0.08);
-          rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetRForearmZ, 0.08);
-        }
+        // Override right arm lift for hello greeting gesture
+        targetRUpperarmX = -0.4;
+        targetRUpperarmY = 0.0;
+        targetRUpperarmZ = -1.2;
+        targetRForearmX = 0.0;
+        targetRForearmY = 0.9;
+        targetRForearmZ = Math.sin(time * 10) * 0.35; // Waving motion
       } else {
         gestureStateRef.current.name = 'none';
       }
     } else if (gesture === 'jolt') {
       if (gestureElapsed < 1.0) {
-        // Rapid head shiver for alert state, let built-in skeleton handle arms
+        // Rapid head shiver for alert state, add micro-shiver to resting arm drape
+        const joltSway = Math.sin(time * 50) * 0.04;
+        targetLUpperarmZ += joltSway;
+        targetRUpperarmZ -= joltSway;
+
         if (headBoneRef.current) {
           headBoneRef.current.rotation.y += Math.sin(time * 60) * 0.1;
           headBoneRef.current.rotation.x += Math.cos(time * 60) * 0.06;
@@ -391,6 +420,28 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       } else {
         gestureStateRef.current.name = 'none';
       }
+    }
+
+    // Apply LERPed arm rotations to override animation mixer
+    if (lUpperarmBoneRef.current) {
+      lUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.x, targetLUpperarmX, 0.08);
+      lUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.y, targetLUpperarmY, 0.08);
+      lUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.z, targetLUpperarmZ, 0.08);
+    }
+    if (lForearmBoneRef.current) {
+      lForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.x, targetLForearmX, 0.08);
+      lForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.y, targetLForearmY, 0.08);
+      lForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.z, targetLForearmZ, 0.08);
+    }
+    if (rUpperarmBoneRef.current) {
+      rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetRUpperarmX, 0.08);
+      rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetRUpperarmY, 0.08);
+      rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetRUpperarmZ, 0.08);
+    }
+    if (rForearmBoneRef.current) {
+      rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetRForearmX, 0.08);
+      rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetRForearmY, 0.08);
+      rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetRForearmZ, 0.08);
     }
 
   });
