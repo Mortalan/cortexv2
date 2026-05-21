@@ -163,23 +163,66 @@ export const VikiDedicatedChat: React.FC = () => {
         body: JSON.stringify({
           model: modelToUse,
           messages: [...chatHistory, { role: 'user', content: userQuery }],
-          stream: false
+          stream: true,
+          keep_alive: -1
         }),
       });
 
       if (!response.ok) throw new Error('Neural link failure');
 
-      const data = await response.json();
-      const reply = data.message.content;
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error('No reader interface available');
 
+      // Append initial empty Viki bubble so we can stream into it
       setMessages(prev => [...prev, { 
         role: 'viki', 
-        content: reply,
+        content: '',
         modelUsed: modelToUse
       }]);
-      
-      // Trigger voice read-back
-      speakResponse(reply);
+
+      let fullContent = '';
+      let buffer = '';
+      let hasStartedStreaming = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep partial line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            const delta = parsed.message?.content || '';
+            if (delta) {
+              if (!hasStartedStreaming) {
+                hasStartedStreaming = true;
+                setVikiState('idle'); // Stop thinking, text is flowing!
+              }
+              fullContent += delta;
+              setMessages(prev => {
+                const next = [...prev];
+                if (next.length > 0) {
+                  next[next.length - 1] = {
+                    ...next[next.length - 1],
+                    content: fullContent
+                  };
+                }
+                return next;
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing stream chunk:', e);
+          }
+        }
+      }
+
+      // Read-back once stream completely finishes
+      speakResponse(fullContent);
       
     } catch (error) {
       setMessages(prev => [...prev, { 
