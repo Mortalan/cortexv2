@@ -8,7 +8,9 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   
-  const { actions } = useAnimations(animations, scene);
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+  const { actions } = useAnimations(animations, sceneRef);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -406,7 +408,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       <primitive 
         object={scene} 
         position={[0, 0, 0]} 
-        scale={1.3} 
+        scale={1.05} 
       />
     </group>
   );
@@ -573,7 +575,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, -0.8, 5.0], fov: 40 }} // Closer and beautifully aligned waist-up framing
+          camera={{ position: [0, -0.5, 7.8], fov: 40 }} // Beautifully aligned framing with zero clipping
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
@@ -589,7 +591,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
           </Suspense>
 
           <OrbitControls 
-            target={[0, -1.1, 0]}
+            target={[0, -1.35, 0]}
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.5} 
