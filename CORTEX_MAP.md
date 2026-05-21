@@ -9,7 +9,7 @@
 ## 1. SYSTEM STATUS SUMMARY
 - **Primary Node (VIKI):** 192.168.50.240 (Proxmox 9.x) - **ACTIVE**
 - **Gateway (HAProxy):** 192.168.50.239 - **ACTIVE**
-- **Core (NetLock/Identity):** 192.168.50.241 - **STABLE/LICENSED**
+- **Core (NetLock/Identity):** 192.168.50.241 - **STABLE/LICENSED** (RMM Server is ONLINE; Web Console diagnosed and pending certificate key configuration)
 - **AI (Intelligence):** 192.168.50.242 - **ACTIVE**
 - **Lake (Forensics):** 192.168.50.243 - **ACTIVE**
 - **Interface (VIKI Chat):** Integrated with Ollama & 3D Avatar - **ACTIVE**
@@ -29,9 +29,11 @@
 
 ---
 
-## 3. NEXT PHASE: AUTONOMOUS INCIDENT TRIAGE & AUTOMATED FEEDBACK LOOP
-- **Goal:** Deploying the n8n-to-Reflex autonomous classification pipeline with operator manual override.
-- **Next Step:** Configure the triage workflow in n8n to classify raw Vector events and push mitigation suggestions directly to the Active Mitigation Console.
+## 3. NEXT PHASE: NETLOCK & VIKI STABILIZATION
+- **Goal:** Finish resolving the NetLock Web Console boot error using newly discovered certificate configuration keys and deploy the Viki premium kinetic animations.
+- **Next Step:** 
+  1. Map `cert_path`, `cert_password`, `certificates_path`, and `certificates_password` root keys in `appsettings.json` and Docker Compose overrides to bind the verified certificates.
+  2. Implement eye tracking, clavicle breathing, hello wave, and security jolt animations in `VikiAvatarRenderer.tsx`.
 
 ---
-*Last Updated: Wednesday, 20 May 2026 (Refined Phase 16.2 Completion)*
+*Last Updated: Thursday, 21 May 2026 (Diagnostic findings on NetLock Web Console boot checks)*

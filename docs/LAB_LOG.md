@@ -47,5 +47,12 @@
 4. [x] Fixed WireGuard Dashboard Interaction: Implemented safe `"disabled"` href/target handling and React preventDefault to bypass JS-blocking.
 5. [x] Cleaned Up Ingress Overlaps: Set `traefik.enable=false` on the legacy dashboard service.
 
+**NetLock Web Console & Viki Kinetics Diagnostics (May 21, 2026)**
+1. [x] Replaced symlinks in `/home/netlock/certificates/` with direct copies of the production certificate (`dummy.pfx` and `cortex_dummy.pfx`, decryptable with password `"dummy"`).
+2. [x] Resolved `netlock-rmm-server` boot loop by applying `MembersPortal__SkipSync=true` override to bypass 429 rate limits.
+3. [x] Decompiled and investigated NetLock obfuscated DLLs: Uncovered that the console checks root configuration keys (`cert_path`, `cert_password`, `certificates_path`, `certificates_password`) instead of the custom Kestrel blocks on boot, leading to the certificate validation crash.
+4. [ ] Map the newly discovered root keys to correct paths and passwords in `appsettings.json` and Docker Compose.
+5. [ ] Refactor `VikiAvatarRenderer.tsx` and `App.tsx` to map eye bones (`CC_Base_L_Eye_047`, `CC_Base_R_Eye_046`), clavicles, and upper arms to implement premium procedurally-guided animations.
+
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.

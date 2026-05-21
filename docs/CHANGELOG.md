@@ -1,6 +1,12 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 21 MAY 2026 - NETLOCK WEB CONSOLE DIAGNOSTICS & VIKI PREPARATION
+- **NetLock Certificate Restoration:** Substituted fragile symlinks in remote `/home/netlock/certificates/` with direct copies of the production wild-card certificates (`dummy.pfx` and `cortex_dummy.pfx`), decryptable under password `"dummy"`.
+- **Members Portal Sync Bypass:** Integrated `MembersPortal__SkipSync=true` environment parameters for `netlock-rmm-server`, bypassing 429 API rate limits that crashed the backend service loop.
+- **Deobfuscated Config Discovery:** Traced custom validation routines in `NetLock_RMM_Web_Console.dll` to find undocumented configuration keys (`cert_path`, `cert_password`, `certificates_path`, and `certificates_password`) checked at the root level, explaining the console's container exit loop.
+- **Handoff Documentation:** Prepared the CORTEX roadmap, lab logs, and artifacts for the next agent session.
+
 ### 20 MAY 2026 - EMERGENCY INGRESS & GATEWAY STABILIZATION (MOLE RUN)
 - **NetLock RMM Core Stability:** Injected missing `AllowPublicKeyRetrieval=True` MySQL parameters, bypass options, and dual environment variables to bypass strict boot validation and C# binding flaws. Resolved 404/502 Gateway crashes.
 - **Velociraptor EDR Restoration:** Removed `authelia@docker` middleware wrapper from Velociraptor to resolve the 401 loop caused by double-wrapping native basic authentication.
