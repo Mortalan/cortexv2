@@ -7,7 +7,7 @@ import * as THREE from 'three';
 const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
-  const { actions } = useAnimations(animations, scene);
+  const { actions } = useAnimations(animations, group);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -451,10 +451,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       lForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.z, targetLForearmZ, 0.08);
     }
 
-    // IMPORTANT: Since we specified a positive render loop priority (1),
-    // we must manually trigger the WebGL renderer after all our bone updates.
-    threeState.gl.render(threeState.scene, threeState.camera);
-  }, 1);
+  });
   
   const handlePointerDown = (e: any) => {
     e.stopPropagation();
@@ -652,6 +649,7 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
           </Suspense>
 
           <OrbitControls 
+            target={[0, -1.45, 0]}
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.5} 
