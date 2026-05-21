@@ -9,6 +9,14 @@
     "CustomCertificatePath": "/app/certificates/cortex_dummy.pfx",
     "CustomCertificatePassword": "dummy"
   },
+  "cert_path": "/app/certificates/cortex_dummy.pfx",
+  "cert_password": "dummy",
+  "certificates_path": "/app/certificates",
+  "certificates_password": "dummy",
+  "CertPath": "/app/certificates/cortex_dummy.pfx",
+  "CertPassword": "dummy",
+  "CertificatesPath": "/app/certificates",
+  "CertificatesPassword": "dummy",
   "MySQL": {
     "Server": "mysql-container",
     "Port": 3306,

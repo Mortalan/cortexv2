@@ -30,6 +30,14 @@ services:
       - Kestrel__Https_Force=false
       - Kestrel__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - Kestrel__CustomCertificatePassword=dummy
+      - cert_path=/app/certificates/cortex_dummy.pfx
+      - cert_password=dummy
+      - certificates_path=/app/certificates
+      - certificates_password=dummy
+      - CertPath=/app/certificates/cortex_dummy.pfx
+      - CertPassword=dummy
+      - CertificatesPath=/app/certificates
+      - CertificatesPassword=dummy
     volumes:
       - '/home/netlock/web_console/appsettings.json:/app/appsettings.json'
       - '/home/netlock/web_console/internal:/app/internal'
@@ -59,6 +67,14 @@ services:
       - Kestrel__Https_Force=false
       - Kestrel__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - Kestrel__CustomCertificatePassword=dummy
+      - cert_path=/app/certificates/cortex_dummy.pfx
+      - cert_password=dummy
+      - certificates_path=/app/certificates
+      - certificates_password=dummy
+      - CertPath=/app/certificates/cortex_dummy.pfx
+      - CertPassword=dummy
+      - CertificatesPath=/app/certificates
+      - CertificatesPassword=dummy
       - MembersPortalApi__ApiKeyOverride=764286af-438b-4f83-b4ed-b4936a45c853-71090d1d-73e4-43dd-908c-b8777fd54465
       - MembersPortal__ApiKey=764286af-438b-4f83-b4ed-b4936a45c853-71090d1d-73e4-43dd-908c-b8777fd54465
       - MembersPortal__SkipSync=true

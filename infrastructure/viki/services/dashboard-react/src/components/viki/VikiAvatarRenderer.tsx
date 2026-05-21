@@ -20,6 +20,34 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const rUpperarmBoneRef = useRef<THREE.Object3D | null>(null);
   const rForearmBoneRef = useRef<THREE.Object3D | null>(null);
 
+  // Blendshapes morph mapping for organic blinks
+  const eyeBlinkLeftMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
+  const eyeBlinkRightMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
+
+  // Blink state tracking
+  const blinkStateRef = useRef<{
+    isBlinking: boolean;
+    startTime: number;
+    duration: number;
+    nextBlinkTime: number;
+  }>({
+    isBlinking: false,
+    startTime: 0,
+    duration: 0.25,
+    nextBlinkTime: Date.now() + 3000 + Math.random() * 4000
+  });
+
+  // Saccadic eye tracking state
+  const saccadeStateRef = useRef<{
+    nextSaccadeTime: number;
+    offsetX: number;
+    offsetY: number;
+  }>({
+    nextSaccadeTime: 0,
+    offsetX: 0,
+    offsetY: 0
+  });
+
   // Gesture state tracking
   const gestureStateRef = useRef<{ name: 'none' | 'wave' | 'jolt'; startTime: number }>({ name: 'none', startTime: 0 });
 
@@ -38,7 +66,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Map bones once the scene is loaded
+  // Map bones and scan blendshapes once the scene is loaded
   useEffect(() => {
     if (scene) {
       headBoneRef.current = scene.getObjectByName('CC_Base_Head_039') || null;
@@ -50,6 +78,22 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       rEyeBoneRef.current = scene.getObjectByName('CC_Base_R_Eye_046') || null;
       rUpperarmBoneRef.current = scene.getObjectByName('CC_Base_R_Upperarm_063') || null;
       rForearmBoneRef.current = scene.getObjectByName('CC_Base_R_Forearm_064') || null;
+
+      // Identify blinking morph targets in the skinned mesh hierarchy
+      scene.traverse((child) => {
+        if (child instanceof THREE.SkinnedMesh && child.morphTargetDictionary) {
+          const dict = child.morphTargetDictionary;
+          for (const [key, value] of Object.entries(dict)) {
+            const lowerKey = key.toLowerCase();
+            if (lowerKey.includes('eye_blink_l') || lowerKey.includes('eyeblinkleft') || lowerKey.includes('blink_l') || lowerKey.includes('blink_left')) {
+              eyeBlinkLeftMorphRef.current = { mesh: child, index: value };
+            }
+            if (lowerKey.includes('eye_blink_r') || lowerKey.includes('eyeblinkright') || lowerKey.includes('blink_r') || lowerKey.includes('blink_right')) {
+              eyeBlinkRightMorphRef.current = { mesh: child, index: value };
+            }
+          }
+        }
+      });
 
       // Reset default rotations
       if (headBoneRef.current) headBoneRef.current.rotation.set(0, 0, 0);
@@ -79,6 +123,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   // Procedural animation loop running after the default mixer updates (priority 1)
   useFrame((threeState) => {
     const time = threeState.clock.getElapsedTime();
+    const nowMs = Date.now();
 
     if (group.current) {
       // Subtle float offset in Y - set to -3.1 for a balanced vertical framing
@@ -87,20 +132,39 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       group.current.rotation.y = Math.sin(time * 0.2) * 0.02;
     }
 
+    // Configure dynamic breathing rates based on state (slower in thinking, faster in alert)
+    let breathingSpeed = 1.2;
+    let breathingAmpSpine = 0.015;
+    let breathingAmpClavicle = 0.005;
+
+    if (state === 'alert') {
+      breathingSpeed = 3.0;
+      breathingAmpSpine = 0.025;
+      breathingAmpClavicle = 0.008;
+    } else if (state === 'thinking') {
+      breathingSpeed = 0.7;
+      breathingAmpSpine = 0.022;
+      breathingAmpClavicle = 0.004;
+    } else if (state === 'speaking') {
+      breathingSpeed = 1.6;
+      breathingAmpSpine = 0.018;
+      breathingAmpClavicle = 0.006;
+    }
+
     // Gentle chest expansion (breathing) mapped to the Spine bone
     if (spineBoneRef.current) {
-      const breathing = Math.sin(time * 1.5) * 0.015;
+      const breathing = Math.sin(time * breathingSpeed) * breathingAmpSpine;
       spineBoneRef.current.rotation.x = breathing;
     }
 
     // Procedural Clavicle (Shoulder) Breathing elevation
     if (lClavicleBoneRef.current) {
-      lClavicleBoneRef.current.rotation.z = -Math.sin(time * 1.5) * 0.005;
-      lClavicleBoneRef.current.rotation.x = Math.sin(time * 1.5) * 0.003;
+      lClavicleBoneRef.current.rotation.z = -Math.sin(time * breathingSpeed) * breathingAmpClavicle;
+      lClavicleBoneRef.current.rotation.x = Math.sin(time * breathingSpeed) * (breathingAmpClavicle * 0.6);
     }
     if (rClavicleBoneRef.current) {
-      rClavicleBoneRef.current.rotation.z = Math.sin(time * 1.5) * 0.005;
-      rClavicleBoneRef.current.rotation.x = Math.sin(time * 1.5) * 0.003;
+      rClavicleBoneRef.current.rotation.z = Math.sin(time * breathingSpeed) * breathingAmpClavicle;
+      rClavicleBoneRef.current.rotation.x = Math.sin(time * breathingSpeed) * (breathingAmpClavicle * 0.6);
     }
 
     // Determine target head angles based on mouse tracking or random sways
@@ -108,8 +172,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     let targetHeadPitch = 0;
     let targetHeadRoll = 0;
 
-    const now = Date.now();
-    const isMouseActive = now - mouseRef.current.lastMoved < 4000; // active in last 4 seconds
+    const isMouseActive = nowMs - mouseRef.current.lastMoved < 4000; // active in last 4 seconds
 
     // Automatically trigger alert jolt gesture on state change
     if (state === 'alert' && gestureStateRef.current.name !== 'jolt') {
@@ -157,15 +220,32 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       neckBoneRef.current.rotation.x = THREE.MathUtils.lerp(neckBoneRef.current.rotation.x, targetHeadPitch * 0.25, 0.06);
     }
 
-    // Procedural Eye Gaze Tracking
-    let targetEyeYaw = 0;
-    let targetEyePitch = 0;
+    // Organic Saccadic movements
+    if (nowMs >= saccadeStateRef.current.nextSaccadeTime) {
+      // 30% chance of micro-saccade
+      if (Math.random() < 0.3) {
+        saccadeStateRef.current.offsetX = (Math.random() - 0.5) * 0.08;
+        saccadeStateRef.current.offsetY = (Math.random() - 0.5) * 0.05;
+      } else {
+        saccadeStateRef.current.offsetX = 0;
+        saccadeStateRef.current.offsetY = 0;
+      }
+      saccadeStateRef.current.nextSaccadeTime = nowMs + 600 + Math.random() * 2000;
+    }
+
+    // Procedural Eye Gaze Tracking (Combining gaze target and organic saccades)
+    let targetEyeYaw = saccadeStateRef.current.offsetX;
+    let targetEyePitch = saccadeStateRef.current.offsetY;
+
     if (state === 'idle' && isMouseActive) {
-      targetEyeYaw = mouseRef.current.x * 0.25;
-      targetEyePitch = mouseRef.current.y * 0.15;
+      targetEyeYaw += mouseRef.current.x * 0.25;
+      targetEyePitch += mouseRef.current.y * 0.15;
+    } else if (state === 'alert') {
+      targetEyeYaw += (Math.random() - 0.5) * 0.15;
+      targetEyePitch += (Math.random() - 0.5) * 0.08;
     } else {
-      targetEyeYaw = Math.sin(time * 0.4) * 0.04;
-      targetEyePitch = Math.cos(time * 0.3) * 0.02;
+      targetEyeYaw += Math.sin(time * 0.4) * 0.04;
+      targetEyePitch += Math.cos(time * 0.3) * 0.02;
     }
 
     if (lEyeBoneRef.current) {
@@ -175,6 +255,48 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     if (rEyeBoneRef.current) {
       rEyeBoneRef.current.rotation.y = THREE.MathUtils.lerp(rEyeBoneRef.current.rotation.y, targetEyeYaw, 0.1);
       rEyeBoneRef.current.rotation.x = THREE.MathUtils.lerp(rEyeBoneRef.current.rotation.x, targetEyePitch, 0.1);
+    }
+
+    // Eyelid Blinking logic (0 = open, 1 = closed)
+    let blinkValue = 0;
+
+    if (!blinkStateRef.current.isBlinking) {
+      if (nowMs >= blinkStateRef.current.nextBlinkTime) {
+        blinkStateRef.current.isBlinking = true;
+        blinkStateRef.current.startTime = nowMs;
+        blinkStateRef.current.duration = 0.18 + Math.random() * 0.08; // 180ms - 260ms
+      }
+    } else {
+      const elapsed = (nowMs - blinkStateRef.current.startTime) / 1000;
+      const duration = blinkStateRef.current.duration;
+      
+      if (elapsed >= duration) {
+        blinkStateRef.current.isBlinking = false;
+        blinkStateRef.current.nextBlinkTime = nowMs + 2000 + Math.random() * 5000; // Next blink in 2-7s
+      } else {
+        const halfDuration = duration / 2;
+        if (elapsed < halfDuration) {
+          blinkValue = elapsed / halfDuration; // Closing
+        } else {
+          blinkValue = 1 - (elapsed - halfDuration) / halfDuration; // Opening
+        }
+      }
+    }
+
+    // Apply blink value to mesh morphTargetInfluences if present
+    if (eyeBlinkLeftMorphRef.current && eyeBlinkLeftMorphRef.current.mesh.morphTargetInfluences) {
+      eyeBlinkLeftMorphRef.current.mesh.morphTargetInfluences[eyeBlinkLeftMorphRef.current.index] = blinkValue;
+    }
+    if (eyeBlinkRightMorphRef.current && eyeBlinkRightMorphRef.current.mesh.morphTargetInfluences) {
+      eyeBlinkRightMorphRef.current.mesh.morphTargetInfluences[eyeBlinkRightMorphRef.current.index] = blinkValue;
+    }
+
+    // Fallback: Scale eyes vertically if morph targets are missing
+    if (!eyeBlinkLeftMorphRef.current && lEyeBoneRef.current) {
+      lEyeBoneRef.current.scale.y = THREE.MathUtils.lerp(lEyeBoneRef.current.scale.y, 1 - blinkValue * 0.9, 0.3);
+    }
+    if (!eyeBlinkRightMorphRef.current && rEyeBoneRef.current) {
+      rEyeBoneRef.current.scale.y = THREE.MathUtils.lerp(rEyeBoneRef.current.scale.y, 1 - blinkValue * 0.9, 0.3);
     }
 
     // Procedural Interactive Gestures
