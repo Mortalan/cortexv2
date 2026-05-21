@@ -10,7 +10,22 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
-  const { actions } = useAnimations(animations, sceneRef);
+
+  // Clone and filter out upperarm and forearm animation tracks so they don't override our procedural controls
+  const filteredAnimations = React.useMemo(() => {
+    if (!animations) return [];
+    return animations.map(clip => {
+      const clonedClip = clip.clone();
+      clonedClip.tracks = clonedClip.tracks.filter(track => {
+        const name = track.name.toLowerCase();
+        const shouldKeep = !name.includes('upperarm') && !name.includes('forearm');
+        return shouldKeep;
+      });
+      return clonedClip;
+    });
+  }, [animations]);
+
+  const { actions } = useAnimations(filteredAnimations, sceneRef);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
