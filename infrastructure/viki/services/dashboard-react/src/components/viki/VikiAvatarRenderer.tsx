@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useMemo } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
@@ -8,25 +8,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   
-  // Clone and filter out upperarm and forearm animation tracks so they don't override our procedural controls
-  const filteredAnimations = useMemo(() => {
-    if (!animations) return [];
-    console.log("Original tracks count:", animations[0]?.tracks.length);
-    const filtered = animations.map(clip => {
-      const clonedClip = clip.clone();
-      clonedClip.tracks = clonedClip.tracks.filter(track => {
-        const name = track.name.toLowerCase();
-        const shouldKeep = !name.includes('upperarm') && !name.includes('forearm');
-        return shouldKeep;
-      });
-      return clonedClip;
-    });
-    console.log("Filtered tracks count:", filtered[0]?.tracks.length);
-    console.log("Filtered track names:", filtered[0]?.tracks.map(t => t.name));
-    return filtered;
-  }, [animations]);
-
-  const { actions } = useAnimations(filteredAnimations, group);
+  const { actions } = useAnimations(animations, group);
 
   // Mapped bones for procedural animation
   const headBoneRef = useRef<THREE.Object3D | null>(null);
@@ -372,68 +354,32 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       );
     }
 
-    // Procedural Interactive Gestures & natural, premium relaxed resting arm pose (hanging down by the side)
-    let targetRUpperarmX = 0;
-    let targetRUpperarmY = 0;
-    let targetRUpperarmZ = 0;
-    let targetRForearmX = 0;
-    let targetRForearmY = 0;
-    let targetRForearmZ = 0;
-
-    let targetLUpperarmX = 0;
-    let targetLUpperarmY = 0;
-    let targetLUpperarmZ = 0;
-    let targetLForearmX = 0;
-    let targetLForearmY = 0;
-    let targetLForearmZ = 0;
-
+    // Procedural Interactive Gestures & built-in natural arm posture
     const gesture = gestureStateRef.current.name;
     const gestureElapsed = (Date.now() - gestureStateRef.current.startTime) / 1000;
 
-    if (gesture === 'none') {
-      // Natural resting arm pose with a very subtle breathing sway to look fluid and alive
-      const armSway = Math.sin(time * breathingSpeed) * 0.025;
-      
-      targetRUpperarmX = 0.1;
-      targetRUpperarmY = 0.05;
-      targetRUpperarmZ = -1.35 - armSway;
-      targetRForearmX = 0.0;
-      targetRForearmY = 0.25;
-      targetRForearmZ = 0.0;
-
-      targetLUpperarmX = 0.1;
-      targetLUpperarmY = -0.05;
-      targetLUpperarmZ = 1.35 + armSway;
-      targetLForearmX = 0.0;
-      targetLForearmY = -0.25;
-      targetLForearmZ = 0.0;
-    } else if (gesture === 'wave') {
+    if (gesture === 'wave') {
       if (gestureElapsed < 2.5) {
-        // Animate right arm lift
-        targetRUpperarmX = -0.4;
-        targetRUpperarmZ = -1.2;
-        targetRForearmY = 0.9;
-        // sinus waving
-        targetRForearmZ = Math.sin(time * 10) * 0.35;
+        // Animate right arm lift for hello greeting gesture
+        const targetRUpperarmX = -0.4;
+        const targetRUpperarmZ = -1.2;
+        const targetRForearmY = 0.9;
+        const targetRForearmZ = Math.sin(time * 10) * 0.35; // Waving motion
 
-        // Keep left arm relaxed
-        targetLUpperarmX = 0.1;
-        targetLUpperarmY = -0.05;
-        targetLUpperarmZ = 1.35;
-        targetLForearmY = -0.25;
+        if (rUpperarmBoneRef.current) {
+          rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetRUpperarmX, 0.08);
+          rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetRUpperarmZ, 0.08);
+        }
+        if (rForearmBoneRef.current) {
+          rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetRForearmY, 0.08);
+          rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetRForearmZ, 0.08);
+        }
       } else {
         gestureStateRef.current.name = 'none';
       }
     } else if (gesture === 'jolt') {
       if (gestureElapsed < 1.0) {
-        const joltIntensity = Math.sin(time * 50) * 0.05;
-        // Shiver while keeping them hanging downwards
-        targetRUpperarmX = 0.1;
-        targetRUpperarmZ = -1.35 - joltIntensity;
-        targetLUpperarmX = 0.1;
-        targetLUpperarmZ = 1.35 + joltIntensity;
-        
-        // Rapid head shiver
+        // Rapid head shiver for alert state, let built-in skeleton handle arms
         if (headBoneRef.current) {
           headBoneRef.current.rotation.y += Math.sin(time * 60) * 0.1;
           headBoneRef.current.rotation.x += Math.cos(time * 60) * 0.06;
@@ -447,27 +393,6 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       } else {
         gestureStateRef.current.name = 'none';
       }
-    }
-
-    if (rUpperarmBoneRef.current) {
-      rUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.x, targetRUpperarmX, 0.08);
-      rUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.y, targetRUpperarmY, 0.08);
-      rUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rUpperarmBoneRef.current.rotation.z, targetRUpperarmZ, 0.08);
-    }
-    if (rForearmBoneRef.current) {
-      rForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.x, targetRForearmX, 0.08);
-      rForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.y, targetRForearmY, 0.08);
-      rForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(rForearmBoneRef.current.rotation.z, targetRForearmZ, 0.08);
-    }
-    if (lUpperarmBoneRef.current) {
-      lUpperarmBoneRef.current.rotation.x = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.x, targetLUpperarmX, 0.08);
-      lUpperarmBoneRef.current.rotation.y = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.y, targetLUpperarmY, 0.08);
-      lUpperarmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lUpperarmBoneRef.current.rotation.z, targetLUpperarmZ, 0.08);
-    }
-    if (lForearmBoneRef.current) {
-      lForearmBoneRef.current.rotation.x = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.x, targetLForearmX, 0.08);
-      lForearmBoneRef.current.rotation.y = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.y, targetLForearmY, 0.08);
-      lForearmBoneRef.current.rotation.z = THREE.MathUtils.lerp(lForearmBoneRef.current.rotation.z, targetLForearmZ, 0.08);
     }
 
   });
@@ -485,7 +410,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       <primitive 
         object={scene} 
         position={[0, 0, 0]} 
-        scale={1.15} 
+        scale={1.3} 
       />
     </group>
   );
