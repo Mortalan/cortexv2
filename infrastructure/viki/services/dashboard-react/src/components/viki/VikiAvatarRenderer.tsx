@@ -384,19 +384,19 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
 
     // Default left arm resting drape (relaxed hanging at the side with subtle breathing motion)
     const leftArmSway = Math.sin(time * breathingSpeed) * 0.025;
-    targetLUpperarmZ = 1.3 + leftArmSway;
-    targetLUpperarmY = 0.15;
-    targetLUpperarmX = 0.0;
-    targetLForearmX = 0.45;
+    targetLUpperarmZ = -1.35 - leftArmSway; // Sign corrected to rotate downwards in CC3 space
+    targetLUpperarmY = -0.15;                // Sign corrected to align with natural humerus twist
+    targetLUpperarmX = -0.1;                 // Slightly rotate forward for relaxed anatomical drape
+    targetLForearmX = 0.35;                  // Slight natural bend at the elbow
     targetLForearmY = 0.0;
     targetLForearmZ = 0.0;
 
     // Default right arm resting drape (relaxed hanging at the side with subtle breathing motion)
     const rightArmSway = Math.sin(time * breathingSpeed) * 0.025;
-    targetRUpperarmZ = -1.3 - rightArmSway;
-    targetRUpperarmY = -0.15;
-    targetRUpperarmX = 0.0;
-    targetRForearmX = 0.45;
+    targetRUpperarmZ = 1.35 + rightArmSway;  // Sign corrected to rotate downwards in CC3 space
+    targetRUpperarmY = 0.15;                 // Sign corrected to align with natural humerus twist
+    targetRUpperarmX = -0.1;                 // Slightly rotate forward for relaxed anatomical drape
+    targetRForearmX = 0.35;                  // Slight natural bend at the elbow
     targetRForearmY = 0.0;
     targetRForearmZ = 0.0;
 
