@@ -8,28 +8,89 @@ interface Message {
   modelUsed?: 'viki' | 'codellama' | 'gpt-4o';
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  timestamp: number;
+  messages: Message[];
+}
+
 export const VikiDedicatedChat: React.FC = () => {
-  // Initialize state from localStorage for persistent chat logs
-  const [messages, setMessages] = useState<Message[]>(() => {
+  // Multiple sessions and persistent archive
+  const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
-      const saved = localStorage.getItem('viki_chat_history');
-      return saved ? JSON.parse(saved) : [
-        { 
-          role: 'viki', 
+      const savedSessions = localStorage.getItem('viki_chat_sessions');
+      if (savedSessions) {
+        const parsed = JSON.parse(savedSessions);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      
+      // Migration from old single history if it exists
+      const savedHistory = localStorage.getItem('viki_chat_history');
+      if (savedHistory) {
+        const historyMsgs = JSON.parse(savedHistory);
+        if (Array.isArray(historyMsgs) && historyMsgs.length > 0) {
+          return [{
+            id: 'session-migrated',
+            title: 'Restored Operational Log',
+            timestamp: Date.now(),
+            messages: historyMsgs
+          }];
+        }
+      }
+    } catch (e) {}
+
+    return [{
+      id: 'session-default',
+      title: 'Neural Session: Alpha',
+      timestamp: Date.now(),
+      messages: [
+        {
+          role: 'viki',
           content: 'CORTEX sovereign systems activated. Cognitive bridge established. I am VIKI, your cybernetic command intelligence. Transmit query, technician.',
           modelUsed: 'viki'
         }
-      ];
-    } catch {
-      return [
-        { 
-          role: 'viki', 
-          content: 'CORTEX sovereign systems activated. Cognitive bridge established. I am VIKI, your cybernetic command intelligence. Transmit query, technician.',
-          modelUsed: 'viki'
-        }
-      ];
-    }
+      ]
+    }];
   });
+
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
+    return localStorage.getItem('viki_active_session_id') || 'session-default';
+  });
+
+  const [showArchive, setShowArchive] = useState(false);
+
+  // Derive current messages from active session
+  const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0] || { messages: [] };
+  const messages = activeSession.messages;
+
+  // Custom setMessages function that updates the active session nested messages
+  const setMessages = (updateFn: Message[] | ((prev: Message[]) => Message[])) => {
+    setSessions(prevSessions => {
+      return prevSessions.map(s => {
+        if (s.id === activeSessionId) {
+          const nextMessages = typeof updateFn === 'function' ? updateFn(s.messages) : updateFn;
+          
+          // Auto-rename session title from the first user message if title is default or basic
+          let nextTitle = s.title;
+          if (s.title === 'Neural Session: Alpha' || s.title.startsWith('Session:')) {
+            const firstUserMsg = nextMessages.find(m => m.role === 'user');
+            if (firstUserMsg) {
+              nextTitle = firstUserMsg.content.substring(0, 24) + (firstUserMsg.content.length > 24 ? '...' : '');
+            }
+          }
+
+          return {
+            ...s,
+            messages: nextMessages,
+            title: nextTitle,
+            timestamp: Date.now()
+          };
+        }
+        return s;
+      });
+    });
+  };
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,10 +115,14 @@ export const VikiDedicatedChat: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Save chat history and settings to localStorage on state changes
+  // Save sessions and settings to localStorage on state changes
   useEffect(() => {
-    localStorage.setItem('viki_chat_history', JSON.stringify(messages));
-  }, [messages]);
+    localStorage.setItem('viki_chat_sessions', JSON.stringify(sessions));
+  }, [sessions]);
+
+  useEffect(() => {
+    localStorage.setItem('viki_active_session_id', activeSessionId);
+  }, [activeSessionId]);
 
   useEffect(() => {
     localStorage.setItem('viki_model_mode', modelMode);
@@ -368,20 +433,69 @@ export const VikiDedicatedChat: React.FC = () => {
   };
 
   const handleClearHistory = () => {
-    if (window.confirm("Are you sure you want to purge all neural logs? This action is irreversible.")) {
-      const initial: Message[] = [
-        { 
-          role: 'viki', 
-          content: 'CORTEX neural logs purged. Systems restarted. Ready for fresh operations, technician.',
-          modelUsed: 'viki'
-        }
-      ];
-      setMessages(initial);
-      localStorage.setItem('viki_chat_history', JSON.stringify(initial));
+    if (window.confirm("Are you sure you want to purge all neural logs across all sessions? This action is irreversible.")) {
+      const initialSession: ChatSession = {
+        id: 'session-default',
+        title: 'Neural Session: Alpha',
+        timestamp: Date.now(),
+        messages: [
+          { 
+            role: 'viki', 
+            content: 'CORTEX neural logs purged. Systems restarted. Ready for fresh operations, technician.',
+            modelUsed: 'viki'
+          }
+        ]
+      };
+      setSessions([initialSession]);
+      setActiveSessionId('session-default');
+      localStorage.removeItem('viki_chat_history'); // clear legacy cache
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
       setVikiState('idle');
+    }
+  };
+
+  const handleCreateSession = () => {
+    const newId = `session-${Date.now()}`;
+    const newSession: ChatSession = {
+      id: newId,
+      title: `Session: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      timestamp: Date.now(),
+      messages: [
+        {
+          role: 'viki',
+          content: 'New cybernetic dialogue initialized. Establish operational parameters, technician.',
+          modelUsed: 'viki'
+        }
+      ]
+    };
+    setSessions(prev => [newSession, ...prev]);
+    setActiveSessionId(newId);
+  };
+
+  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sessions.length === 1) {
+      alert("Cannot delete the final remaining active session. Initiate a new session first.");
+      return;
+    }
+    if (window.confirm("Purge this dialogue session from the Neural Archive?")) {
+      const nextSessions = sessions.filter(s => s.id !== id);
+      setSessions(nextSessions);
+      if (activeSessionId === id) {
+        setActiveSessionId(nextSessions[0].id);
+      }
+    }
+  };
+
+  const handleRenameSession = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const session = sessions.find(s => s.id === id);
+    if (!session) return;
+    const newName = prompt("Enter new title for this operational log:", session.title);
+    if (newName && newName.trim()) {
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: newName.trim() } : s));
     }
   };
 
@@ -431,6 +545,14 @@ export const VikiDedicatedChat: React.FC = () => {
         </button>
         
         <div className="header-actions">
+          <button 
+            className={`archive-toggle-btn ${showArchive ? 'active' : ''}`}
+            onClick={() => setShowArchive(!showArchive)}
+            title="Open Neural Archive (Saved Chats)"
+          >
+            📂 NEURAL ARCHIVE
+          </button>
+
           <button 
             className={`settings-toggle-btn ${showSettings ? 'active' : ''}`}
             onClick={() => setShowSettings(!showSettings)}
@@ -701,6 +823,51 @@ export const VikiDedicatedChat: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Collapsible Neural Archive Sidebar */}
+        {showArchive && (
+          <div className="archive-sidebar glassmorphic font-space">
+            <div className="archive-header">
+              <span className="archive-header-title">📂 NEURAL ARCHIVE</span>
+              <button className="new-session-btn font-space" onClick={handleCreateSession}>
+                + NEW DIALOGUE
+              </button>
+            </div>
+            
+            <div className="archive-list">
+              {sessions.map(s => (
+                <div 
+                  key={s.id} 
+                  className={`archive-item ${s.id === activeSessionId ? 'active' : ''}`}
+                  onClick={() => setActiveSessionId(s.id)}
+                >
+                  <div className="archive-item-main">
+                    <span className="archive-item-icon">📄</span>
+                    <span className="archive-item-title" title={s.title}>
+                      {s.title}
+                    </span>
+                  </div>
+                  <div className="archive-item-actions">
+                    <button 
+                      className="archive-action-btn rename"
+                      onClick={(e) => handleRenameSession(s.id, e)}
+                      title="Rename Operational Log"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      className="archive-action-btn delete"
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      title="Purge Dialogue Session"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
