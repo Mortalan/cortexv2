@@ -20,9 +20,12 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
   const rUpperarmBoneRef = useRef<THREE.Object3D | null>(null);
   const rForearmBoneRef = useRef<THREE.Object3D | null>(null);
 
-  // Blendshapes morph mapping for organic blinks
+  // Blendshapes morph mapping for organic blinks and facial expressions
   const eyeBlinkLeftMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
   const eyeBlinkRightMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
+  const mouthOpenMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
+  const browDropLeftMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
+  const browDropRightMorphRef = useRef<{ mesh: THREE.SkinnedMesh; index: number } | null>(null);
 
   // Blink state tracking
   const blinkStateRef = useRef<{
@@ -79,7 +82,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       rUpperarmBoneRef.current = scene.getObjectByName('CC_Base_R_Upperarm_063') || null;
       rForearmBoneRef.current = scene.getObjectByName('CC_Base_R_Forearm_064') || null;
 
-      // Identify blinking morph targets in the skinned mesh hierarchy
+      // Identify blinking and facial expression morph targets in the skinned mesh hierarchy
       scene.traverse((child) => {
         if (child instanceof THREE.SkinnedMesh && child.morphTargetDictionary) {
           const dict = child.morphTargetDictionary;
@@ -90,6 +93,15 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
             }
             if (lowerKey.includes('eye_blink_r') || lowerKey.includes('eyeblinkright') || lowerKey.includes('blink_r') || lowerKey.includes('blink_right')) {
               eyeBlinkRightMorphRef.current = { mesh: child, index: value };
+            }
+            if (lowerKey.includes('mouth_open') || lowerKey.includes('jaw_open') || lowerKey.includes('mouthopen') || lowerKey.includes('jawopen')) {
+              mouthOpenMorphRef.current = { mesh: child, index: value };
+            }
+            if (lowerKey.includes('brow_drop_l') || lowerKey.includes('brow_squeeze_l') || lowerKey.includes('browsqueezeleft')) {
+              browDropLeftMorphRef.current = { mesh: child, index: value };
+            }
+            if (lowerKey.includes('brow_drop_r') || lowerKey.includes('brow_squeeze_r') || lowerKey.includes('browsqueezeright')) {
+              browDropRightMorphRef.current = { mesh: child, index: value };
             }
           }
         }
@@ -177,6 +189,11 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     // Automatically trigger alert jolt gesture on state change
     if (state === 'alert' && gestureStateRef.current.name !== 'jolt') {
       gestureStateRef.current = { name: 'jolt', startTime: Date.now() };
+    }
+
+    // Automatically trigger greeting wave gesture when starting to speak
+    if (state === 'speaking' && gestureStateRef.current.name === 'none') {
+      gestureStateRef.current = { name: 'wave', startTime: Date.now() };
     }
 
     if (state === 'thinking') {
@@ -297,6 +314,37 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
     }
     if (!eyeBlinkRightMorphRef.current && rEyeBoneRef.current) {
       rEyeBoneRef.current.scale.y = THREE.MathUtils.lerp(rEyeBoneRef.current.scale.y, 1 - blinkValue * 0.9, 0.3);
+    }
+
+    // Lip sync / mouth movement when speaking
+    let mouthOpenValue = 0;
+    if (state === 'speaking') {
+      mouthOpenValue = Math.max(0, Math.sin(time * 12) * 0.45 + Math.cos(time * 8) * 0.2 + 0.35);
+    }
+
+    if (mouthOpenMorphRef.current && mouthOpenMorphRef.current.mesh.morphTargetInfluences) {
+      mouthOpenMorphRef.current.mesh.morphTargetInfluences[mouthOpenMorphRef.current.index] = THREE.MathUtils.lerp(
+        mouthOpenMorphRef.current.mesh.morphTargetInfluences[mouthOpenMorphRef.current.index],
+        mouthOpenValue,
+        0.2
+      );
+    }
+
+    // Analytical brow dropping when thinking
+    let browValue = state === 'thinking' ? 0.65 : 0.0;
+    if (browDropLeftMorphRef.current && browDropLeftMorphRef.current.mesh.morphTargetInfluences) {
+      browDropLeftMorphRef.current.mesh.morphTargetInfluences[browDropLeftMorphRef.current.index] = THREE.MathUtils.lerp(
+        browDropLeftMorphRef.current.mesh.morphTargetInfluences[browDropLeftMorphRef.current.index],
+        browValue,
+        0.1
+      );
+    }
+    if (browDropRightMorphRef.current && browDropRightMorphRef.current.mesh.morphTargetInfluences) {
+      browDropRightMorphRef.current.mesh.morphTargetInfluences[browDropRightMorphRef.current.index] = THREE.MathUtils.lerp(
+        browDropRightMorphRef.current.mesh.morphTargetInfluences[browDropRightMorphRef.current.index],
+        browValue,
+        0.1
+      );
     }
 
     // Procedural Interactive Gestures
