@@ -396,14 +396,14 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
       
       targetRUpperarmX = 0.1;
       targetRUpperarmY = 0.05;
-      targetRUpperarmZ = 1.35 - armSway;
+      targetRUpperarmZ = -1.35 - armSway;
       targetRForearmX = 0.0;
       targetRForearmY = 0.25;
       targetRForearmZ = 0.0;
 
       targetLUpperarmX = 0.1;
       targetLUpperarmY = -0.05;
-      targetLUpperarmZ = -1.35 + armSway;
+      targetLUpperarmZ = 1.35 + armSway;
       targetLForearmX = 0.0;
       targetLForearmY = -0.25;
       targetLForearmZ = 0.0;
@@ -419,7 +419,7 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
         // Keep left arm relaxed
         targetLUpperarmX = 0.1;
         targetLUpperarmY = -0.05;
-        targetLUpperarmZ = -1.35;
+        targetLUpperarmZ = 1.35;
         targetLForearmY = -0.25;
       } else {
         gestureStateRef.current.name = 'none';
@@ -429,9 +429,9 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string, state: 'idle' | 
         const joltIntensity = Math.sin(time * 50) * 0.05;
         // Shiver while keeping them hanging downwards
         targetRUpperarmX = 0.1;
-        targetRUpperarmZ = 1.35 - joltIntensity;
+        targetRUpperarmZ = -1.35 - joltIntensity;
         targetLUpperarmX = 0.1;
-        targetLUpperarmZ = -1.35 + joltIntensity;
+        targetLUpperarmZ = 1.35 + joltIntensity;
         
         // Rapid head shiver
         if (headBoneRef.current) {
