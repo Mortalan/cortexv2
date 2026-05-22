@@ -9,7 +9,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard-react.rule=Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)"
       - "traefik.http.routers.dashboard-react.entrypoints=web"
-      - "traefik.http.routers.dashboard-react.middlewares=authelia@docker"
+      - "traefik.http.routers.dashboard-react.middlewares=authelia-authelia@docker"
       - "traefik.http.services.dashboard-react.loadbalancer.server.port=80"
     networks:
       - netlock_netlock-network

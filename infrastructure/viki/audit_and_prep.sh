@@ -11,7 +11,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}" | grep "Up" || echo "[!] WARN
 # 2. MFA Verification
 echo "[*] Verifying Traefik-Authelia Middleware labels (v2)..."
 for svc in glpi velociraptor n8n-automation; do
-    docker inspect $svc --format="{{json .Config.Labels}}" | grep "traefik.http.routers.*.middlewares\":\"authelia@docker\"" > /dev/null
+    docker inspect $svc --format="{{json .Config.Labels}}" | grep "traefik.http.routers.*.middlewares\":\"authelia-authelia@docker\"" > /dev/null
     if [ $? -eq 0 ]; then
         echo "[+] SUCCESS: $svc protected by Authelia MFA."
     else

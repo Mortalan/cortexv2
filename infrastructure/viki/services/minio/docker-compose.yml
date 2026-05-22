@@ -18,7 +18,7 @@ services:
       - "traefik.http.routers.minio-console.rule=Host(`s3-console.rmmservice.co.za`)"
       - "traefik.http.routers.minio-console.entrypoints=web"
       - "traefik.http.routers.minio-console.service=minio-console"
-      - "traefik.http.routers.minio-console.middlewares=authelia@docker"
+      - "traefik.http.routers.minio-console.middlewares=authelia-authelia@docker"
       - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
     networks:
       - netlock_netlock-network

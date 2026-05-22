@@ -17,7 +17,7 @@ services:
       - "traefik.http.routers.traefik-dash.rule=Host(`traefik.rmmservice.co.za`)"
       - "traefik.http.routers.traefik-dash.entrypoints=web"
       - "traefik.http.routers.traefik-dash.service=api@internal"
-      - "traefik.http.routers.traefik-dash.middlewares=authelia@docker"
+      - "traefik.http.routers.traefik-dash.middlewares=authelia-authelia@docker"
     networks:
       - netlock_netlock-network
 

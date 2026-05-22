@@ -13,7 +13,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.viki-api.rule=(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/viki`)"
       - "traefik.http.routers.viki-api.entrypoints=web"
-      - "traefik.http.routers.viki-api.middlewares=authelia@docker,viki-api-stripprefix"
+      - "traefik.http.routers.viki-api.middlewares=authelia-authelia@docker,viki-api-stripprefix"
       - "traefik.http.middlewares.viki-api-stripprefix.stripprefix.prefixes=/api/viki"
       - "traefik.http.services.viki-api.loadbalancer.server.port=11434"
     deploy:

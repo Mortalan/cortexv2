@@ -35,7 +35,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.glpi.rule=Host(`glpi.rmmservice.co.za`)"
       - "traefik.http.routers.glpi.entrypoints=web"
-      - "traefik.http.routers.glpi.middlewares=authelia@docker"
+      - "traefik.http.routers.glpi.middlewares=authelia-authelia@docker"
       - "traefik.http.services.glpi.loadbalancer.server.port=80"
     networks:
       - netlock_netlock-network
