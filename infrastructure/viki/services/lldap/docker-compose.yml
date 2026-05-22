@@ -15,7 +15,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.lldap.rule=Host(`auth-admin.rmmservice.co.za`)"
       - "traefik.http.routers.lldap.entrypoints=web"
-      - "traefik.http.routers.lldap.middlewares=authelia-authelia@docker"
+      - "traefik.http.routers.lldap.middlewares=authelia@docker"
       - "traefik.http.services.lldap.loadbalancer.server.port=17170"
 
 networks:
