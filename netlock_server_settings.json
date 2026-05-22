@@ -4,6 +4,10 @@
   },
   "CustomCertificatePath": "/app/certificates/cortex_dummy.pfx",
   "CustomCertificatePassword": "dummy",
+  "NetLock": {
+    "CustomCertificatePath": "/app/certificates/cortex_dummy.pfx",
+    "CustomCertificatePassword": "dummy"
+  },
   "Kestrel": {
     "Http": true,
     "Https": false,
