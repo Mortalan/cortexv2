@@ -30,6 +30,8 @@ services:
       - Kestrel__Https_Force=false
       - Kestrel__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - Kestrel__CustomCertificatePassword=dummy
+      - CustomCertificatePath=/app/certificates/cortex_dummy.pfx
+      - CustomCertificatePassword=dummy
       - cert_path=/app/certificates/cortex_dummy.pfx
       - cert_password=dummy
       - certificates_path=/app/certificates
@@ -67,6 +69,8 @@ services:
       - Kestrel__Https_Force=false
       - Kestrel__CustomCertificatePath=/app/certificates/cortex_dummy.pfx
       - Kestrel__CustomCertificatePassword=dummy
+      - CustomCertificatePath=/app/certificates/cortex_dummy.pfx
+      - CustomCertificatePassword=dummy
       - cert_path=/app/certificates/cortex_dummy.pfx
       - cert_password=dummy
       - certificates_path=/app/certificates
