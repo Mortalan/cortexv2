@@ -4,7 +4,7 @@ import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three
 import * as THREE from 'three';
 
 // Component that handles loading and animating the 3D asset
-const AvatarModel = ({ modelPath }: { modelPath: string; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+const AvatarModel = ({ modelPath, state }: { modelPath: string; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   
@@ -12,6 +12,47 @@ const AvatarModel = ({ modelPath }: { modelPath: string; state: 'idle' | 'thinki
   sceneRef.current = scene;
 
   const { actions } = useAnimations(animations, sceneRef);
+
+  // Dynamic skeletal bone mapping
+  const bonesRef = useRef<{
+    leftEye?: THREE.Bone;
+    rightEye?: THREE.Bone;
+    leftClavicle?: THREE.Bone;
+    rightClavicle?: THREE.Bone;
+    leftUpperArm?: THREE.Bone;
+    rightUpperArm?: THREE.Bone;
+    leftForearm?: THREE.Bone;
+    rightForearm?: THREE.Bone;
+    neck?: THREE.Bone;
+    head?: THREE.Bone;
+    spine?: THREE.Bone;
+  }>({});
+
+  // Dynamic skeletal traversal to resolve RIG naming variations
+  useEffect(() => {
+    const bones: typeof bonesRef.current = {};
+    scene.traverse((child) => {
+      if ((child as any).isBone) {
+        const name = child.name.toLowerCase();
+        // Eye bones
+        if (name.includes('lefteye') || name === 'eye_l' || name.includes('eye.l')) bones.leftEye = child as THREE.Bone;
+        if (name.includes('righteye') || name === 'eye_r' || name.includes('eye.r')) bones.rightEye = child as THREE.Bone;
+        // Clavicle bones
+        if (name.includes('leftclavicle') || name.includes('clavicle_l') || name.includes('clavicle.l')) bones.leftClavicle = child as THREE.Bone;
+        if (name.includes('rightclavicle') || name.includes('clavicle_r') || name.includes('clavicle.r')) bones.rightClavicle = child as THREE.Bone;
+        // Arm bones
+        if (name.includes('leftupperarm') || name.includes('upperarm_l') || name.includes('upper_arm_l') || name.includes('arm_l') || name.includes('shoulder_l')) bones.leftUpperArm = child as THREE.Bone;
+        if (name.includes('rightupperarm') || name.includes('upperarm_r') || name.includes('upper_arm_r') || name.includes('arm_r') || name.includes('shoulder_r')) bones.rightUpperArm = child as THREE.Bone;
+        if (name.includes('leftforearm') || name.includes('forearm_l') || name.includes('fore_arm_l')) bones.leftForearm = child as THREE.Bone;
+        if (name.includes('rightforearm') || name.includes('forearm_r') || name.includes('fore_arm_r')) bones.rightForearm = child as THREE.Bone;
+        // Neck/Head/Spine bones
+        if (name.includes('neck')) bones.neck = child as THREE.Bone;
+        if (name.includes('head')) bones.head = child as THREE.Bone;
+        if (name.includes('spine')) bones.spine = child as THREE.Bone;
+      }
+    });
+    bonesRef.current = bones;
+  }, [scene]);
 
   // Handle playing the basic embedded body animation
   useEffect(() => {
@@ -25,14 +66,129 @@ const AvatarModel = ({ modelPath }: { modelPath: string; state: 'idle' | 'thinki
     }
   }, [actions]);
 
-  // Subtle ambient floating/bobbing on the root group
+  // Kinetic animation timers & state trackers
+  const waveTimer = useRef(0);
+  const lastState = useRef(state);
+  const lastAlertState = useRef(false);
+  const joltTime = useRef(0);
+
+  // Advanced procedural animations on useFrame R3F loop
   useFrame((threeState) => {
     const time = threeState.clock.getElapsedTime();
+    
+    // 1. Root group floating bobbing and yaw sway
     if (group.current) {
-      // Gentle floating bobbing
       group.current.position.y = -3.35 + Math.sin(time * 0.4) * 0.015;
-      // Soft floating yaw sway
       group.current.rotation.y = Math.sin(time * 0.2) * 0.02;
+    }
+
+    const bones = bonesRef.current;
+    if (!bones) return;
+
+    // 2. Procedural Eye Tracking (Gaze)
+    const pointer = threeState.pointer;
+    const targetX = pointer.x * 0.35; // Horizontal limit
+    const targetY = pointer.y * 0.25; // Vertical limit
+
+    if (bones.leftEye) {
+      bones.leftEye.rotation.y = THREE.MathUtils.lerp(bones.leftEye.rotation.y, targetX, 0.1);
+      bones.leftEye.rotation.x = THREE.MathUtils.lerp(bones.leftEye.rotation.x, -targetY, 0.1);
+    }
+    if (bones.rightEye) {
+      bones.rightEye.rotation.y = THREE.MathUtils.lerp(bones.rightEye.rotation.y, targetX, 0.1);
+      bones.rightEye.rotation.x = THREE.MathUtils.lerp(bones.rightEye.rotation.x, -targetY, 0.1);
+    }
+    // Head and neck mimic gaze slightly for physical compliance
+    if (bones.head) {
+      bones.head.rotation.y = THREE.MathUtils.lerp(bones.head.rotation.y, targetX * 0.4, 0.08);
+      bones.head.rotation.x = THREE.MathUtils.lerp(bones.head.rotation.x, -targetY * 0.3, 0.08);
+    }
+    if (bones.neck) {
+      bones.neck.rotation.y = THREE.MathUtils.lerp(bones.neck.rotation.y, targetX * 0.2, 0.08);
+      bones.neck.rotation.x = THREE.MathUtils.lerp(bones.neck.rotation.x, -targetY * 0.15, 0.08);
+    }
+
+    // 3. State-based Clavicle & Spine Breathing Cycles
+    let breathingSpeed = 1.4;
+    let breathingAmplitude = 0.02;
+
+    if (state === 'alert') {
+      breathingSpeed = 3.0; // Rapid combat breathing
+      breathingAmplitude = 0.045;
+    } else if (state === 'thinking') {
+      breathingSpeed = 0.8; // Meditative deep breathing
+      breathingAmplitude = 0.015;
+    } else if (state === 'speaking') {
+      breathingSpeed = 1.8;
+      breathingAmplitude = 0.025;
+    }
+
+    const breathingValue = Math.sin(time * breathingSpeed) * breathingAmplitude;
+
+    if (bones.leftClavicle) {
+      bones.leftClavicle.rotation.z = THREE.MathUtils.lerp(bones.leftClavicle.rotation.z, breathingValue, 0.1);
+    }
+    if (bones.rightClavicle) {
+      bones.rightClavicle.rotation.z = THREE.MathUtils.lerp(bones.rightClavicle.rotation.z, -breathingValue, 0.1);
+    }
+    if (bones.spine) {
+      bones.spine.rotation.x = THREE.MathUtils.lerp(bones.spine.rotation.x, breathingValue * 0.2, 0.1);
+    }
+
+    // 4. Speaking-Triggered Hello Wave Greeting
+    if (state === 'speaking' && lastState.current !== 'speaking') {
+      waveTimer.current = time;
+    }
+    lastState.current = state;
+
+    let targetRightArmZ = 0;
+    let targetRightForearmY = 0;
+    let targetRightForearmX = 0;
+
+    const elapsedWave = time - waveTimer.current;
+    if (state === 'speaking' && elapsedWave < 4.0) {
+      targetRightArmZ = -1.6; // Raised arm
+      targetRightForearmY = 0.5 + Math.sin(time * 12.0) * 0.45; // Wave hand
+      targetRightForearmX = 0.3;
+    } else {
+      if (state === 'alert') {
+        targetRightArmZ = -0.15; // Hold arm closer to body
+      } else {
+        targetRightArmZ = 0; // Relaxed / default animation control
+      }
+    }
+
+    if (bones.rightUpperArm) {
+      bones.rightUpperArm.rotation.z = THREE.MathUtils.lerp(bones.rightUpperArm.rotation.z, targetRightArmZ, 0.08);
+    }
+    if (bones.rightForearm) {
+      bones.rightForearm.rotation.y = THREE.MathUtils.lerp(bones.rightForearm.rotation.y, targetRightForearmY, 0.08);
+      bones.rightForearm.rotation.x = THREE.MathUtils.lerp(bones.rightForearm.rotation.x, targetRightForearmX, 0.08);
+    }
+
+    // 5. Alert-Triggered Security Jolt Spasm (sudden full skeleton contract)
+    if (state === 'alert' && !lastAlertState.current) {
+      joltTime.current = time;
+    }
+    lastAlertState.current = (state === 'alert');
+
+    const elapsedJolt = time - joltTime.current;
+    if (state === 'alert' && elapsedJolt < 1.0) {
+      const joltSpasm = Math.exp(-elapsedJolt * 6.5) * Math.sin(elapsedJolt * 40.0) * 0.18;
+      
+      if (bones.neck) {
+        bones.neck.rotation.x += joltSpasm;
+        bones.neck.rotation.z += joltSpasm * 0.4;
+      }
+      if (bones.spine) {
+        bones.spine.rotation.y += joltSpasm * 0.3;
+      }
+      if (bones.leftClavicle) {
+        bones.leftClavicle.rotation.y += joltSpasm * 0.5;
+      }
+      if (bones.rightClavicle) {
+        bones.rightClavicle.rotation.y -= joltSpasm * 0.5;
+      }
     }
   });
 
