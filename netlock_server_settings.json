@@ -1,28 +1,36 @@
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=mysql-container;Database=w7cdks;Uid=root;Pwd=cortex_secure_netlock_pass;Charset=utf8mb4;"
+    "DefaultConnection": "Server=mysql-container;Database=w7cdks;Uid=root;Pwd=cortex_secure_netlock_pass;Charset=utf8mb4;AllowPublicKeyRetrieval=True;"
   },
+  "CustomCertificatePath": "/app/certificates/cortex_dummy.pfx",
+  "CustomCertificatePassword": "dummy",
   "Kestrel": {
     "Http": true,
     "Https": false,
     "Https_Force": false,
-    "CustomCertificatePath": "/app/certificates/dummy.pfx",
+    "CustomCertificatePath": "/app/certificates/cortex_dummy.pfx",
     "CustomCertificatePassword": "dummy"
   },
+  "cert_path": "/app/certificates/cortex_dummy.pfx",
+  "cert_password": "dummy",
+  "certificates_path": "/app/certificates",
+  "certificates_password": "dummy",
+  "CertPath": "/app/certificates/cortex_dummy.pfx",
+  "CertPassword": "dummy",
+  "CertificatesPath": "/app/certificates",
+  "CertificatesPassword": "dummy",
   "MySQL": {
     "Server": "mysql-container",
     "Port": 3306,
     "Database": "w7cdks",
     "User": "root",
-    "Password": "cortex_secure_netlock_pass"
+    "Password": "cortex_secure_netlock_pass",
+    "AdditionalParameters": "AllowPublicKeyRetrieval=True"
   },
   "MembersPortal": {
-    "Enabled": false,
-    "ApiKeyOverride": "cortex_dummy_key"
-  },
-  "MembersPortalApi": {
-    "Enabled": false,
-    "ApiKeyOverride": "cortex_dummy_key"
+    "BaseUrl": "http://localhost",
+    "ApiKey": "SKIP_SYNC",
+    "SkipSync": true
   },
   "Logging": {
     "LogLevel": {
