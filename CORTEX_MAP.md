@@ -34,6 +34,8 @@
 - **Next Step:** 
   1. Audit Traefik dynamic load balancing configurations for newly established public endpoints.
   2. Implement advanced active response triggers inside the Reflex Daemon telemetry pipeline.
+  3. Expand the custom reporting engine to support scheduled cron tasks and interactive dashboard compilation buttons.
 
 ---
-*Last Updated: Monday, 25 May 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, and DNS stabilization)*
+*Last Updated: Monday, 25 May 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, DNS stabilization, and Automated Custom DOCX/PDF Reporting Engine)*
+

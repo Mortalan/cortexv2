@@ -10,6 +10,8 @@ services:
       MARIADB_PASSWORD: glpi_password
     volumes:
       - /opt/cortex/data/glpi/db:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
     networks:
       - netlock_netlock-network
 

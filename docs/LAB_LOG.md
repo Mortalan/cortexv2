@@ -68,5 +68,13 @@
 4. [x] Engineer the right collapsible **Neural Archive** sidebar to persist multiple conversation sessions.
 5. [x] Support automatic session topic naming and dynamic legacy chat database migration.
 
+**Phase 16.3: Custom Automated Reporting Engine (May 25, 2026)**
+1. [x] Deployed Python-based report compiler `cortex_reporter.py` on `CORTEX-Core`.
+2. [x] Installed `libreoffice-writer-nogui` on `CORTEX-Core` to handle headless DOCX-to-PDF compilation.
+3. [x] Safely exposed GLPI database via `127.0.0.1:3306` on the host network for secure SQL queries.
+4. [x] Created `generate_report.sh` to orchestrate pipeline and sync generated reports (DOCX/PDF) to Forensic Data Lake reports ingress (`/mnt/data_lake/reports/`).
+5. [x] Automatically transferred compiled reports to Downloads folder for immediate client delivery.
+
+
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.
