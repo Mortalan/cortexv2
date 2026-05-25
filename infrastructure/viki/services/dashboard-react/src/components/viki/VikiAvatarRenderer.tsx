@@ -1,97 +1,95 @@
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Highly-detailed cinematic mathematical face contour and curved column mapping representing V.I.K.I. from I, Robot
+// Highly-detailed deep 3D mathematical face contour and curved column mapping representing V.I.K.I. from I, Robot
 const getVoxelDepth = (x: number, y: number, time: number, state: string, amplitude: number) => {
-  // Base cylindrical surface representing the glowing digital column screen
-  let depth = Math.cos((x / 2.2) * (Math.PI / 2)) * 0.5;
+  // Base vertical cylindrical screen columns deforming back
+  let depth = Math.cos((x / 2.2) * (Math.PI / 2)) * 0.7;
   
-  // Radial coordinates centered on the head ellipsoid
-  const headX = x * 1.3;
-  const headY = y - 0.08;
+  // Radial coordinates for the face ellipsoid
+  const headX = x * 1.25;
+  const headY = y - 0.1;
   const r = Math.sqrt(headX * headX + headY * headY);
   
-  if (r <= 1.55) {
-    // Ellipsoid face dome projection
-    const domeRatio = r / 1.55;
-    depth += Math.cos(domeRatio * (Math.PI / 2)) * 0.55;
+  if (r <= 1.6) {
+    const domeRatio = r / 1.6;
+    // Deep 3D ellipsoid dome depth (1.35 units instead of 0.55) to ensure face is highly visible in 3D
+    depth += Math.cos(domeRatio * (Math.PI / 2)) * 1.35;
     
-    // 1. Nose ridge protrusion (realistic sharp bone profile)
-    if (Math.abs(x) < 0.12 && y > -0.22 && y < 0.32) {
-      const noseFactor = (1.0 - Math.abs(x) / 0.12) * ((0.32 - y) / 0.54);
-      depth += 0.36 * noseFactor;
+    // 1. Prominent sharp Nose ridge (0.85 units depth!)
+    if (Math.abs(x) < 0.14 && y > -0.25 && y < 0.35) {
+      const noseFactor = (1.0 - Math.abs(x) / 0.14) * ((0.35 - y) / 0.6);
+      depth += 0.85 * noseFactor;
     }
     
-    // 2. Eyebrow ridge arches
-    if (y > 0.28 && y < 0.44 && Math.abs(x) < 0.48) {
-      const browY = (y - 0.28) / 0.16; // 0 to 1
-      const browX = Math.abs(x) / 0.48; // 0 to 1
+    // 2. High eyebrow arches
+    if (y > 0.28 && y < 0.46 && Math.abs(x) < 0.5) {
+      const browY = (y - 0.28) / 0.18;
+      const browX = Math.abs(x) / 0.5;
       const browFactor = Math.sin(browY * Math.PI) * Math.cos(browX * (Math.PI / 2));
-      depth += 0.09 * browFactor;
+      depth += 0.18 * browFactor;
     }
 
-    // 3. Eye socket depressions (eyeballs sockets)
-    const leftEye = Math.sqrt((x + 0.35) * (x + 0.35) + (y - 0.18) * (y - 0.18));
-    const rightEye = Math.sqrt((x - 0.35) * (x - 0.35) + (y - 0.18) * (y - 0.18));
-    if (leftEye < 0.2) {
-      depth -= 0.22 * Math.cos((leftEye / 0.2) * (Math.PI / 2));
+    // 3. Deep eye socket depressions (creating sharp 3D shadows)
+    const leftEye = Math.sqrt((x + 0.38) * (x + 0.38) + (y - 0.2) * (y - 0.2));
+    const rightEye = Math.sqrt((x - 0.38) * (x - 0.38) + (y - 0.2) * (y - 0.2));
+    if (leftEye < 0.22) {
+      depth -= 0.52 * Math.cos((leftEye / 0.22) * (Math.PI / 2));
     }
-    if (rightEye < 0.2) {
-      depth -= 0.22 * Math.cos((rightEye / 0.2) * (Math.PI / 2));
-    }
-    
-    // 4. Prominent organic cheekbones
-    const leftCheek = Math.sqrt((x + 0.42) * (x + 0.42) + (y + 0.05) * (y + 0.05));
-    const rightCheek = Math.sqrt((x - 0.42) * (x - 0.42) + (y + 0.05) * (y + 0.05));
-    if (leftCheek < 0.28) {
-      depth += 0.095 * Math.cos((leftCheek / 0.28) * (Math.PI / 2));
-    }
-    if (rightCheek < 0.28) {
-      depth += 0.095 * Math.cos((rightCheek / 0.28) * (Math.PI / 2));
+    if (rightEye < 0.22) {
+      depth -= 0.52 * Math.cos((rightEye / 0.22) * (Math.PI / 2));
     }
     
-    // 5. Mouth horizontal lip contour (opens and deforms with speech!)
-    const lipY = Math.abs(y + 0.26);
+    // 4. Strong organic cheekbones
+    const leftCheek = Math.sqrt((x + 0.44) * (x + 0.44) + (y + 0.05) * (y + 0.05));
+    const rightCheek = Math.sqrt((x - 0.44) * (x - 0.44) + (y + 0.05) * (y + 0.05));
+    if (leftCheek < 0.3) {
+      depth += 0.24 * Math.cos((leftCheek / 0.3) * (Math.PI / 2));
+    }
+    if (rightCheek < 0.3) {
+      depth += 0.24 * Math.cos((rightCheek / 0.3) * (Math.PI / 2));
+    }
+    
+    // 5. Lip contour (reactive mouth opening)
+    const lipY = Math.abs(y + 0.28);
     const lipX = Math.abs(x);
-    if (lipY < 0.16 && lipX < 0.36) {
-      const mouthArea = Math.cos((lipX / 0.36) * (Math.PI / 2)) * Math.cos((lipY / 0.16) * (Math.PI / 2));
+    if (lipY < 0.18 && lipX < 0.38) {
+      const mouthArea = Math.cos((lipX / 0.38) * (Math.PI / 2)) * Math.cos((lipY / 0.18) * (Math.PI / 2));
       let mouthOpening = 0;
       if (state === 'speaking') {
-        // syllabic oscillations creating realistic mouth opening
-        mouthOpening = amplitude * 0.22 * Math.abs(Math.sin(time * 16.0));
+        mouthOpening = amplitude * 0.45 * Math.abs(Math.sin(time * 15.0));
       }
-      depth += (0.08 - mouthOpening) * mouthArea;
+      depth += (0.18 - mouthOpening) * mouthArea;
     }
     
     // 6. Chin contour
-    const chin = Math.sqrt(x * x + (y + 0.58) * (y + 0.58));
-    if (chin < 0.16) {
-      depth += 0.16 * Math.cos((chin / 0.16) * (Math.PI / 2));
+    const chin = Math.sqrt(x * x + (y + 0.6) * (y + 0.6));
+    if (chin < 0.18) {
+      depth += 0.35 * Math.cos((chin / 0.18) * (Math.PI / 2));
     }
   } else {
-    // Subtle cybernetic background matrix wave ripples
-    depth += Math.sin(x * 2.0 + y * 1.5 + time * 0.7) * 0.015;
+    // Subtle background ripple
+    depth += Math.sin(x * 1.8 + y * 1.5 + time * 0.8) * 0.02;
   }
   
-  // Continuous shifting organic wave ripple running across the entire face (kinetic voxel wall style)
+  // Continuous shifting organic wave ripple running across the entire face
   let waveSpeed = 2.0;
   if (state === 'thinking') waveSpeed = 3.6;
   else if (state === 'alert') waveSpeed = 5.0;
   
-  let wave = Math.sin(x * 1.6 - time * waveSpeed) * Math.cos(y * 1.6 + time * (waveSpeed * 0.75)) * 0.07;
+  let wave = Math.sin(x * 1.5 - time * waveSpeed) * Math.cos(y * 1.5 + time * (waveSpeed * 0.7)) * 0.08;
   
-  // Speak-reactive push/pull kinetics (bulges entire face forward and sends ripples)
+  // Speak-reactive push/pull kinetics
   if (state === 'speaking') {
     const speechRadius = Math.sqrt(x*x + y*y);
-    wave += Math.sin(speechRadius * 2.4 - time * 13.0) * amplitude * 0.12;
-    depth += amplitude * 0.14 * Math.cos(Math.min(1.0, speechRadius / 1.5) * (Math.PI / 2));
+    wave += Math.sin(speechRadius * 2.2 - time * 12.0) * amplitude * 0.15;
+    depth += amplitude * 0.2 * Math.cos(Math.min(1.0, speechRadius / 1.6) * (Math.PI / 2));
   }
   
-  // Micro-shivering in alert state
   if (state === 'alert') {
-    depth += Math.sin(time * 45.0 + x * 15.0) * 0.025;
+    depth += Math.sin(time * 40.0 + x * 12.0) * 0.03;
   }
   
   depth += wave;
@@ -107,29 +105,29 @@ const VIKIVoxelFace = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'a
   const gridWidth = 46;
   const gridHeight = 46;
   const count = gridWidth * gridHeight;
-  const spacing = 0.088; // Wider spacing for true translucent holographic lattice
+  const spacing = 0.085; // Perfectly proportioned spacing for high visibility
 
-  // Geometry: Thin vertical lines of light + tip joint spheres
-  const boxGeom = React.useMemo(() => new THREE.BoxGeometry(0.016, 0.016, 0.9), []);
-  const sphereGeom = React.useMemo(() => new THREE.SphereGeometry(0.02, 6, 6), []);
+  // Geometry: Thicker vertical lines of light + tip joint spheres to ensure high visibility
+  const boxGeom = React.useMemo(() => new THREE.BoxGeometry(0.035, 0.035, 0.9), []);
+  const sphereGeom = React.useMemo(() => new THREE.SphereGeometry(0.045, 6, 6), []);
   const dummy = React.useMemo(() => new THREE.Object3D(), []);
 
   // Dynamic color interpolation cache
   const tempColor = React.useMemo(() => new THREE.Color(), []);
 
   // Glowing holographic colors matching the movie screenshots
-  let colorMapStart = '#051c2b'; // Deep translucent base blue (recessed)
-  let colorMapEnd = '#a0d8ff';   // Luminous glowing ice-blue (prominent face features)
+  let colorMapStart = '#0f354f'; // Glowing translucent base blue (recessed column grid)
+  let colorMapEnd = '#8adeff';   // Luminous glowing ice-blue (prominent face features)
 
   if (state === 'alert') {
-    colorMapStart = '#2b0207'; // Deep red
-    colorMapEnd = '#ff3b5c';   // Threat red
+    colorMapStart = '#4f0d14'; // Deep red
+    colorMapEnd = '#ff4d6a';   // Threat red
   } else if (state === 'speaking') {
-    colorMapStart = '#04262b'; // Deep teal
-    colorMapEnd = '#d8ffff';   // Glowing silver-cyan
+    colorMapStart = '#0f4a47'; // Deep teal
+    colorMapEnd = '#bbfdff';   // Glowing silver-cyan
   } else if (state === 'thinking') {
-    colorMapStart = '#021630'; // Deep cobalt
-    colorMapEnd = '#00bfff';   // Electric cyan-blue
+    colorMapStart = '#0b325c'; // Deep cobalt
+    colorMapEnd = '#00c0ff';   // Electric cyan-blue
   }
 
   const colStartObj = React.useMemo(() => new THREE.Color(colorMapStart), [colorMapStart]);
@@ -167,12 +165,12 @@ const VIKIVoxelFace = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'a
         meshRefSpheres.current.setMatrixAt(index, dummy.matrix);
 
         // 3. Dynamic color interpolation based on depth
-        const depthRatio = Math.max(0.0, Math.min(1.0, (posZ + 0.2) / 1.1));
+        const depthRatio = Math.max(0.0, Math.min(1.0, (posZ + 0.2) / 1.25));
         tempColor.lerpColors(colStartObj, colEndObj, depthRatio);
 
         // Reactively brighten active speech region
         if (state === 'speaking' && Math.abs(posY + 0.26) < 0.15 && Math.abs(posX) < 0.36) {
-          tempColor.addScalar(amplitude * 0.12);
+          tempColor.addScalar(amplitude * 0.15);
         }
 
         meshRefRods.current.setColorAt(index, tempColor);
@@ -220,7 +218,7 @@ const VIKIVoxelFace = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'a
   );
 };
 
-// Double-layer counter-rotating outer wireframe box enclosure centered around the face
+// Double-layer counter-rotating outer wireframe box enclosure centered around the face (extremely delicate lines)
 const HolographicVIKICube = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const outerCubeRef1 = useRef<THREE.Mesh>(null);
   const outerCubeRef2 = useRef<THREE.Mesh>(null);
@@ -228,12 +226,12 @@ const HolographicVIKICube = ({ state }: { state: 'idle' | 'thinking' | 'speaking
   useFrame((threeState) => {
     const time = threeState.clock.getElapsedTime();
     if (outerCubeRef1.current) {
-      outerCubeRef1.current.rotation.y = time * 0.14;
-      outerCubeRef1.current.rotation.x = time * 0.06;
+      outerCubeRef1.current.rotation.y = time * 0.12;
+      outerCubeRef1.current.rotation.x = time * 0.05;
     }
     if (outerCubeRef2.current) {
-      outerCubeRef2.current.rotation.y = -time * 0.08;
-      outerCubeRef2.current.rotation.z = time * 0.11;
+      outerCubeRef2.current.rotation.y = -time * 0.07;
+      outerCubeRef2.current.rotation.z = time * 0.09;
     }
   });
   
@@ -247,157 +245,16 @@ const HolographicVIKICube = ({ state }: { state: 'idle' | 'thinking' | 'speaking
       {/* Primary Cube Cage */}
       <mesh ref={outerCubeRef1}>
         <boxGeometry args={[4.4, 4.4, 4.4]} />
-        <meshBasicMaterial color={color} wireframe transparent opacity={0.06} blending={THREE.AdditiveBlending} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={0.04} blending={THREE.AdditiveBlending} />
       </mesh>
       
       {/* Secondary Inner Cage for Parallax Depth */}
       <mesh ref={outerCubeRef2} scale={0.96}>
         <boxGeometry args={[4.4, 4.4, 4.4]} />
-        <meshBasicMaterial color={color} wireframe transparent opacity={0.03} blending={THREE.AdditiveBlending} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={0.02} blending={THREE.AdditiveBlending} />
       </mesh>
     </group>
   );
-};
-
-// Cyber particles matrix floating around the face
-const CyberParticles = ({ count = 55, state }: { count?: number; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const pointsRef = useRef<THREE.Points>(null);
-  
-  const positions = React.useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 5.2;          // x
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 5.8 - 0.2; // y centered around head
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 4.5;       // z
-    }
-    return pos;
-  }, [count]);
-
-  useFrame((threeState) => {
-    if (!pointsRef.current) return;
-    const time = threeState.clock.getElapsedTime();
-    const array = pointsRef.current.geometry.attributes.position.array as Float32Array;
-
-    let speed = 0.008;
-    if (state === 'alert') speed = 0.025;
-    else if (state === 'thinking') speed = 0.005;
-    else if (state === 'speaking') speed = 0.014;
-
-    for (let i = 0; i < count; i++) {
-      // Float upwards
-      array[i * 3 + 1] += speed;
-      // Reset if floated out of screen boundaries
-      if (array[i * 3 + 1] > 2.6) {
-        array[i * 3 + 1] = -2.6;
-        array[i * 3] = (Math.random() - 0.5) * 5.2;
-      }
-      // Horizontal sinusoidal sway
-      array[i * 3] += Math.sin(time * 0.95 + i) * 0.0035;
-    }
-    pointsRef.current.geometry.attributes.position.needsUpdate = true;
-  });
-
-  let color = '#a0d8ff';
-  if (state === 'alert') color = '#ff3050';
-  else if (state === 'thinking') color = '#00f0ff';
-  else if (state === 'speaking') color = '#d0f5ff';
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-      </bufferGeometry>
-      <pointsMaterial
-        color={color}
-        size={0.045}
-        transparent
-        opacity={0.45}
-        sizeAttenuation
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
-};
-
-// Translucent glowing grid platform below the entity
-const HolographicPlatform = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const gridRef = useRef<THREE.GridHelper>(null);
-  const ringRef1 = useRef<THREE.Mesh>(null);
-  const ringRef2 = useRef<THREE.Mesh>(null);
-  
-  useFrame((threeState) => {
-    const time = threeState.clock.getElapsedTime();
-    
-    if (gridRef.current) {
-      gridRef.current.rotation.y = time * 0.04;
-      const mat = gridRef.current.material as THREE.Material;
-      mat.transparent = true;
-      mat.opacity = 0.15;
-    }
-    if (ringRef1.current) {
-      ringRef1.current.rotation.z = -time * 0.05;
-    }
-    if (ringRef2.current) {
-      ringRef2.current.rotation.z = time * 0.08;
-    }
-  });
-
-  let color = '#80c0ff';
-  if (state === 'alert') color = '#ff3050';
-  else if (state === 'thinking') color = '#00f0ff';
-  else if (state === 'speaking') color = '#a0d8ff';
-
-  return (
-    <group position={[0, -2.4, 0]}>
-      {/* Dynamic Cyber Grid */}
-      <gridHelper ref={gridRef} args={[7.0, 16, color, color]} />
-      
-      {/* Outer cyber ring */}
-      <mesh ref={ringRef1} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <ringGeometry args={[2.0, 2.15, 32]} />
-        <meshBasicMaterial color={color} side={THREE.DoubleSide} opacity={0.22} transparent wireframe />
-      </mesh>
-      
-      {/* Inner cyber ring */}
-      <mesh ref={ringRef2} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <ringGeometry args={[0.9, 0.96, 24]} />
-        <meshBasicMaterial color={color} side={THREE.DoubleSide} opacity={0.18} transparent wireframe />
-      </mesh>
-    </group>
-  );
-};
-
-const ReactivePointLight = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const lightRef = useRef<THREE.PointLight>(null);
-  
-  useFrame((threeState) => {
-    if (!lightRef.current) return;
-    const time = threeState.clock.getElapsedTime();
-    
-    const targetColor = new THREE.Color('#80c0ff');
-    let targetIntensity = 0.7;
-    
-    if (state === 'alert') {
-      targetColor.set('#ff3050');
-      targetIntensity = 1.4 + Math.sin(time * 18.0) * 0.45;
-    } else if (state === 'thinking') {
-      targetColor.set('#00e5ff');
-      targetIntensity = 0.8 + Math.sin(time * 3.5) * 0.15;
-    } else if (state === 'speaking') {
-      targetColor.set('#d0f5ff');
-      targetIntensity = 1.0 + Math.sin(time * 11.0) * 0.28;
-    } else {
-      targetIntensity = 0.6 + Math.sin(time * 1.2) * 0.08;
-    }
-    
-    lightRef.current.color.lerp(targetColor, 0.08);
-    lightRef.current.intensity = THREE.MathUtils.lerp(lightRef.current.intensity, targetIntensity, 0.08);
-  });
-
-  return <pointLight ref={lightRef} position={[-2, 1, 2.5]} />;
 };
 
 interface RendererProps {
@@ -423,16 +280,9 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
-          <ambientLight intensity={0.7} />
-          <directionalLight position={[3, 4, 3]} intensity={1.3} castShadow />
-          <ReactivePointLight state={vikiState} />
-
           <Suspense fallback={null}>
             <HolographicVIKICube state={vikiState} />
             <VIKIVoxelFace state={vikiState} />
-            <Environment preset="city" />
-            <CyberParticles state={vikiState} />
-            <HolographicPlatform state={vikiState} />
           </Suspense>
 
           <OrbitControls 
