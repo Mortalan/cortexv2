@@ -1,5 +1,6 @@
 # CORTEX: SYSTEM MAP & INDEX
-## [VERSION 2.1 - MAY 2026] - ANTIGRAVITY TRANSITION
+## [VERSION 2.3 - MAY 2026] - COGNITIVE INTEGRATION & STABILIZATION
+
 
 ### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
 > "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and continue with the next phase. Do not read unrelated files."
@@ -37,6 +38,7 @@
   3. Expand the custom reporting engine with a secure mailing pipeline to dispatch reports directly from the dashboard.
 
 ---
-*Last Updated: Monday, 25 May 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, DNS stabilization, Custom DOCX/PDF Reporting Engine, and Cognitive Stateful Hermes Agent)*
+*Last Updated: Monday, 25 May 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, DNS stabilization, Custom DOCX/PDF Reporting Engine, Cognitive Stateful Hermes Agent, Active Sovereign Viki Agent, Firefox Speech Recognition STT /api/transcribe fallback, and WebGL Linux Render Hardening)*
+
 
 

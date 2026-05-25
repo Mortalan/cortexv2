@@ -30,3 +30,5 @@ To prevent infrastructure degradation (404s/502s/401s), the following rules must
 - **External Proxies:** For routing to external nodes (e.g., `Ollama` at `192.168.50.242`), Traefik Docker labels are insufficient. A `file` provider must be used inside `/etc/traefik/dynamic` (e.g., `ollama.yml`) with a defined `loadBalancer.servers.url`.
 - **Authentication Conflicts:** Services that rely on internal native GUI basic authentication (such as `Velociraptor EDR`) must **not** be wrapped in Traefik's `authelia@docker` middleware. Double-wrapping authentication layers results in an unavoidable `401 Unauthorized` loop. 
 - **Traefik Dashboard:** The Traefik API requires the trailing slash (`/dashboard/`) when accessed via standard routing links.
+- **Python / Host-Level Services:** Services running on the host systemd (e.g., `viki-agent` listening on port `9092` on VM 100) are routed via dynamic Traefik file providers (`dynamic/viki-agent.yml`) using `http.services` with `loadBalancer.servers` pointing to host loopback or internal IP endpoints to bypass Docker boundaries seamlessly.
+

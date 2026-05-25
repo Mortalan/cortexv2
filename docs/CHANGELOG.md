@@ -1,6 +1,16 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 25 MAY 2026 - ACTIVE SOVEREIGN VIKI AGENT, DYNAMIC TIME-RANGE REPORTING & WEBGL LINUX RENDER HARDENING (MOLE RUN)
+- **Active Sovereign VIKI Agent:** Upgraded the conversational agent (`viki_agent.py` on VM 100) running in a system-isolated Python virtual environment (`/opt/cortex/venv`) using local Ollama (`viki` model) in a stateful ReAct (Reasoning + Action) loop.
+- **Dual-Database Active Operations:** Integrated direct, secure SQL querying of the `glpi-db` MariaDB container and NetLock RMM `mysql-container` (database `dogha6`), allowing Viki to pull tickets, list/add/remove users, change roles/permissions, and audit RMM policies autonomously.
+- **Dynamic Schema Discovery & Self-Correction:** Programmed robust MySQL feedback capture so that when Viki encounters a SQL query error (e.g., unknown column `status`), she autonomously runs schema discovery (`SHOW TABLES;`, `DESCRIBE policies;`) to correct her own query and execute successfully.
+- **Historical Custom Reports:** Upgraded `cortex_reporter.py` and `generate_report.sh` to parse spec parameters from `/tmp/viki_report_spec.json`. When asked to "pull a report from 3 months ago," Viki parses the date range (e.g., `"February 2026"`), compiles it into the BTRFS lake under the customized slug-naming structure (`monthly_report_pr_vip_2026_02.docx` and `.pdf`).
+- **Robust Audio Speech-to-Text Fallback:** Upgraded the speech triggers inside `VikiDedicatedChat.tsx` so that if native `SpeechRecognition` is disabled or unsupported (as Firefox defaults to), the interface automatically uses `MediaRecorder` and Web Audio APIs to capture high-fidelity voice inputs natively.
+- **Server-Side Transcription Backend:** Developed a new POST endpoint `/api/transcribe` inside `viki_agent.py` on VM 100. It receives browser-recorded binary payloads (webm/ogg formats), transcodes them headlessly using `ffmpeg`, and transcribes them in Python using the Google Speech Recognition engine.
+- **WebGL 3D Avatar Rendering Fix:** Integrated automatic geometry traversal inside `VikiAvatarRenderer.tsx` to dynamically convert all loaded mesh structures to **non-indexed geometries** (`toNonIndexed()`), completely eliminating index buffers and successfully bypassing the Firefox/Mesa index underflow rendering driver bugs on Linux.
+- **Dynamic Gateway Routing Interception:** Deployed a dynamic Traefik file provider router (`viki-agent.yml`) to proxy both chat and transcribe endpoints to port `9092` dynamically without requiring any container builds.
+
 ### 25 MAY 2026 - NETLOCK CLEAN SLATE REINSTALLATION, SHARED NETWORK ADAPTATION & TRAEFIK INGRESS STABILIZATION (MOLE RUN)
 - **Clean Slate Uninstallation:** Purged all residual files, logs, databases, and Docker volumes on `CORTEX-Core` (`192.168.50.241`) to establish a 100% clean installation slate.
 - **Shared Network & Port Realignment:** Adapted the custom installer script `install.sh` to run NetLock inside the existing `netlock_netlock-network` without static IP address mappings, completely eliminating subnet collisions and label warnings with other active CORTEX containers (Authelia, GLPI, etc.).

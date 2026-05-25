@@ -9,9 +9,12 @@
 - [x] **CLI Migration (Gemini -> Antigravity) Prep.**
 - [x] **Real-time Telemetry HUD (Phase 16.1) Completed.**
 - [x] **Sovereign Control & Active Mitigation Console (Phase 16.2) Completed.**
+- [x] **Sovereign Viki Agent & DB Operations (Phase 16.7) Completed.**
+- [x] **Native Firefox STT Recorder & Transcription API (Phase 16.8) Completed.**
+- [x] **WebGL 3D Avatar Render Hardening (Phase 16.9) Completed.**
 
-### CURRENT PHASE: COGNITIVE INTEGRATION
-**Phase 15.3: Visualizing VIKI**
+### CURRENT PHASE: PLATFORM ORCHESTRATION & SECURITY HARDENING
+**Phase 17.1: Gateway Hardening & Webhook Orchestration**
 1. [x] Implement `VikiAvatarRenderer.tsx` in Dashboard.
 2. [x] Deploy `viki_sync.py` on AI-101.
 3. [x] Integrate Avatar visibility into Dashboard Auth (Admin only).
@@ -88,15 +91,20 @@
 3. [x] Deployed `/opt/cortex/infrastructure/viki/services/hermes/` container stack under dynamic Traefik proxying at `hermes.rmmservice.co.za`.
 4. [x] Successfully mapped automated playbooks inside `/api/hermes/triage` to autonomously execute target host quarantining and notify CORTEX's active response channels.
 
-**Phase 16.6: Cognitive Exceptions Knowledgebase (May 25, 2026)**
-1. [x] Deployed a local JSON-backed Knowledgebase exception store `/mnt/data_lake/logs/hermes_knowledgebase.json` on the data lake.
-2. [x] Integrated rule matching inside the triage parser to match incoming messages against approved exclusion rules prior to LLM query routing.
-3. [x] Upgraded the Hermes Command Console UI to serve a visual **Approved Exclusions list** with active deletion controllers.
-4. [x] Integrated a quick-action **Approve as Exclusion Rule** whitelist mapping directly on logged telemetry incidents.
-5. [x] Successfully verified the exception bypass loop with mock domain `GPUPDATE` indicators.
+**Phase 16.7: Sovereign Viki Agent & DB Operations (May 25, 2026)**
+1. [x] Upgraded the conversational agent (`viki_agent.py` on VM 100) running in a system-isolated Python virtual environment (`/opt/cortex/venv`) using local Ollama (`viki` model) in a stateful ReAct (Reasoning + Action) loop.
+2. [x] Integrated direct, secure SQL querying of the `glpi-db` MariaDB container and NetLock RMM `mysql-container` (database `dogha6`), allowing Viki to pull tickets, list/add/remove users, change roles/permissions, and audit RMM policies autonomously.
+3. [x] Programmed robust MySQL feedback capture so that when Viki encounters a SQL query error (e.g., unknown column `status`), she autonomously runs schema discovery (`SHOW TABLES;`, `DESCRIBE policies;`) to correct her own query and execute successfully.
+4. [x] Upgraded `cortex_reporter.py` and `generate_report.sh` to parse spec parameters from `/tmp/viki_report_spec.json`. When asked to "pull a report from 3 months ago," Viki parses the date range (e.g., `"February 2026"`), compiles it into the BTRFS lake under the customized slug-naming structure (`monthly_report_pr_vip_2026_02.docx` and `.pdf`).
 
+**Phase 16.8: Native Firefox Speech Recorder & Transcription API (May 25, 2026)**
+1. [x] Upgraded the speech triggers inside `VikiDedicatedChat.tsx` so that if native `SpeechRecognition` is disabled or unsupported (as Firefox defaults to), the interface automatically uses `MediaRecorder` and Web Audio APIs to capture high-fidelity voice inputs natively.
+2. [x] Developed a new POST endpoint `/api/transcribe` inside `viki_agent.py` on VM 100. It receives browser-recorded binary payloads (webm/ogg formats), transcodes them headlessly using `ffmpeg`, and transcribes them in Python using the Google Speech Recognition engine.
+3. [x] Integrated a glowing glassmorphic HUD modal overlay inside the frontend that triggers if microphone access fails, showing Firefox users the exact flags needed to enable native Web Speech API in `about:config`.
 
-
+**Phase 16.9: WebGL 3D Avatar Render Hardening (May 25, 2026)**
+1. [x] Integrated automatic geometry traversal inside `VikiAvatarRenderer.tsx` to dynamically convert all loaded mesh structures to non-indexed geometries (`toNonIndexed()`), completely eliminating index buffers and successfully bypassing the Firefox/Mesa index underflow rendering driver bugs on Linux.
+2. [x] Deployed a dynamic Traefik file provider router (`viki-agent.yml`) to proxy both chat and transcribe endpoints to port `9092` dynamically without requiring any container builds.
 
 
 ### SNAPSHOT HISTORY
