@@ -3,13 +3,13 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Procedural low-poly head base generator with ARKit/Oculus viseme morph targets
+// Procedural low-poly head base generator
 const createHeadGeometry = () => {
   const geometry = new THREE.SphereGeometry(1.2, 32, 32);
   const pos = geometry.attributes.position;
   const count = pos.count;
   
-  // 1. Deform the sphere to look like a human head (oval, narrowed jaw, flat face)
+  // Deform the sphere to look like a human head (oval, narrowed jaw, flat face)
   for (let i = 0; i < count; i++) {
     let x = pos.getX(i);
     let y = pos.getY(i);
@@ -36,49 +36,6 @@ const createHeadGeometry = () => {
     pos.setXYZ(i, x, y, z);
   }
   
-  // 2. Define Morph Targets (offsets relative to the base positions)
-  const jawOpenOffsets = new Float32Array(count * 3);
-  const mouthOpenOffsets = new Float32Array(count * 3);
-  const smileOffsets = new Float32Array(count * 3);
-  
-  for (let i = 0; i < count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    
-    // Morph Target 1: jawOpen (lower chin pull)
-    if (y < -0.1 && z > 0.2) {
-      const distToChin = Math.abs(y + 0.8);
-      const factor = z * (1.0 - Math.min(distToChin, 0.8));
-      jawOpenOffsets[i * 3 + 1] = -0.35 * factor;
-      jawOpenOffsets[i * 3 + 2] = 0.08 * factor;
-    }
-    
-    // Morph Target 2: mouthOpen (vertical lips split)
-    const distToLipCenter = Math.sqrt(x*x + (y + 0.18)*(y + 0.18));
-    if (distToLipCenter < 0.35 && z > 0.5) {
-      const factor = (0.35 - distToLipCenter) * z;
-      if (y > -0.18) {
-        mouthOpenOffsets[i * 3 + 1] = 0.16 * factor; // upper lip up
-      } else {
-        mouthOpenOffsets[i * 3 + 1] = -0.16 * factor; // lower lip down
-      }
-    }
-    
-    // Morph Target 3: smile (corners horizontal pull and lift)
-    if (Math.abs(y + 0.18) < 0.25 && z > 0.5) {
-      const factor = (0.25 - Math.abs(y + 0.18)) * z;
-      smileOffsets[i * 3] = (x > 0 ? 0.15 : -0.15) * factor;
-      smileOffsets[i * 3 + 1] = 0.1 * factor;
-    }
-  }
-  
-  // Set the morph attributes
-  geometry.morphAttributes.position = [];
-  geometry.morphAttributes.position[0] = new THREE.Float32BufferAttribute(jawOpenOffsets, 3);
-  geometry.morphAttributes.position[1] = new THREE.Float32BufferAttribute(mouthOpenOffsets, 3);
-  geometry.morphAttributes.position[2] = new THREE.Float32BufferAttribute(smileOffsets, 3);
-  
   geometry.computeVertexNormals();
   return geometry;
 };
@@ -87,9 +44,15 @@ const createHeadGeometry = () => {
 const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const pointsRef = useRef<THREE.Points>(null);
   const meshRef = useRef<THREE.Mesh>(null);
+  const basePositionsRef = useRef<Float32Array | null>(null);
   
   // Generate the responsive geometry
-  const geometry = React.useMemo(() => createHeadGeometry(), []);
+  const geometry = React.useMemo(() => {
+    const geom = createHeadGeometry();
+    // Cache the original base coordinates for CPU manipulation
+    basePositionsRef.current = new Float32Array(geom.attributes.position.array);
+    return geom;
+  }, []);
   
   // Web Audio API capture nodes
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -160,40 +123,70 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
       }
     }
     
-    // 3. Bind Web Audio frequency data directly to Morph target blend weights
-    if (pointsRef.current && meshRef.current) {
-      const points = pointsRef.current;
-      const mesh = meshRef.current;
+    // Lerp weights for organic jaw compliance
+    let jawWeight = 0;
+    let mouthWeight = 0;
+    let smileWeight = 0;
+    
+    if (state === 'speaking') {
+      jawWeight = amplitude * 0.85;
+      mouthWeight = amplitude * 0.95;
+      smileWeight = 0.15 + amplitude * 0.1;
+    } else if (state === 'thinking') {
+      smileWeight = -0.15; // concentration frown
+      jawWeight = amplitude * 0.1;
+    } else if (state === 'alert') {
+      smileWeight = -0.3; // combat frown
+      jawWeight = 0.05;
+    } else {
+      // Calm idle smile breathing
+      smileWeight = 0.25 + Math.sin(time * 0.3) * 0.08;
+    }
+    
+    // 3. Direct CPU Vertex Modification (Standard WebGL safe, zero shader compilation warnings)
+    if (pointsRef.current && meshRef.current && basePositionsRef.current) {
+      const posAttr = geometry.attributes.position;
+      const count = posAttr.count;
+      const base = basePositionsRef.current;
       
-      if (points.morphTargetInfluences && mesh.morphTargetInfluences) {
-        let targetJaw = 0;
-        let targetMouth = 0;
-        let targetSmile = 0;
+      for (let i = 0; i < count; i++) {
+        const bx = base[i * 3];
+        const by = base[i * 3 + 1];
+        const bz = base[i * 3 + 2];
         
-        if (state === 'speaking') {
-          targetJaw = amplitude * 0.85;
-          targetMouth = amplitude * 0.95;
-          targetSmile = 0.15 + amplitude * 0.1;
-        } else if (state === 'thinking') {
-          targetSmile = -0.15; // concentration frown
-          targetJaw = amplitude * 0.1;
-        } else if (state === 'alert') {
-          targetSmile = -0.3; // combat frown
-          targetJaw = 0.05;
-        } else {
-          // Calm idle smile breathing
-          targetSmile = 0.25 + Math.sin(time * 0.3) * 0.08;
+        let x = bx;
+        let y = by;
+        let z = bz;
+        
+        // jawOpen offset calculation (lower chin pull)
+        if (by < -0.1 && bz > 0.2) {
+          const distToChin = Math.abs(by + 0.8);
+          const factor = bz * (1.0 - Math.min(distToChin, 0.8)) * jawWeight;
+          y += -0.35 * factor;
+          z += 0.08 * factor;
         }
         
-        // Organic compliance lerping
-        points.morphTargetInfluences[0] = THREE.MathUtils.lerp(points.morphTargetInfluences[0], targetJaw, 0.22);
-        points.morphTargetInfluences[1] = THREE.MathUtils.lerp(points.morphTargetInfluences[1], targetMouth, 0.22);
-        points.morphTargetInfluences[2] = THREE.MathUtils.lerp(points.morphTargetInfluences[2], targetSmile, 0.22);
+        // mouthOpen offset calculation (vertical lips split)
+        const distToLipCenter = Math.sqrt(bx*bx + (by + 0.18)*(by + 0.18));
+        if (distToLipCenter < 0.35 && bz > 0.5) {
+          const factor = (0.35 - distToLipCenter) * bz * mouthWeight;
+          if (by > -0.18) {
+            y += 0.16 * factor; // upper lip up
+          } else {
+            y += -0.16 * factor; // lower lip down
+          }
+        }
         
-        mesh.morphTargetInfluences[0] = points.morphTargetInfluences[0];
-        mesh.morphTargetInfluences[1] = points.morphTargetInfluences[1];
-        mesh.morphTargetInfluences[2] = points.morphTargetInfluences[2];
+        // smile offset calculation (corners horizontal pull and lift)
+        if (Math.abs(by + 0.18) < 0.25 && bz > 0.5) {
+          const factor = (0.25 - Math.abs(by + 0.18)) * bz * smileWeight;
+          x += (bx > 0 ? 0.15 : -0.15) * factor;
+          y += 0.1 * factor;
+        }
+        
+        posAttr.setXYZ(i, x, y, z);
       }
+      posAttr.needsUpdate = true;
     }
   });
   
