@@ -82,6 +82,13 @@
 4. [x] Broadcast dynamic WebSocket `MITIGATION` visual HUD overlays to notify all connected operational dashboards of automated mitigations.
 5. [x] Successfully verified the mitigation loop with simulated threat vectors, quarantining mock target `C-101` in the background.
 
+**Phase 16.5: Cognitive Stateful Dispatcher - Hermes Agent (May 25, 2026)**
+1. [x] Built the Python-based `hermes_agent.py` driven by FastAPI and equipped with Ollama `viki:latest` context-retrieval hooks.
+2. [x] Designed the interactive HTML/JS **Hermes Dispatch Console** (served on root `/`) featuring real-time diagnostic log persistence and a manual Triage Simulator.
+3. [x] Deployed `/opt/cortex/infrastructure/viki/services/hermes/` container stack under dynamic Traefik proxying at `hermes.rmmservice.co.za`.
+4. [x] Successfully mapped automated playbooks inside `/api/hermes/triage` to autonomously execute target host quarantining and notify CORTEX's active response channels.
+
+
 
 
 ### SNAPSHOT HISTORY
