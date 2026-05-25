@@ -1,0 +1,13 @@
+http:
+  routers:
+    viki-reporter:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/generate-report`)"
+      entryPoints:
+        - web
+      service: viki-reporter-service
+
+  services:
+    viki-reporter-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.241:9091"

@@ -44,6 +44,7 @@ const servicesData = [
       { name: "NetLock RMM", subtitle: "Tactical Control", url: "https://rmm.rmmservice.co.za", icon: "⚡" },
       { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
       { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
+      { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
     ],
   },
   {
@@ -52,6 +53,7 @@ const servicesData = [
       { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
       { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
       { name: "Ollama AI", subtitle: "Neural Inference", url: "https://cortex.rmmservice.co.za/api/viki/", icon: "🤖" },
+      { name: "Hermes Agent", subtitle: "Cognitive Dispatcher", url: "https://hermes.rmmservice.co.za", icon: "🕊️" },
     ],
   },
   {
