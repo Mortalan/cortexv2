@@ -32,6 +32,16 @@ def save_alerts(alerts: list) -> None:
     with open(ALERTS_PATH, "w") as f:
         json.dump(alerts, f)
 
+def get_mode() -> str:
+    if os.path.exists(STATE_PATH):
+        try:
+            with open(STATE_PATH, "r") as f:
+                state = json.load(f)
+                return state.get("mode", "NORMAL")
+        except:
+            return "NORMAL"
+    return "NORMAL"
+
 def broadcast_event(payload: dict) -> None:
     """Send JSON payload to all active WebSocket clients."""
     event_str = json.dumps(payload)
@@ -109,6 +119,31 @@ def handle_telemetry() -> object:
         data['severity'] = data.get('level', 'INFO')
         
     broadcast_event(data)
+    
+    # Active Mitigation Autonomous Trigger in REFLEX mode
+    mode = get_mode()
+    severity = str(data.get("severity", "INFO")).upper()
+    message = str(data.get("message", "")).upper()
+    
+    if mode == "REFLEX" and (severity == "CRITICAL" or "CRITICAL" in message or "MIMIKATZ" in message or "QUARANTINE" in message):
+        target_id = data.get("client_id") or data.get("hostname") or data.get("target")
+        if target_id:
+            print(f"[!] AUTONOMOUS REFLEX TRIGGERED: Critical threat detected on target '{target_id}' in Hardened mode. Initiating isolation playbook!", flush=True)
+            playbook_path = os.path.join(PLAYBOOKS_DIR, "isolate_host.sh")
+            if os.path.exists(playbook_path):
+                os.system(f"bash {playbook_path} {target_id} &")
+                
+                # Broadcast autonomous mitigation HUD alert
+                mitigation_event = {
+                    "id": str(int(time.time() * 1000) + 1),
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "type": "MITIGATION",
+                    "severity": "CRITICAL",
+                    "source": "REFLEX",
+                    "message": f"Autonomous Quarantine initiated for target: {target_id} due to EDR indicator: {data.get('message', 'Critical process execution')}"
+                }
+                broadcast_event(mitigation_event)
+
     return jsonify({"status": "ok"})
 
 def set_mode(mode: str) -> None:
