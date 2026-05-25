@@ -8,6 +8,18 @@ const AvatarModel = ({ modelPath, state }: { modelPath: string; state: 'idle' | 
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(modelPath);
   
+  // Convert to non-indexed geometry to bypass WebGL index underflow driver bugs in Firefox on Linux
+  React.useMemo(() => {
+    scene.traverse((child) => {
+      if ((child as any).isMesh) {
+        const mesh = child as THREE.Mesh;
+        if (mesh.geometry && mesh.geometry.index) {
+          mesh.geometry = mesh.geometry.toNonIndexed();
+        }
+      }
+    });
+  }, [scene]);
+  
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
 
