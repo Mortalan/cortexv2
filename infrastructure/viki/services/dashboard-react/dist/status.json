@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-05-11T11:40:15Z",
+  "services": [
+    {"name": "Dashboard", "status": "online"},
+    {"name": "NetLock RMM", "status": "online"},
+    {"name": "Velociraptor", "status": "online"},
+    {"name": "n8n", "status": "online"},
+    {"name": "GLPI", "status": "online"},
+    {"name": "Authelia", "status": "online"},
+    {"name": "MinIO", "status": "online"},
+    {"name": "Ollama AI", "status": "online"}
+  ]
+}
