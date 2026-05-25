@@ -3,9 +3,11 @@ import os
 import sys
 import json
 import time
+import tempfile
 import subprocess
 import requests
-from fastapi import FastAPI, Request, HTTPException
+import speech_recognition as sr
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 import uvicorn
 
@@ -280,6 +282,55 @@ async def handle_chat(request: Request):
             "content": assistant_reply
         }
     })
+
+@app.post("/api/transcribe")
+async def handle_transcribe(file: UploadFile = File(...)):
+    """Transcribe webm/ogg audio from browsers using ffmpeg + SpeechRecognition."""
+    in_path = None
+    out_path = None
+    try:
+        # Create temp files
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_in:
+            temp_in.write(await file.read())
+            in_path = temp_in.name
+            
+        out_path = in_path + ".wav"
+        
+        # Run ffmpeg to convert webm/ogg to wav (16kHz, mono)
+        cmd = f"ffmpeg -y -i {in_path} -ar 16000 -ac 1 {out_path}"
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if res.returncode != 0:
+            print(f"[!] Ffmpeg conversion failed: {res.stderr}", flush=True)
+            return JSONResponse({"text": "", "error": f"Ffmpeg error: {res.stderr.strip()}"}, status_code=500)
+        
+        # Run SpeechRecognition
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(out_path) as source:
+            audio_data = recognizer.record(source)
+            
+        # Transcribe using Google's free Web Speech API
+        text = recognizer.recognize_google(audio_data)
+        
+        return JSONResponse({"text": text})
+    except sr.UnknownValueError:
+        return JSONResponse({"text": "", "error": "Speech was unintelligible."})
+    except sr.RequestError as e:
+        return JSONResponse({"text": "", "error": f"Transcription API request error: {e}"})
+    except Exception as e:
+        print(f"[!] Transcription failed: {e}", flush=True)
+        return JSONResponse({"text": "", "error": str(e)}, status_code=500)
+    finally:
+        # Safe cleanup
+        if in_path and os.path.exists(in_path):
+            try:
+                os.remove(in_path)
+            except:
+                pass
+        if out_path and os.path.exists(out_path):
+            try:
+                os.remove(out_path)
+            except:
+                pass
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=9092)

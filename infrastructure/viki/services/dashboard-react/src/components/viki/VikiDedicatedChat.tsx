@@ -114,6 +114,12 @@ export const VikiDedicatedChat: React.FC = () => {
   // References
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<any>(null);
+  const audioChunksRef = useRef<any[]>([]);
+
+  // Firefox Speech Recognition Fallback States
+  const [showMicError, setShowMicError] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Save sessions and settings to localStorage on state changes
   useEffect(() => {
@@ -412,16 +418,88 @@ export const VikiDedicatedChat: React.FC = () => {
     }
   };
 
-  const handleMicClick = () => {
-    if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome, Safari or Edge.');
+  const handleMicClick = async () => {
+    // 1. If native Web Speech API is supported, use it!
+    if (recognitionRef.current) {
+      if (isListening) {
+        recognitionRef.current.stop();
+      } else {
+        recognitionRef.current.start();
+      }
+      return;
+    }
+
+    // 2. Browser SpeechRecognition not supported (e.g. Firefox by default).
+    // Fallback to server-side audio capture & transcription using MediaRecorder
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      setShowMicError(true);
       return;
     }
 
     if (isListening) {
-      recognitionRef.current.stop();
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsListening(false);
+      setVikiState('idle');
     } else {
-      recognitionRef.current.start();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunksRef.current = [];
+        
+        const recorder = new MediaRecorder(stream);
+        
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+        
+        recorder.onstop = async () => {
+          // Clean up microphone streams immediately
+          stream.getTracks().forEach(track => track.stop());
+          
+          const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+          if (audioBlob.size === 0) return;
+          
+          setIsTranscribing(true);
+          setVikiState('thinking');
+          
+          try {
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'voice_input.webm');
+            
+            const response = await fetch('/api/viki/api/transcribe', {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (!response.ok) throw new Error('Transcription link failure');
+            
+            const data = await response.json();
+            if (data.text && data.text.trim()) {
+              setInput(data.text);
+              sendMessage(data.text);
+            } else if (data.error) {
+              console.warn('STT warning:', data.error);
+            }
+          } catch (err) {
+            console.error('Transcription failed:', err);
+          } finally {
+            setIsTranscribing(false);
+            setVikiState('idle');
+          }
+        };
+        
+        mediaRecorderRef.current = recorder;
+        recorder.start();
+        setIsListening(true);
+        setVikiState('thinking');
+      } catch (err) {
+        console.error('Microphone stream access error:', err);
+        setShowMicError(true);
+      }
     }
   };
 
@@ -756,6 +834,22 @@ export const VikiDedicatedChat: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {isTranscribing && (
+              <div className="console-row viki thinking">
+                <div className="row-avatar">👤</div>
+                <div className="console-bubble user thinking" style={{ border: '1px solid var(--neon-coder)' }}>
+                  <div className="bubble-meta">
+                    <span className="sender-name">TECHNICIAN</span>
+                    <span className="model-tag pulse" style={{ background: 'var(--neon-coder)', color: '#000' }}>TRANSCRIBING...</span>
+                  </div>
+                  <div className="neural-thinking-loader">
+                    <div className="pulse-circle" style={{ background: 'var(--neon-coder)', boxShadow: '0 0 8px var(--neon-coder)' }}></div>
+                    <span className="font-space" style={{ color: 'var(--neon-coder)' }}>TRANSCRIBING NEURAL AUDIO SIGNAL...</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* User Cockpit Input Controls */}
@@ -869,6 +963,34 @@ export const VikiDedicatedChat: React.FC = () => {
           </div>
         )}
       </div>
+
+      {showMicError && (
+        <div className="mic-error-modal-overlay" onClick={() => setShowMicError(false)}>
+          <div className="mic-error-modal glassmorphic" onClick={(e) => e.stopPropagation()}>
+            <div className="mic-error-header font-space">
+              <span className="mic-error-icon">⚠️</span>
+              <span className="mic-error-title">SPEECH INTERFACE OFFLINE</span>
+            </div>
+            <div className="mic-error-body font-space">
+              <p>Web Speech Recognition is not natively enabled by default in Firefox.</p>
+              <p className="mic-instructions-title">🔧 HOW TO ACTIVATE IN FIREFOX:</p>
+              <ol className="mic-instructions-list">
+                <li>Open a new tab and type <code className="glow-code">about:config</code> in the address bar.</li>
+                <li>Accept the warning to proceed.</li>
+                <li>Search for <code className="glow-code">media.webspeech.recognition.enable</code> and set it to <strong>true</strong>.</li>
+                <li>Search for <code className="glow-code">media.webspeech.recognition.force_enable</code> and set it to <strong>true</strong>.</li>
+                <li>Restart Firefox and reload this cockpit.</li>
+              </ol>
+              <p className="mic-alternative">Alternatively, please use Google Chrome, Apple Safari, or Microsoft Edge for out-of-the-box voice operations.</p>
+            </div>
+            <div className="mic-error-actions">
+              <button className="mic-error-close-btn font-space" onClick={() => setShowMicError(false)}>
+                CLOSE PILOT OVERLAY
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

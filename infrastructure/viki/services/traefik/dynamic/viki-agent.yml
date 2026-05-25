@@ -1,15 +1,15 @@
 http:
   routers:
-    viki-agent-chat:
-      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/viki/api/chat`)"
+    viki-agent-endpoints:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && (PathPrefix(`/api/viki/api/chat`) || PathPrefix(`/api/viki/api/transcribe`))"
       entryPoints:
         - web
       service: viki-agent-service
       middlewares:
-        - strip-viki-chat
+        - strip-viki-prefix
 
   middlewares:
-    strip-viki-chat:
+    strip-viki-prefix:
       stripPrefix:
         prefixes:
           - "/api/viki"
