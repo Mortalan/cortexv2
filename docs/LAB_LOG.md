@@ -25,10 +25,10 @@
 - [ ] Implement a secure, tokenized SMTP mailing pipeline inside cortex_reporter.py to dispatch reports directly from the dashboard.
 
 **Phase 17.2: Holographic V.I.K.I. Core Matrix Conversion**
-- [ ] Source or model a low-poly head base containing standard ARKit/Oculus viseme morph targets.
-- [ ] Develop custom Three.js ShaderMaterial or InstancedMesh layer in VikiAvatarRenderer.tsx to render the 3D grid matrix look.
-- [ ] Connect Web Audio API AnalyserNode to the /api/viki audio playback hook to capture real-time audio amplitudes.
-- [ ] Bind real-time sound frequencies to face morph target weights inside the core frame rendering loop.
+- [x] Source or model a low-poly head base containing standard ARKit/Oculus viseme morph targets.
+- [x] Develop custom Three.js ShaderMaterial or InstancedMesh layer in VikiAvatarRenderer.tsx to render the 3D grid matrix look.
+- [x] Connect Web Audio API AnalyserNode to the /api/viki audio playback hook to capture real-time audio amplitudes.
+- [x] Bind real-time sound frequencies to face morph target weights inside the core frame rendering loop.
 
 **Phase 15.4: Cognitive Dialogue**
 1. [x] Implement `VikiChat.tsx` component in Dashboard sidebar.

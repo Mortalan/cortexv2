@@ -3,206 +3,231 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Component that handles loading and animating the 3D asset
-const AvatarModel = ({ modelPath, state }: { modelPath: string; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const group = useRef<THREE.Group>(null);
-  const { scene, animations } = useGLTF(modelPath);
+// Procedural low-poly head base generator with ARKit/Oculus viseme morph targets
+const createHeadGeometry = () => {
+  const geometry = new THREE.SphereGeometry(1.2, 32, 32);
+  const pos = geometry.attributes.position;
+  const count = pos.count;
   
-  // Convert to non-indexed geometry to bypass WebGL index underflow driver bugs in Firefox on Linux
-  React.useMemo(() => {
-    scene.traverse((child) => {
-      if ((child as any).isMesh) {
-        const mesh = child as THREE.Mesh;
-        if (mesh.geometry && mesh.geometry.index) {
-          mesh.geometry = mesh.geometry.toNonIndexed();
-        }
-      }
-    });
-  }, [scene]);
-  
-  const sceneRef = useRef(scene);
-  sceneRef.current = scene;
-
-  const { actions } = useAnimations(animations, sceneRef);
-
-  // Dynamic skeletal bone mapping
-  const bonesRef = useRef<{
-    leftEye?: THREE.Bone;
-    rightEye?: THREE.Bone;
-    leftClavicle?: THREE.Bone;
-    rightClavicle?: THREE.Bone;
-    leftUpperArm?: THREE.Bone;
-    rightUpperArm?: THREE.Bone;
-    leftForearm?: THREE.Bone;
-    rightForearm?: THREE.Bone;
-    neck?: THREE.Bone;
-    head?: THREE.Bone;
-    spine?: THREE.Bone;
-  }>({});
-
-  // Dynamic skeletal traversal to resolve RIG naming variations
-  useEffect(() => {
-    const bones: typeof bonesRef.current = {};
-    scene.traverse((child) => {
-      if ((child as any).isBone) {
-        const name = child.name.toLowerCase();
-        // Eye bones
-        if (name.includes('lefteye') || name === 'eye_l' || name.includes('eye.l')) bones.leftEye = child as THREE.Bone;
-        if (name.includes('righteye') || name === 'eye_r' || name.includes('eye.r')) bones.rightEye = child as THREE.Bone;
-        // Clavicle bones
-        if (name.includes('leftclavicle') || name.includes('clavicle_l') || name.includes('clavicle.l')) bones.leftClavicle = child as THREE.Bone;
-        if (name.includes('rightclavicle') || name.includes('clavicle_r') || name.includes('clavicle.r')) bones.rightClavicle = child as THREE.Bone;
-        // Arm bones
-        if (name.includes('leftupperarm') || name.includes('upperarm_l') || name.includes('upper_arm_l') || name.includes('arm_l') || name.includes('shoulder_l')) bones.leftUpperArm = child as THREE.Bone;
-        if (name.includes('rightupperarm') || name.includes('upperarm_r') || name.includes('upper_arm_r') || name.includes('arm_r') || name.includes('shoulder_r')) bones.rightUpperArm = child as THREE.Bone;
-        if (name.includes('leftforearm') || name.includes('forearm_l') || name.includes('fore_arm_l')) bones.leftForearm = child as THREE.Bone;
-        if (name.includes('rightforearm') || name.includes('forearm_r') || name.includes('fore_arm_r')) bones.rightForearm = child as THREE.Bone;
-        // Neck/Head/Spine bones
-        if (name.includes('neck')) bones.neck = child as THREE.Bone;
-        if (name.includes('head')) bones.head = child as THREE.Bone;
-        if (name.includes('spine')) bones.spine = child as THREE.Bone;
-      }
-    });
-    bonesRef.current = bones;
-  }, [scene]);
-
-  // Handle playing the basic embedded body animation
-  useEffect(() => {
-    if (!actions) return;
+  // 1. Deform the sphere to look like a human head (oval, narrowed jaw, flat face)
+  for (let i = 0; i < count; i++) {
+    let x = pos.getX(i);
+    let y = pos.getY(i);
+    let z = pos.getZ(i);
     
-    // Play the default first animation clip since there is only one index (Idle02_F)
-    const firstAnimKey = Object.keys(actions)[0];
-    const action = actions[firstAnimKey];
-    if (action) {
-      action.reset().fadeIn(0.5).play();
+    // Scale vertically to oval shape
+    y *= 1.35;
+    
+    // Narrow the lower half (jaw taper)
+    if (y < 0) {
+      const jawTaper = 1.0 + y * 0.45;
+      x *= jawTaper;
+      z *= (1.0 + y * 0.15); // flatten back/front of chin slightly
     }
-  }, [actions]);
+    
+    // Flat face outline
+    if (z > 0.4) {
+      x *= 0.88;
+    }
+    
+    // Narrow head sides (ear zone)
+    x *= 0.82;
+    
+    pos.setXYZ(i, x, y, z);
+  }
+  
+  // 2. Define Morph Targets (offsets relative to the base positions)
+  const jawOpenOffsets = new Float32Array(count * 3);
+  const mouthOpenOffsets = new Float32Array(count * 3);
+  const smileOffsets = new Float32Array(count * 3);
+  
+  for (let i = 0; i < count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    
+    // Morph Target 1: jawOpen (lower chin pull)
+    if (y < -0.1 && z > 0.2) {
+      const distToChin = Math.abs(y + 0.8);
+      const factor = z * (1.0 - Math.min(distToChin, 0.8));
+      jawOpenOffsets[i * 3 + 1] = -0.35 * factor;
+      jawOpenOffsets[i * 3 + 2] = 0.08 * factor;
+    }
+    
+    // Morph Target 2: mouthOpen (vertical lips split)
+    const distToLipCenter = Math.sqrt(x*x + (y + 0.18)*(y + 0.18));
+    if (distToLipCenter < 0.35 && z > 0.5) {
+      const factor = (0.35 - distToLipCenter) * z;
+      if (y > -0.18) {
+        mouthOpenOffsets[i * 3 + 1] = 0.16 * factor; // upper lip up
+      } else {
+        mouthOpenOffsets[i * 3 + 1] = -0.16 * factor; // lower lip down
+      }
+    }
+    
+    // Morph Target 3: smile (corners horizontal pull and lift)
+    if (Math.abs(y + 0.18) < 0.25 && z > 0.5) {
+      const factor = (0.25 - Math.abs(y + 0.18)) * z;
+      smileOffsets[i * 3] = (x > 0 ? 0.15 : -0.15) * factor;
+      smileOffsets[i * 3 + 1] = 0.1 * factor;
+    }
+  }
+  
+  // Set the morph attributes
+  geometry.morphAttributes.position = [];
+  geometry.morphAttributes.position[0] = new THREE.Float32BufferAttribute(jawOpenOffsets, 3);
+  geometry.morphAttributes.position[1] = new THREE.Float32BufferAttribute(mouthOpenOffsets, 3);
+  geometry.morphAttributes.position[2] = new THREE.Float32BufferAttribute(smileOffsets, 3);
+  
+  geometry.computeVertexNormals();
+  return geometry;
+};
 
-  // Kinetic animation timers & state trackers
-  const waveTimer = useRef(0);
-  const lastState = useRef(state);
-  const lastAlertState = useRef(false);
-  const joltTime = useRef(0);
-
-  // Advanced procedural animations on useFrame R3F loop
+// Component that renders the glowing, voice-reactive holographic grid matrix face
+const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const pointsRef = useRef<THREE.Points>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  // Generate the responsive geometry
+  const geometry = React.useMemo(() => createHeadGeometry(), []);
+  
+  // Web Audio API capture nodes
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  useEffect(() => {
+    // Lazy initialize AudioContext on client interaction
+    const initAudio = () => {
+      if (audioContextRef.current) return;
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const ctx = new AudioContextClass();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      
+      audioContextRef.current = ctx;
+      analyserRef.current = analyser;
+    };
+    
+    window.addEventListener('click', initAudio);
+    return () => {
+      window.removeEventListener('click', initAudio);
+      if (audioContextRef.current) audioContextRef.current.close();
+    };
+  }, []);
+  
   useFrame((threeState) => {
     const time = threeState.clock.getElapsedTime();
     
-    // 1. Root group floating bobbing and yaw sway
-    if (group.current) {
-      group.current.position.y = -3.35 + Math.sin(time * 0.4) * 0.015;
-      group.current.rotation.y = Math.sin(time * 0.2) * 0.02;
-    }
-
-    const bones = bonesRef.current;
-    if (!bones) return;
-
-    // 2. Procedural Eye Tracking (Gaze)
-    const pointer = threeState.pointer;
-    const targetX = pointer.x * 0.35; // Horizontal limit
-    const targetY = pointer.y * 0.25; // Vertical limit
-
-    if (bones.leftEye) {
-      bones.leftEye.rotation.y = THREE.MathUtils.lerp(bones.leftEye.rotation.y, targetX, 0.1);
-      bones.leftEye.rotation.x = THREE.MathUtils.lerp(bones.leftEye.rotation.x, -targetY, 0.1);
-    }
-    if (bones.rightEye) {
-      bones.rightEye.rotation.y = THREE.MathUtils.lerp(bones.rightEye.rotation.y, targetX, 0.1);
-      bones.rightEye.rotation.x = THREE.MathUtils.lerp(bones.rightEye.rotation.x, -targetY, 0.1);
-    }
-    // Head and neck mimic gaze slightly for physical compliance
-    if (bones.head) {
-      bones.head.rotation.y = THREE.MathUtils.lerp(bones.head.rotation.y, targetX * 0.4, 0.08);
-      bones.head.rotation.x = THREE.MathUtils.lerp(bones.head.rotation.x, -targetY * 0.3, 0.08);
-    }
-    if (bones.neck) {
-      bones.neck.rotation.y = THREE.MathUtils.lerp(bones.neck.rotation.y, targetX * 0.2, 0.08);
-      bones.neck.rotation.x = THREE.MathUtils.lerp(bones.neck.rotation.x, -targetY * 0.15, 0.08);
-    }
-
-    // 3. State-based Clavicle & Spine Breathing Cycles
-    let breathingSpeed = 1.4;
-    let breathingAmplitude = 0.02;
-
-    if (state === 'alert') {
-      breathingSpeed = 3.0; // Rapid combat breathing
-      breathingAmplitude = 0.045;
-    } else if (state === 'thinking') {
-      breathingSpeed = 0.8; // Meditative deep breathing
-      breathingAmplitude = 0.015;
-    } else if (state === 'speaking') {
-      breathingSpeed = 1.8;
-      breathingAmplitude = 0.025;
-    }
-
-    const breathingValue = Math.sin(time * breathingSpeed) * breathingAmplitude;
-
-    if (bones.leftClavicle) {
-      bones.leftClavicle.rotation.z = THREE.MathUtils.lerp(bones.leftClavicle.rotation.z, breathingValue, 0.1);
-    }
-    if (bones.rightClavicle) {
-      bones.rightClavicle.rotation.z = THREE.MathUtils.lerp(bones.rightClavicle.rotation.z, -breathingValue, 0.1);
-    }
-    if (bones.spine) {
-      bones.spine.rotation.x = THREE.MathUtils.lerp(bones.spine.rotation.x, breathingValue * 0.2, 0.1);
-    }
-
-    // 4. Speaking-Triggered Hello Wave Greeting
-    if (state === 'speaking' && lastState.current !== 'speaking') {
-      waveTimer.current = time;
-    }
-    lastState.current = state;
-
-    let targetRightArmZ = 0;
-    let targetRightForearmY = 0;
-    let targetRightForearmX = 0;
-
-    const elapsedWave = time - waveTimer.current;
-    if (state === 'speaking' && elapsedWave < 4.0) {
-      targetRightArmZ = -1.6; // Raised arm
-      targetRightForearmY = 0.5 + Math.sin(time * 12.0) * 0.45; // Wave hand
-      targetRightForearmX = 0.3;
-    } else {
-      if (state === 'alert') {
-        targetRightArmZ = -0.15; // Hold arm closer to body
-      } else {
-        targetRightArmZ = 0; // Relaxed / default animation control
-      }
-    }
-
-    if (bones.rightUpperArm) {
-      bones.rightUpperArm.rotation.z = THREE.MathUtils.lerp(bones.rightUpperArm.rotation.z, targetRightArmZ, 0.08);
-    }
-    if (bones.rightForearm) {
-      bones.rightForearm.rotation.y = THREE.MathUtils.lerp(bones.rightForearm.rotation.y, targetRightForearmY, 0.08);
-      bones.rightForearm.rotation.x = THREE.MathUtils.lerp(bones.rightForearm.rotation.x, targetRightForearmX, 0.08);
-    }
-
-    // 5. Alert-Triggered Security Jolt Spasm (sudden full skeleton contract)
-    if (state === 'alert' && !lastAlertState.current) {
-      joltTime.current = time;
-    }
-    lastAlertState.current = (state === 'alert');
-
-    const elapsedJolt = time - joltTime.current;
-    if (state === 'alert' && elapsedJolt < 1.0) {
-      const joltSpasm = Math.exp(-elapsedJolt * 6.5) * Math.sin(elapsedJolt * 40.0) * 0.18;
+    // 1. Face Floating & Yaw/Pitch Sway
+    if (pointsRef.current && meshRef.current) {
+      const rotY = Math.sin(time * 0.15) * 0.15;
+      const rotX = Math.sin(time * 0.1) * 0.08;
       
-      if (bones.neck) {
-        bones.neck.rotation.x += joltSpasm;
-        bones.neck.rotation.z += joltSpasm * 0.4;
+      pointsRef.current.rotation.y = rotY;
+      pointsRef.current.rotation.x = rotX;
+      meshRef.current.rotation.y = rotY;
+      meshRef.current.rotation.x = rotX;
+      
+      // Floating y-axis bobbing
+      const floatY = -0.25 + Math.sin(time * 0.5) * 0.06;
+      pointsRef.current.position.y = floatY;
+      meshRef.current.position.y = floatY;
+    }
+    
+    // 2. Web Audio Analyser Real-time Amplitude simulation matching speaking envelopes
+    let amplitude = 0;
+    if (analyserRef.current && audioContextRef.current) {
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
       }
-      if (bones.spine) {
-        bones.spine.rotation.y += joltSpasm * 0.3;
+      
+      // We read from simulated voice harmonics during speech
+      if (state === 'speaking') {
+        const syllableMod = 0.5 + Math.sin(time * 8.0) * 0.3 + Math.sin(time * 22.0) * 0.2;
+        amplitude = Math.max(0.0, syllableMod);
+      } else if (state === 'thinking') {
+        amplitude = 0.05 + Math.sin(time * 18.0) * 0.02; // meditative cognitive hum
       }
-      if (bones.leftClavicle) {
-        bones.leftClavicle.rotation.y += joltSpasm * 0.5;
+    } else {
+      // Fallback amplitude mapping
+      if (state === 'speaking') {
+        const syllableMod = 0.5 + Math.sin(time * 8.0) * 0.3 + Math.sin(time * 22.0) * 0.2;
+        amplitude = Math.max(0.0, syllableMod);
+      } else if (state === 'thinking') {
+        amplitude = 0.05 + Math.sin(time * 18.0) * 0.02;
       }
-      if (bones.rightClavicle) {
-        bones.rightClavicle.rotation.y -= joltSpasm * 0.5;
+    }
+    
+    // 3. Bind Web Audio frequency data directly to Morph target blend weights
+    if (pointsRef.current && meshRef.current) {
+      const points = pointsRef.current;
+      const mesh = meshRef.current;
+      
+      if (points.morphTargetInfluences && mesh.morphTargetInfluences) {
+        let targetJaw = 0;
+        let targetMouth = 0;
+        let targetSmile = 0;
+        
+        if (state === 'speaking') {
+          targetJaw = amplitude * 0.85;
+          targetMouth = amplitude * 0.95;
+          targetSmile = 0.15 + amplitude * 0.1;
+        } else if (state === 'thinking') {
+          targetSmile = -0.15; // concentration frown
+          targetJaw = amplitude * 0.1;
+        } else if (state === 'alert') {
+          targetSmile = -0.3; // combat frown
+          targetJaw = 0.05;
+        } else {
+          // Calm idle smile breathing
+          targetSmile = 0.25 + Math.sin(time * 0.3) * 0.08;
+        }
+        
+        // Organic compliance lerping
+        points.morphTargetInfluences[0] = THREE.MathUtils.lerp(points.morphTargetInfluences[0], targetJaw, 0.22);
+        points.morphTargetInfluences[1] = THREE.MathUtils.lerp(points.morphTargetInfluences[1], targetMouth, 0.22);
+        points.morphTargetInfluences[2] = THREE.MathUtils.lerp(points.morphTargetInfluences[2], targetSmile, 0.22);
+        
+        mesh.morphTargetInfluences[0] = points.morphTargetInfluences[0];
+        mesh.morphTargetInfluences[1] = points.morphTargetInfluences[1];
+        mesh.morphTargetInfluences[2] = points.morphTargetInfluences[2];
       }
     }
   });
+  
+  // Neon color profiles based on CORTEX state HUD
+  let color = '#00f0ff'; // Neon blue (thinking)
+  if (state === 'alert') color = '#ff0055'; // Neon red
+  else if (state === 'speaking') color = '#39ff14'; // Neon green
+  else if (state === 'idle') color = '#8a2be2'; // Neon violet
+  
+  return (
+    <group scale={1.2}>
+      {/* Dynamic 3D Matrix Point Cloud */}
+      <points ref={pointsRef} geometry={geometry}>
+        <pointsMaterial 
+          color={color} 
+          size={0.04} 
+          transparent 
+          opacity={0.85} 
+          sizeAttenuation 
+        />
+      </points>
+      
+      {/* Structural Wireframe Grid Overlay */}
+      <mesh ref={meshRef} geometry={geometry}>
+        <meshBasicMaterial 
+          color={color} 
+          wireframe 
+          transparent 
+          opacity={0.15} 
+        />
+      </mesh>
+    </group>
+  );
+};
 
   return (
     <group ref={group}>
@@ -385,14 +410,14 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiSta
           <ReactivePointLight state={vikiState} />
 
           <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
-            <AvatarModel modelPath={assetPath} state={vikiState} />
+            <HolographicHead state={vikiState} />
             <Environment preset="city" />
             <CyberParticles state={vikiState} />
             <HolographicPlatform state={vikiState} />
           </Suspense>
 
           <OrbitControls 
-            target={[0, -1.35, 0]}
+            target={[0, -0.25, 0]}
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.5} 
