@@ -6,6 +6,7 @@ http:
         - web
       service: viki-agent-service
       middlewares:
+        - authelia@docker
         - strip-viki-prefix
 
   middlewares:

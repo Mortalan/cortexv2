@@ -12,6 +12,7 @@ http:
         - web
       service: viki-ollama-service
       middlewares:
+        - authelia@docker
         - strip-viki
 
   services:

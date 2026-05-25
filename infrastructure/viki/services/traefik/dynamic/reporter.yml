@@ -5,6 +5,8 @@ http:
       entryPoints:
         - web
       service: viki-reporter-service
+      middlewares:
+        - authelia@docker
 
   services:
     viki-reporter-service:

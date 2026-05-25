@@ -20,6 +20,15 @@
 3. [x] Integrate Avatar visibility into Dashboard Auth (Admin only).
 4. [x] Refactor Dashboard layout for full-height Sidebar manifesting VIKI.
 5. [x] Implement 3D animation and framing optimization for production.
+- [x] Audit Traefik dynamic load balancing routing configurations for new public endpoints.
+- [x] Inject HMAC-SHA256 verification hooks inside hermes_agent.py to secure incoming n8n automated triage webhooks.
+- [ ] Implement a secure, tokenized SMTP mailing pipeline inside cortex_reporter.py to dispatch reports directly from the dashboard.
+
+**Phase 17.2: Holographic V.I.K.I. Core Matrix Conversion**
+- [ ] Source or model a low-poly head base containing standard ARKit/Oculus viseme morph targets.
+- [ ] Develop custom Three.js ShaderMaterial or InstancedMesh layer in VikiAvatarRenderer.tsx to render the 3D grid matrix look.
+- [ ] Connect Web Audio API AnalyserNode to the /api/viki audio playback hook to capture real-time audio amplitudes.
+- [ ] Bind real-time sound frequencies to face morph target weights inside the core frame rendering loop.
 
 **Phase 15.4: Cognitive Dialogue**
 1. [x] Implement `VikiChat.tsx` component in Dashboard sidebar.

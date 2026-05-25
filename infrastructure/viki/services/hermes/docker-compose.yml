@@ -13,10 +13,17 @@ services:
       - netlock_netlock-network
     labels:
       - "traefik.enable=true"
+      # Main console router (protected by Authelia)
       - "traefik.http.routers.hermes.rule=Host(`hermes.rmmservice.co.za`)"
       - "traefik.http.routers.hermes.entrypoints=web"
       - "traefik.http.routers.hermes.middlewares=authelia@docker"
-      - "traefik.http.services.hermes.loadbalancer.server.port=8000"
+      - "traefik.http.routers.hermes.service=hermes-service"
+      # Public Webhook bypass router (secured with HMAC at app layer)
+      - "traefik.http.routers.hermes-api.rule=Host(`hermes.rmmservice.co.za`) && PathPrefix(`/api/hermes/triage`)"
+      - "traefik.http.routers.hermes-api.entrypoints=web"
+      - "traefik.http.routers.hermes-api.service=hermes-service"
+      # Shared target backend service
+      - "traefik.http.services.hermes-service.loadbalancer.server.port=8000"
 
 networks:
   netlock_netlock-network:

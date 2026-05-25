@@ -2,11 +2,45 @@ import os
 import time
 import json
 import requests
+import hmac
+import hashlib
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 import uvicorn
 
 app = FastAPI(title="Hermes Agent: Cognitive Dispatcher")
+
+HERMES_WEBHOOK_SECRET = os.getenv("HERMES_WEBHOOK_SECRET", "cortex_hermes_secret_2026")
+
+async def verify_hmac(request: Request):
+    """
+    Verifies that the incoming request is signed with HMAC-SHA256 matching the pre-shared secret,
+    or has been authenticated via Authelia SSO.
+    """
+    # If authenticated via Authelia SSO, allow it to pass (e.g. for the local dashboard simulator)
+    if request.headers.get("x-forwarded-user") or request.headers.get("remote-user") or request.headers.get("x-remote-user"):
+        return
+        
+    signature = request.headers.get("X-Signature-256") or request.headers.get("X-Hub-Signature-256")
+    if not signature:
+        raise HTTPException(
+            status_code=401, 
+            detail="Unauthorized: Missing signature header (X-Signature-256) or SSO context."
+        )
+        
+    # Support 'sha256=' prefix if present
+    if signature.startswith("sha256="):
+        signature = signature[7:]
+        
+    body = await request.body()
+    expected_signature = hmac.new(
+        HERMES_WEBHOOK_SECRET.encode(),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(signature, expected_signature):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid signature")
 
 OLLAMA_URL = "http://192.168.50.242:11434/api/generate"
 STATE_PATH = "/mnt/data_lake/logs/reflex_state.json"
@@ -553,6 +587,7 @@ async def handle_triage(request: Request):
     Stateful triage endpoint: Ingests unstructured alerts, checks against the 
     approved exception rules (Knowledgebase), queries Ollama, and executes mitigations.
     """
+    await verify_hmac(request)
     data = await request.json()
     if not data:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
