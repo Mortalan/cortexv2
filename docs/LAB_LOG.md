@@ -47,11 +47,18 @@
 4. [x] Fixed WireGuard Dashboard Interaction: Implemented safe `"disabled"` href/target handling and React preventDefault to bypass JS-blocking.
 5. [x] Cleaned Up Ingress Overlaps: Set `traefik.enable=false` on the legacy dashboard service.
 
+**NetLock Stack Reinstallation & Ingress Refinement (May 25, 2026)**
+1. [x] Performed complete uninstallation and data purge of the old NetLock containers, databases, and persistent data paths on `CORTEX-Core` (`192.168.50.241`) to establish a clean slate.
+2. [x] Copied the custom installer `install.sh` to the server and adapted its network layout to map dynamically to the existing shared external `netlock_netlock-network`, preventing all subnet clashes and label mismatch errors.
+3. [x] Resolved host port 80 allocation conflicts by removing the direct `80:80` port binding for the Web Console container, replacing it with Traefik routing labels to enable seamless reverse proxying internally.
+4. [x] Successfully resolved local static DNS conflicts by commenting out obsolete internal IP overrides for `rmm.rmmservice.co.za` in the local `/etc/hosts` file, restoring clean public DNS resolution to `156.155.97.18`.
+5. [x] Ran the custom installer successfully to bring up a stable NetLock stack. Verified that all subdomains (`rmm`, `nl-webconsole`, `nl-backend`, `nl-relay`) resolve and route perfectly.
+
 **NetLock Web Console & Viki Kinetics Diagnostics (May 21, 2026)**
 1. [x] Replaced symlinks in `/home/netlock/certificates/` with direct copies of the production certificate (`dummy.pfx` and `cortex_dummy.pfx`, decryptable with password `"dummy"`).
 2. [x] Resolved `netlock-rmm-server` boot loop by applying `MembersPortal__SkipSync=true` override to bypass 429 rate limits.
 3. [x] Decompiled and investigated NetLock obfuscated DLLs: Uncovered that the console checks root configuration keys (`cert_path`, `cert_password`, `certificates_path`, `certificates_password`) instead of the custom Kestrel blocks on boot, leading to the certificate validation crash.
-4. [ ] Map the newly discovered root keys to correct paths and passwords in `appsettings.json` and Docker Compose.
+4. [x] Map the newly discovered root keys to correct paths and passwords in `appsettings.json` and Docker Compose.
 5. [x] Refactor `VikiAvatarRenderer.tsx` to map eye bones, clavicles, and upper arms to correct natural skeletal constraints, resolving arm posturing conflicts.
 
 **Phase 15.5: Cognitive Dedicated Chat & Neural Archive (May 21, 2026)**

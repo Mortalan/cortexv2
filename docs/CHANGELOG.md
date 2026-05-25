@@ -1,6 +1,12 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 25 MAY 2026 - NETLOCK CLEAN SLATE REINSTALLATION, SHARED NETWORK ADAPTATION & TRAEFIK INGRESS STABILIZATION (MOLE RUN)
+- **Clean Slate Uninstallation:** Purged all residual files, logs, databases, and Docker volumes on `CORTEX-Core` (`192.168.50.241`) to establish a 100% clean installation slate.
+- **Shared Network & Port Realignment:** Adapted the custom installer script `install.sh` to run NetLock inside the existing `netlock_netlock-network` without static IP address mappings, completely eliminating subnet collisions and label warnings with other active CORTEX containers (Authelia, GLPI, etc.).
+- **Traefik Ingress Integration:** Extracted the web console container from direct host port 80 binding (which conflicted with the active Traefik gateway) and successfully injected Traefik reverse proxy routing labels to route `rmm.rmmservice.co.za` and `nl-webconsole.rmmservice.co.za` to the console internally.
+- **Public DNS Resolution:** Commented out obsolete private overrides inside the local `/etc/hosts` file to restore clean, consistent public DNS resolution (`156.155.97.18`) for all CORTEX subdomains.
+
 ### 21 MAY 2026 - VIKI DEDICATED COCKPIT, VOICE INTERFACE & NEURAL ARCHIVE (MOLE RUN)
 - **Dedicated Chat Cockpit (`/?mode=viki-chat`):** Deployed a dedicated fullscreen glassmorphic conversation workspace for VIKI, separating full dialog interfaces from standard dashboard widgets.
 - **Bi-Directional Voice Interface (STT/TTS):** Wired real-time Speech-to-Text microphone capturing using Web Speech Recognition, and Speech-to-Synthesis output mapping to premium female vocal profiles, with toggleable mute controls.
