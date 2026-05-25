@@ -1,260 +1,163 @@
-import React, { Suspense, useRef } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { OrbitControls, Environment, useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Highly-detailed deep 3D mathematical face contour and curved column mapping representing V.I.K.I. from I, Robot
-const getVoxelDepth = (x: number, y: number, time: number, state: string, amplitude: number) => {
-  // Base vertical cylindrical screen columns deforming back
-  let depth = Math.cos((x / 2.2) * (Math.PI / 2)) * 0.7;
-  
-  // Radial coordinates for the face ellipsoid
-  const headX = x * 1.25;
-  const headY = y - 0.1;
-  const r = Math.sqrt(headX * headX + headY * headY);
-  
-  if (r <= 1.6) {
-    const domeRatio = r / 1.6;
-    // Deep 3D ellipsoid dome depth (1.35 units instead of 0.55) to ensure face is highly visible in 3D
-    depth += Math.cos(domeRatio * (Math.PI / 2)) * 1.35;
-    
-    // 1. Prominent sharp Nose ridge (0.85 units depth!)
-    if (Math.abs(x) < 0.14 && y > -0.25 && y < 0.35) {
-      const noseFactor = (1.0 - Math.abs(x) / 0.14) * ((0.35 - y) / 0.6);
-      depth += 0.85 * noseFactor;
-    }
-    
-    // 2. High eyebrow arches
-    if (y > 0.28 && y < 0.46 && Math.abs(x) < 0.5) {
-      const browY = (y - 0.28) / 0.18;
-      const browX = Math.abs(x) / 0.5;
-      const browFactor = Math.sin(browY * Math.PI) * Math.cos(browX * (Math.PI / 2));
-      depth += 0.18 * browFactor;
-    }
+// Component that loads, processes, and animates the 3D Bishop android bust model
+const BishopModel = ({ modelPath, state }: { modelPath: string; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const group = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF(modelPath);
 
-    // 3. Deep eye socket depressions (creating sharp 3D shadows)
-    const leftEye = Math.sqrt((x + 0.38) * (x + 0.38) + (y - 0.2) * (y - 0.2));
-    const rightEye = Math.sqrt((x - 0.38) * (x - 0.38) + (y - 0.2) * (y - 0.2));
-    if (leftEye < 0.22) {
-      depth -= 0.52 * Math.cos((leftEye / 0.22) * (Math.PI / 2));
-    }
-    if (rightEye < 0.22) {
-      depth -= 0.52 * Math.cos((rightEye / 0.22) * (Math.PI / 2));
-    }
-    
-    // 4. Strong organic cheekbones
-    const leftCheek = Math.sqrt((x + 0.44) * (x + 0.44) + (y + 0.05) * (y + 0.05));
-    const rightCheek = Math.sqrt((x - 0.44) * (x - 0.44) + (y + 0.05) * (y + 0.05));
-    if (leftCheek < 0.3) {
-      depth += 0.24 * Math.cos((leftCheek / 0.3) * (Math.PI / 2));
-    }
-    if (rightCheek < 0.3) {
-      depth += 0.24 * Math.cos((rightCheek / 0.3) * (Math.PI / 2));
-    }
-    
-    // 5. Lip contour (reactive mouth opening)
-    const lipY = Math.abs(y + 0.28);
-    const lipX = Math.abs(x);
-    if (lipY < 0.18 && lipX < 0.38) {
-      const mouthArea = Math.cos((lipX / 0.38) * (Math.PI / 2)) * Math.cos((lipY / 0.18) * (Math.PI / 2));
-      let mouthOpening = 0;
-      if (state === 'speaking') {
-        mouthOpening = amplitude * 0.45 * Math.abs(Math.sin(time * 15.0));
-      }
-      depth += (0.18 - mouthOpening) * mouthArea;
-    }
-    
-    // 6. Chin contour
-    const chin = Math.sqrt(x * x + (y + 0.6) * (y + 0.6));
-    if (chin < 0.18) {
-      depth += 0.35 * Math.cos((chin / 0.18) * (Math.PI / 2));
-    }
-  } else {
-    // Subtle background ripple
-    depth += Math.sin(x * 1.8 + y * 1.5 + time * 0.8) * 0.02;
-  }
-  
-  // Continuous shifting organic wave ripple running across the entire face
-  let waveSpeed = 2.0;
-  if (state === 'thinking') waveSpeed = 3.6;
-  else if (state === 'alert') waveSpeed = 5.0;
-  
-  let wave = Math.sin(x * 1.5 - time * waveSpeed) * Math.cos(y * 1.5 + time * (waveSpeed * 0.7)) * 0.08;
-  
-  // Speak-reactive push/pull kinetics
-  if (state === 'speaking') {
-    const speechRadius = Math.sqrt(x*x + y*y);
-    wave += Math.sin(speechRadius * 2.2 - time * 12.0) * amplitude * 0.15;
-    depth += amplitude * 0.2 * Math.cos(Math.min(1.0, speechRadius / 1.6) * (Math.PI / 2));
-  }
-  
-  if (state === 'alert') {
-    depth += Math.sin(time * 40.0 + x * 12.0) * 0.03;
-  }
-  
-  depth += wave;
-  return depth;
-};
-
-// Shifting kinetic voxel face matrix (InstancedMesh optimal single draw call)
-const VIKIVoxelFace = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const meshRefRods = useRef<THREE.InstancedMesh>(null);
-  const meshRefSpheres = useRef<THREE.InstancedMesh>(null);
-
-  // High-resolution grid to create a solid coherent surface rather than sparse lines
-  const gridWidth = 46;
-  const gridHeight = 46;
-  const count = gridWidth * gridHeight;
-  const spacing = 0.085; // Perfectly proportioned spacing for high visibility
-
-  // Geometry: Thicker vertical lines of light + tip joint spheres to ensure high visibility
-  const boxGeom = React.useMemo(() => new THREE.BoxGeometry(0.035, 0.035, 0.9), []);
-  const sphereGeom = React.useMemo(() => new THREE.SphereGeometry(0.045, 6, 6), []);
-  const dummy = React.useMemo(() => new THREE.Object3D(), []);
-
-  // Dynamic color interpolation cache
-  const tempColor = React.useMemo(() => new THREE.Color(), []);
-
-  // Glowing holographic colors matching the movie screenshots
-  let colorMapStart = '#0f354f'; // Glowing translucent base blue (recessed column grid)
-  let colorMapEnd = '#8adeff';   // Luminous glowing ice-blue (prominent face features)
-
-  if (state === 'alert') {
-    colorMapStart = '#4f0d14'; // Deep red
-    colorMapEnd = '#ff4d6a';   // Threat red
-  } else if (state === 'speaking') {
-    colorMapStart = '#0f4a47'; // Deep teal
-    colorMapEnd = '#bbfdff';   // Glowing silver-cyan
-  } else if (state === 'thinking') {
-    colorMapStart = '#0b325c'; // Deep cobalt
-    colorMapEnd = '#00c0ff';   // Electric cyan-blue
-  }
-
-  const colStartObj = React.useMemo(() => new THREE.Color(colorMapStart), [colorMapStart]);
-  const colEndObj = React.useMemo(() => new THREE.Color(colorMapEnd), [colorMapEnd]);
-
-  useFrame((threeState) => {
-    const time = threeState.clock.getElapsedTime();
-    if (!meshRefRods.current || !meshRefSpheres.current) return;
-
-    let amplitude = 0;
-    if (state === 'speaking') {
-      const syllableMod = 0.5 + Math.sin(time * 8.0) * 0.35 + Math.sin(time * 22.0) * 0.15;
-      amplitude = Math.max(0.0, syllableMod);
-    } else if (state === 'thinking') {
-      amplitude = 0.08 + Math.sin(time * 18.0) * 0.04;
-    }
-
-    let index = 0;
-    for (let x = 0; x < gridWidth; x++) {
-      for (let y = 0; y < gridHeight; y++) {
-        const posX = (x - gridWidth / 2) * spacing;
-        const posY = (y - gridHeight / 2) * spacing;
-
-        const posZ = getVoxelDepth(posX, posY, time, state, amplitude);
+  // Convert to non-indexed geometry to bypass WebGL index underflow driver bugs in Firefox on Linux.
+  React.useMemo(() => {
+    scene.traverse((child) => {
+      if ((child as any).isMesh) {
+        const mesh = child as THREE.Mesh;
         
-        // 1. Draw vertical light rods
-        dummy.position.set(posX, posY, posZ);
-        dummy.scale.set(1.0, 1.0, 1.0);
-        dummy.updateMatrix();
-        meshRefRods.current.setMatrixAt(index, dummy.matrix);
+        // Enable matrix auto update
+        mesh.matrixAutoUpdate = true;
 
-        // 2. Draw front joint pixel spheres (offset by 0.45, half the rod's length)
-        dummy.position.set(posX, posY, posZ + 0.45);
-        dummy.updateMatrix();
-        meshRefSpheres.current.setMatrixAt(index, dummy.matrix);
-
-        // 3. Dynamic color interpolation based on depth
-        const depthRatio = Math.max(0.0, Math.min(1.0, (posZ + 0.2) / 1.25));
-        tempColor.lerpColors(colStartObj, colEndObj, depthRatio);
-
-        // Reactively brighten active speech region
-        if (state === 'speaking' && Math.abs(posY + 0.26) < 0.15 && Math.abs(posX) < 0.36) {
-          tempColor.addScalar(amplitude * 0.15);
+        // Strip geometry index for Linux Mesa graphics driver stability
+        if (mesh.geometry && mesh.geometry.index) {
+          mesh.geometry = mesh.geometry.toNonIndexed();
         }
-
-        meshRefRods.current.setColorAt(index, tempColor);
-        meshRefSpheres.current.setColorAt(index, tempColor);
-
-        index++;
       }
+    });
+  }, [scene]);
+
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+
+  // Setup useAnimations hook to handle built-in expressive actions
+  const { actions } = useAnimations(animations, sceneRef);
+
+  // Dynamic skeletal bone mapping for custom procedural overlays
+  const bonesRef = useRef<{
+    leftClavicle?: THREE.Bone;
+    rightClavicle?: THREE.Bone;
+    leftUpperArm?: THREE.Bone;
+    rightUpperArm?: THREE.Bone;
+    leftForearm?: THREE.Bone;
+    rightForearm?: THREE.Bone;
+    neck?: THREE.Bone;
+    head?: THREE.Bone;
+    spine?: THREE.Bone;
+  }>({});
+
+  // Resolve Rigged character bones from our inspection log
+  useEffect(() => {
+    const bones: typeof bonesRef.current = {};
+    scene.traverse((child) => {
+      if ((child as any).isBone) {
+        const name = child.name.toLowerCase();
+        // Clavicle / Shoulder bones
+        if (name.includes('shoulder.l') || name.includes('shoulder_l')) bones.leftClavicle = child as THREE.Bone;
+        if (name.includes('shoulder.r') || name.includes('shoulder_r')) bones.rightClavicle = child as THREE.Bone;
+        // Arm bones
+        if (name.includes('upperarm.l') || name.includes('upperarm_l')) bones.leftUpperArm = child as THREE.Bone;
+        if (name.includes('upperarm.r') || name.includes('upperarm_r')) bones.rightUpperArm = child as THREE.Bone;
+        if (name.includes('lowerarm.l') || name.includes('lowerarm_l')) bones.leftForearm = child as THREE.Bone;
+        if (name.includes('lowerarm.r') || name.includes('lowerarm_r')) bones.rightForearm = child as THREE.Bone;
+        // Neck/Head/Spine bones
+        if (name.includes('neck')) bones.neck = child as THREE.Bone;
+        if (name.includes('head')) bones.head = child as THREE.Bone;
+        if (name.includes('torso') || name.includes('abdomen')) bones.spine = child as THREE.Bone;
+      }
+    });
+    bonesRef.current = bones;
+  }, [scene]);
+
+  // Handle playing and crossfading animations based on the agent's active state
+  useEffect(() => {
+    if (!actions) return;
+
+    // Define target animation based on state
+    let targetAnim = 'Standing';
+    if (state === 'idle') {
+      targetAnim = 'Idle'; // Breathe organically
+    } else if (state === 'thinking') {
+      targetAnim = 'Standing'; // Attentive posture
+    } else if (state === 'speaking') {
+      targetAnim = 'Wave'; // Wave greeting
+    } else if (state === 'alert') {
+      targetAnim = 'No'; // Alarm warning head shake
     }
 
-    meshRefRods.current.instanceMatrix.needsUpdate = true;
-    meshRefSpheres.current.instanceMatrix.needsUpdate = true;
-    
-    if (meshRefRods.current.instanceColor) {
-      meshRefRods.current.instanceColor.needsUpdate = true;
+    // Crossfade to the target animation smoothly
+    const currentAction = actions[targetAnim];
+    if (currentAction) {
+      // Fade out all other playing clips
+      Object.keys(actions).forEach((key) => {
+        if (key !== targetAnim) {
+          actions[key]?.fadeOut(0.35);
+        }
+      });
+
+      // Play target animation
+      currentAction.reset().fadeIn(0.35).play();
     }
-    if (meshRefSpheres.current.instanceColor) {
-      meshRefSpheres.current.instanceColor.needsUpdate = true;
+  }, [actions, state]);
+
+  // Procedural mouse gaze-tracking overlays in useFrame
+  useFrame((threeState) => {
+    const bones = bonesRef.current;
+    if (!bones) return;
+
+    const pointer = threeState.pointer;
+    const targetX = pointer.x * 0.35; // Horizontal limit
+    const targetY = pointer.y * 0.25; // Vertical limit
+
+    // Apply smooth look-at gaze targeting on top of active clip loops
+    if (bones.head) {
+      bones.head.rotation.y = THREE.MathUtils.lerp(bones.head.rotation.y, targetX * 0.52, 0.08);
+      bones.head.rotation.x = THREE.MathUtils.lerp(bones.head.rotation.x, -targetY * 0.42, 0.08);
+    }
+    if (bones.neck) {
+      bones.neck.rotation.y = THREE.MathUtils.lerp(bones.neck.rotation.y, targetX * 0.26, 0.08);
+      bones.neck.rotation.x = THREE.MathUtils.lerp(bones.neck.rotation.x, -targetY * 0.22, 0.08);
     }
   });
 
   return (
-    <group position={[0, 0, 0]}>
-      {/* Grid Lines Mesh */}
-      <instancedMesh ref={meshRefRods} args={[boxGeom, null as any, count]}>
-        <meshBasicMaterial
-          color="#ffffff"
-          transparent
-          opacity={0.8}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </instancedMesh>
-
-      {/* Grid Joint Pixels Mesh */}
-      <instancedMesh ref={meshRefSpheres} args={[sphereGeom, null as any, count]}>
-        <meshBasicMaterial
-          color="#ffffff"
-          transparent
-          opacity={0.9}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </instancedMesh>
+    <group ref={group}>
+      <primitive
+        object={scene}
+        position={[0, -1.82, 0]} // Torso positioned to render chest/head bust framing
+        scale={1.75} // Perfectly scaled for high impact
+      />
     </group>
   );
 };
 
-// Double-layer counter-rotating outer wireframe box enclosure centered around the face (extremely delicate lines)
-const HolographicVIKICube = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const outerCubeRef1 = useRef<THREE.Mesh>(null);
-  const outerCubeRef2 = useRef<THREE.Mesh>(null);
+const ReactivePointLight = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const lightRef = useRef<THREE.PointLight>(null);
   
   useFrame((threeState) => {
+    if (!lightRef.current) return;
     const time = threeState.clock.getElapsedTime();
-    if (outerCubeRef1.current) {
-      outerCubeRef1.current.rotation.y = time * 0.12;
-      outerCubeRef1.current.rotation.x = time * 0.05;
+    
+    const targetColor = new THREE.Color('#80c0ff');
+    let targetIntensity = 1.0;
+    
+    if (state === 'alert') {
+      targetColor.set('#ff3050');
+      targetIntensity = 2.0 + Math.sin(time * 18.0) * 0.6;
+    } else if (state === 'thinking') {
+      targetColor.set('#00e5ff');
+      targetIntensity = 1.2 + Math.sin(time * 3.5) * 0.2;
+    } else if (state === 'speaking') {
+      targetColor.set('#3b82f6');
+      targetIntensity = 1.5 + Math.sin(time * 10.0) * 0.35;
+    } else {
+      // Calm breathing glow
+      targetIntensity = 0.9 + Math.sin(time * 1.2) * 0.1;
     }
-    if (outerCubeRef2.current) {
-      outerCubeRef2.current.rotation.y = -time * 0.07;
-      outerCubeRef2.current.rotation.z = time * 0.09;
-    }
+    
+    lightRef.current.color.lerp(targetColor, 0.08);
+    lightRef.current.intensity = THREE.MathUtils.lerp(lightRef.current.intensity, targetIntensity, 0.08);
   });
-  
-  let color = '#a0d8ff'; 
-  if (state === 'alert') color = '#ff3050';
-  else if (state === 'thinking') color = '#00f0ff';
-  else if (state === 'speaking') color = '#d0f5ff';
-  
-  return (
-    <group position={[0, 0, 0]}>
-      {/* Primary Cube Cage */}
-      <mesh ref={outerCubeRef1}>
-        <boxGeometry args={[4.4, 4.4, 4.4]} />
-        <meshBasicMaterial color={color} wireframe transparent opacity={0.04} blending={THREE.AdditiveBlending} />
-      </mesh>
-      
-      {/* Secondary Inner Cage for Parallax Depth */}
-      <mesh ref={outerCubeRef2} scale={0.96}>
-        <boxGeometry args={[4.4, 4.4, 4.4]} />
-        <meshBasicMaterial color={color} wireframe transparent opacity={0.02} blending={THREE.AdditiveBlending} />
-      </mesh>
-    </group>
-  );
+
+  return <pointLight ref={lightRef} position={[-2.5, 1.5, 3.0]} />;
 };
 
 interface RendererProps {
@@ -262,7 +165,7 @@ interface RendererProps {
   vikiState?: 'idle' | 'thinking' | 'speaking' | 'alert';
 }
 
-export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle' }) => {
+export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath = '/assets/bishop_android.glb', vikiState = 'idle' }) => {
   return (
     <div 
       className="viki-canvas-wrapper" 
@@ -271,26 +174,33 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
         width: '100%', 
         height: '100%', 
         minHeight: '400px', 
-        overflow: 'hidden' 
+        overflow: 'hidden',
+        background: '#040711' // Futuristic dark sci-fi viewport void
       }}
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas 
-          camera={{ position: [0, 0, 6.2], fov: 38 }} // Perfect centered framing
+          camera={{ position: [0, 0, 3.2], fov: 40 }} // Cinematic bust framing
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
+          {/* Detailed studio lighting void setup */}
+          <ambientLight intensity={0.9} />
+          <directionalLight position={[4, 5, 4]} intensity={2.0} castShadow />
+          <directionalLight position={[-4, 2, -3]} intensity={0.6} color="#4b5563" /> {/* Backlight contour */}
+          <ReactivePointLight state={vikiState} />
+
           <Suspense fallback={null}>
-            <HolographicVIKICube state={vikiState} />
-            <VIKIVoxelFace state={vikiState} />
+            <BishopModel modelPath={assetPath} state={vikiState} />
+            <Environment preset="city" />
           </Suspense>
 
           <OrbitControls 
-            target={[0, 0, 0]} // Perfectly centered in the middle of the voxel projection
+            target={[0, -0.22, 0]} // Centered focus on the chest/head bust projection
             enableZoom={false}
             enablePan={false}
-            maxPolarAngle={Math.PI / 1.5} 
-            minPolarAngle={Math.PI / 3} 
+            maxPolarAngle={Math.PI / 1.6} 
+            minPolarAngle={Math.PI / 2.4} 
           />
         </Canvas>
       </div>
@@ -298,5 +208,5 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
   );
 };
 
-// Preload to remain API-compliant
-useGLTF.preload('/assets/viki_android_real.glb');
+// Preload the new Bishop model asset to prevent initialization delays
+useGLTF.preload('/assets/bishop_android.glb');
