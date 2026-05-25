@@ -88,6 +88,14 @@
 3. [x] Deployed `/opt/cortex/infrastructure/viki/services/hermes/` container stack under dynamic Traefik proxying at `hermes.rmmservice.co.za`.
 4. [x] Successfully mapped automated playbooks inside `/api/hermes/triage` to autonomously execute target host quarantining and notify CORTEX's active response channels.
 
+**Phase 16.6: Cognitive Exceptions Knowledgebase (May 25, 2026)**
+1. [x] Deployed a local JSON-backed Knowledgebase exception store `/mnt/data_lake/logs/hermes_knowledgebase.json` on the data lake.
+2. [x] Integrated rule matching inside the triage parser to match incoming messages against approved exclusion rules prior to LLM query routing.
+3. [x] Upgraded the Hermes Command Console UI to serve a visual **Approved Exclusions list** with active deletion controllers.
+4. [x] Integrated a quick-action **Approve as Exclusion Rule** whitelist mapping directly on logged telemetry incidents.
+5. [x] Successfully verified the exception bypass loop with mock domain `GPUPDATE` indicators.
+
+
 
 
 
