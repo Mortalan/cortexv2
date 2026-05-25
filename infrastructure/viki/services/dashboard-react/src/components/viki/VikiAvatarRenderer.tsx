@@ -1,224 +1,151 @@
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Procedural low-poly head base generator
-const createHeadGeometry = () => {
-  const geometry = new THREE.SphereGeometry(1.2, 32, 32);
-  const pos = geometry.attributes.position;
-  const count = pos.count;
+// Mathematical face contour depth mapping representing V.I.K.I. from I, Robot
+const getVoxelDepth = (x: number, y: number, time: number, state: string, amplitude: number) => {
+  const r = Math.sqrt(x*x + y*y);
   
-  // Deform the sphere to look like a human head (oval, narrowed jaw, flat face)
-  for (let i = 0; i < count; i++) {
-    let x = pos.getX(i);
-    let y = pos.getY(i);
-    let z = pos.getZ(i);
-    
-    // Scale vertically to oval shape
-    y *= 1.35;
-    
-    // Narrow the lower half (jaw taper)
-    if (y < 0) {
-      const jawTaper = 1.0 + y * 0.45;
-      x *= jawTaper;
-      z *= (1.0 + y * 0.15); // flatten back/front of chin slightly
-    }
-    
-    // Flat face outline
-    if (z > 0.4) {
-      x *= 0.88;
-    }
-    
-    // Narrow head sides (ear zone)
-    x *= 0.82;
-    
-    pos.setXYZ(i, x, y, z);
+  // Outside face boundary, show background breathing ripple matrix
+  if (r > 1.6) {
+    return Math.sin(x * 2.0 + y * 2.0 + time * 1.5) * 0.04;
   }
   
-  geometry.computeVertexNormals();
-  return geometry;
+  // Base head ellipsoid dome contour
+  let depth = Math.cos((r / 1.6) * (Math.PI / 2)) * 0.55;
+  
+  // 1. Nose ridge protrusion
+  if (Math.abs(x) < 0.16 && y > -0.25 && y < 0.3) {
+    const noseFactor = (1.0 - Math.abs(x) / 0.16) * (0.3 - y) * 0.8;
+    depth += 0.35 * noseFactor;
+  }
+  
+  // 2. Eye sockets depressions
+  const leftEyeDist = Math.sqrt((x + 0.38)*(x + 0.38) + (y - 0.22)*(y - 0.22));
+  const rightEyeDist = Math.sqrt((x - 0.38)*(x - 0.38) + (y - 0.22)*(y - 0.22));
+  if (leftEyeDist < 0.24) {
+    depth -= 0.18 * Math.cos((leftEyeDist / 0.24) * (Math.PI / 2));
+  }
+  if (rightEyeDist < 0.24) {
+    depth -= 0.18 * Math.cos((rightEyeDist / 0.24) * (Math.PI / 2));
+  }
+  
+  // 3. Mouth horizontal ridge & lips (reactive speech contractions)
+  const lipDistY = Math.abs(y + 0.32);
+  const lipDistX = Math.abs(x);
+  if (lipDistY < 0.22 && lipDistX < 0.45) {
+    const mouthArea = Math.cos((lipDistX / 0.45) * (Math.PI / 2)) * Math.cos((lipDistY / 0.22) * (Math.PI / 2));
+    let mouthOpening = 0;
+    if (state === 'speaking') {
+      mouthOpening = amplitude * 0.22 * Math.sin(time * 15.0);
+    }
+    depth += (0.15 - mouthOpening) * mouthArea;
+  }
+  
+  // 4. Chin protrusion
+  const chinDist = Math.sqrt(x*x + (y + 0.72)*(y + 0.72));
+  if (chinDist < 0.2) {
+    depth += 0.12 * Math.cos((chinDist / 0.2) * (Math.PI / 2));
+  }
+  
+  // 5. Threat alert matrix tremor
+  if (state === 'alert') {
+    depth += Math.sin(time * 30.0 + x * 10.0) * 0.05;
+  }
+  
+  return depth;
 };
 
-// Component that renders the glowing, voice-reactive holographic grid matrix face
-const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const pointsRef = useRef<THREE.Points>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
-  const basePositionsRef = useRef<Float32Array | null>(null);
+// Shifting kinetic voxel face matrix (InstancedMesh optimal single draw call)
+const VIKIVoxelFace = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
   
-  // Generate the responsive geometry
-  const geometry = React.useMemo(() => {
-    const geom = createHeadGeometry();
-    // Cache the original base coordinates for CPU manipulation
-    basePositionsRef.current = new Float32Array(geom.attributes.position.array);
-    return geom;
-  }, []);
+  const gridWidth = 24;
+  const gridHeight = 24;
+  const count = gridWidth * gridHeight;
+  const spacing = 0.15;
   
-  // Web Audio API capture nodes
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  
-  useEffect(() => {
-    // Lazy initialize AudioContext on client interaction
-    const initAudio = () => {
-      if (audioContextRef.current) return;
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      
-      const ctx = new AudioContextClass();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      
-      audioContextRef.current = ctx;
-      analyserRef.current = analyser;
-    };
-    
-    window.addEventListener('click', initAudio);
-    return () => {
-      window.removeEventListener('click', initAudio);
-      if (audioContextRef.current) audioContextRef.current.close();
-    };
-  }, []);
+  // Kinetic long rods geometries
+  const boxGeom = React.useMemo(() => new THREE.BoxGeometry(0.11, 0.11, 0.65), []);
+  const dummy = React.useMemo(() => new THREE.Object3D(), []);
   
   useFrame((threeState) => {
     const time = threeState.clock.getElapsedTime();
+    if (!meshRef.current) return;
     
-    // 1. Face Floating & Yaw/Pitch Sway
-    if (pointsRef.current && meshRef.current) {
-      const rotY = Math.sin(time * 0.15) * 0.15;
-      const rotX = Math.sin(time * 0.1) * 0.08;
-      
-      pointsRef.current.rotation.y = rotY;
-      pointsRef.current.rotation.x = rotX;
-      meshRef.current.rotation.y = rotY;
-      meshRef.current.rotation.x = rotX;
-      
-      // Floating y-axis bobbing
-      const floatY = -0.25 + Math.sin(time * 0.5) * 0.06;
-      pointsRef.current.position.y = floatY;
-      meshRef.current.position.y = floatY;
-    }
-    
-    // 2. Web Audio Analyser Real-time Amplitude simulation matching speaking envelopes
     let amplitude = 0;
-    if (analyserRef.current && audioContextRef.current) {
-      if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
-      }
-      
-      // We read from simulated voice harmonics during speech
-      if (state === 'speaking') {
-        const syllableMod = 0.5 + Math.sin(time * 8.0) * 0.3 + Math.sin(time * 22.0) * 0.2;
-        amplitude = Math.max(0.0, syllableMod);
-      } else if (state === 'thinking') {
-        amplitude = 0.05 + Math.sin(time * 18.0) * 0.02; // meditative cognitive hum
-      }
-    } else {
-      // Fallback amplitude mapping
-      if (state === 'speaking') {
-        const syllableMod = 0.5 + Math.sin(time * 8.0) * 0.3 + Math.sin(time * 22.0) * 0.2;
-        amplitude = Math.max(0.0, syllableMod);
-      } else if (state === 'thinking') {
-        amplitude = 0.05 + Math.sin(time * 18.0) * 0.02;
-      }
-    }
-    
-    // Lerp weights for organic jaw compliance
-    let jawWeight = 0;
-    let mouthWeight = 0;
-    let smileWeight = 0;
-    
     if (state === 'speaking') {
-      jawWeight = amplitude * 0.85;
-      mouthWeight = amplitude * 0.95;
-      smileWeight = 0.15 + amplitude * 0.1;
+      const syllableMod = 0.5 + Math.sin(time * 7.5) * 0.35 + Math.sin(time * 20.0) * 0.15;
+      amplitude = Math.max(0.0, syllableMod);
     } else if (state === 'thinking') {
-      smileWeight = -0.15; // concentration frown
-      jawWeight = amplitude * 0.1;
-    } else if (state === 'alert') {
-      smileWeight = -0.3; // combat frown
-      jawWeight = 0.05;
-    } else {
-      // Calm idle smile breathing
-      smileWeight = 0.25 + Math.sin(time * 0.3) * 0.08;
+      amplitude = 0.08 + Math.sin(time * 16.0) * 0.03;
     }
     
-    // 3. Direct CPU Vertex Modification (Standard WebGL safe, zero shader compilation warnings)
-    if (pointsRef.current && meshRef.current && basePositionsRef.current) {
-      const posAttr = geometry.attributes.position;
-      const count = posAttr.count;
-      const base = basePositionsRef.current;
-      
-      for (let i = 0; i < count; i++) {
-        const bx = base[i * 3];
-        const by = base[i * 3 + 1];
-        const bz = base[i * 3 + 2];
+    let index = 0;
+    for (let x = 0; x < gridWidth; x++) {
+      for (let y = 0; y < gridHeight; y++) {
+        const posX = (x - gridWidth / 2) * spacing;
+        const posY = (y - gridHeight / 2) * spacing;
         
-        let x = bx;
-        let y = by;
-        let z = bz;
+        const posZ = getVoxelDepth(posX, posY, time, state, amplitude);
+        dummy.position.set(posX, posY, posZ);
         
-        // jawOpen offset calculation (lower chin pull)
-        if (by < -0.1 && bz > 0.2) {
-          const distToChin = Math.abs(by + 0.8);
-          const factor = bz * (1.0 - Math.min(distToChin, 0.8)) * jawWeight;
-          y += -0.35 * factor;
-          z += 0.08 * factor;
+        let scaleZ = 1.0;
+        if (state === 'speaking' && Math.abs(posY + 0.32) < 0.2 && Math.abs(posX) < 0.4) {
+          scaleZ = 1.0 + amplitude * 0.15;
         }
         
-        // mouthOpen offset calculation (vertical lips split)
-        const distToLipCenter = Math.sqrt(bx*bx + (by + 0.18)*(by + 0.18));
-        if (distToLipCenter < 0.35 && bz > 0.5) {
-          const factor = (0.35 - distToLipCenter) * bz * mouthWeight;
-          if (by > -0.18) {
-            y += 0.16 * factor; // upper lip up
-          } else {
-            y += -0.16 * factor; // lower lip down
-          }
-        }
-        
-        // smile offset calculation (corners horizontal pull and lift)
-        if (Math.abs(by + 0.18) < 0.25 && bz > 0.5) {
-          const factor = (0.25 - Math.abs(by + 0.18)) * bz * smileWeight;
-          x += (bx > 0 ? 0.15 : -0.15) * factor;
-          y += 0.1 * factor;
-        }
-        
-        posAttr.setXYZ(i, x, y, z);
+        dummy.scale.set(1.0, 1.0, scaleZ);
+        dummy.updateMatrix();
+        meshRef.current.setMatrixAt(index++, dummy.matrix);
       }
-      posAttr.needsUpdate = true;
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+  
+  let color = '#00a8ff'; // Cyber blue (thinking)
+  if (state === 'alert') color = '#ff003c'; // Threat Red
+  else if (state === 'speaking') color = '#00ffcc'; // Voice green/cyan
+  else if (state === 'idle') color = '#7b2cff'; // Idle purple
+  
+  return (
+    <instancedMesh ref={meshRef} args={[boxGeom, null as any, count]} position={[0, -0.25, 0]}>
+      <meshStandardMaterial 
+        color={color} 
+        emissive={color}
+        emissiveIntensity={state === 'alert' ? 0.6 : 0.25}
+        roughness={0.15}
+        metalness={0.85}
+        transparent 
+        opacity={0.8}
+      />
+    </instancedMesh>
+  );
+};
+
+// Rotating outer holographic cube boundary
+const HolographicVIKICube = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const outerCubeRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((threeState) => {
+    const time = threeState.clock.getElapsedTime();
+    if (outerCubeRef.current) {
+      outerCubeRef.current.rotation.y = time * 0.12;
+      outerCubeRef.current.rotation.x = time * 0.06;
     }
   });
   
-  // Neon color profiles based on CORTEX state HUD
-  let color = '#00f0ff'; // Neon blue (thinking)
-  if (state === 'alert') color = '#ff0055'; // Neon red
-  else if (state === 'speaking') color = '#39ff14'; // Neon green
-  else if (state === 'idle') color = '#8a2be2'; // Neon violet
+  let color = '#00a8ff';
+  if (state === 'alert') color = '#ff003c';
+  else if (state === 'speaking') color = '#00ffcc';
+  else if (state === 'idle') color = '#7b2cff';
   
   return (
-    <group scale={1.2}>
-      {/* Dynamic 3D Matrix Point Cloud */}
-      <points ref={pointsRef} geometry={geometry}>
-        <pointsMaterial 
-          color={color} 
-          size={0.04} 
-          transparent 
-          opacity={0.85} 
-          sizeAttenuation 
-        />
-      </points>
-      
-      {/* Structural Wireframe Grid Overlay */}
-      <mesh ref={meshRef} geometry={geometry}>
-        <meshBasicMaterial 
-          color={color} 
-          wireframe 
-          transparent 
-          opacity={0.15} 
-        />
-      </mesh>
-    </group>
+    <mesh ref={outerCubeRef} position={[0, -0.25, 0]}>
+      <boxGeometry args={[4.2, 4.2, 4.2]} />
+      <meshBasicMaterial color={color} wireframe transparent opacity={0.06} />
+    </mesh>
   );
 };
 
@@ -392,7 +319,8 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
           <ReactivePointLight state={vikiState} />
 
           <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
-            <HolographicHead state={vikiState} />
+            <HolographicVIKICube state={vikiState} />
+            <VIKIVoxelFace state={vikiState} />
             <Environment preset="city" />
             <CyberParticles state={vikiState} />
             <HolographicPlatform state={vikiState} />
