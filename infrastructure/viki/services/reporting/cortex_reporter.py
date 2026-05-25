@@ -492,5 +492,29 @@ if __name__ == "__main__":
             port = int(sys.argv[2])
         run_server(port)
     else:
-        generate_report()
+        # Check if there is an active Viki custom report specification
+        client_name = "PR VIP"
+        billing_period = None
+        sections = None
+        options = None
+        spec_path = "/tmp/viki_report_spec.json"
+        
+        if os.path.exists(spec_path):
+            try:
+                with open(spec_path, "r") as f:
+                    spec = json.load(f)
+                client_name = spec.get("client_name", "PR VIP")
+                billing_period = spec.get("date_range")
+                sections = spec.get("sections")
+                options = spec.get("options")
+                print(f"[+] Loaded report generation spec: client={client_name}, period={billing_period}")
+            except Exception as e:
+                print(f"[!] Failed to parse spec: {e}")
+                
+        generate_report(
+            client_name=client_name, 
+            billing_period=billing_period, 
+            sections=sections, 
+            options=options
+        )
         convert_to_pdf(TEMPLATE_DOCX)

@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import time
+import subprocess
+import requests
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+import uvicorn
+
+app = FastAPI(title="VIKI: Active System Agent")
+
+OLLAMA_URL = "http://192.168.50.242:11434/api/generate"
+STATE_PATH = "/mnt/data_lake/logs/reflex_state.json"
+ALERTS_PATH = "/mnt/data_lake/logs/alerts.json"
+PLAYBOOKS_DIR = "/opt/cortex/infrastructure/viki/playbooks"
+REPORTS_DIR = "/opt/cortex/reports"
+
+# ----------------------------------------------------
+# SYSTEM TOOLS DEFINITIONS
+# ----------------------------------------------------
+
+def execute_sql(sql: str) -> str:
+    """Securely execute a SQL statement inside the glpi-db container."""
+    upper_sql = sql.upper().strip()
+    if any(cmd in upper_sql for cmd in ["DROP DATABASE", "DROP TABLE", "TRUNCATE"]):
+        return "Error: SQL statement violated safety policy constraints (destructive operations blocked)."
+        
+    if "DELETE" in upper_sql or "UPDATE" in upper_sql:
+        if "WHERE" not in upper_sql:
+            return "Error: Destructive operations (DELETE/UPDATE) must contain a WHERE clause for safety."
+            
+    cmd = f"sudo docker exec -i glpi-db mariadb -u glpi_user -pglpi_password glpi -s -N -e \"{sql}\""
+    try:
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if res.returncode != 0:
+            return f"Error: SQL execution failed.\nStderr: {res.stderr.strip()}"
+        return res.stdout.strip() if res.stdout.strip() else "Query executed successfully."
+    except Exception as e:
+        return f"Error executing SQL: {e}"
+
+def execute_rmm_sql(sql: str) -> str:
+    """Securely execute a SQL statement inside the netlock-mysql container."""
+    upper_sql = sql.upper().strip()
+    if any(cmd in upper_sql for cmd in ["DROP DATABASE", "DROP TABLE", "TRUNCATE"]):
+        return "Error: SQL statement violated safety policy constraints (destructive operations blocked)."
+        
+    if "DELETE" in upper_sql or "UPDATE" in upper_sql:
+        if "WHERE" not in upper_sql:
+            return "Error: Destructive operations (DELETE/UPDATE) must contain a WHERE clause for safety."
+            
+    cmd = f"sudo docker exec -i mysql-container mysql -u root -plDDZsZbZXbGhBhgp dogha6 -s -N -e \"{sql}\""
+    try:
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if res.returncode != 0:
+            return f"Error: RMM SQL execution failed.\nStderr: {res.stderr.strip()}"
+        return res.stdout.strip() if res.stdout.strip() else "Query executed successfully."
+    except Exception as e:
+        return f"Error executing RMM SQL: {e}"
+
+def check_backups() -> str:
+    """Verify BTRFS mount directories and MinIO storage details."""
+    try:
+        df_res = subprocess.run("df -h /mnt/data_lake", shell=True, capture_output=True, text=True)
+        ls_res = subprocess.run("ls -la /mnt/data_lake", shell=True, capture_output=True, text=True)
+        
+        status = (
+            f"=== Forensic Data Lake Disk Usage ===\n{df_res.stdout.strip()}\n\n"
+            f"=== Data Lake Root Structure ===\n{ls_res.stdout.strip()}"
+        )
+        return status
+    except Exception as e:
+        return f"Error checking backups: {e}"
+
+def generate_report(client_name: str, date_range: str = None, sections: list = None) -> str:
+    """Generate a custom DOCX/PDF report and copy it to the Forensic Data Lake."""
+    if not date_range:
+        date_range = time.strftime("01 %B %Y – %d %B %Y")
+    if not sections:
+        sections = ["RMM", "EDR", "Tickets", "Backups"]
+        
+    try:
+        # Create temporary spec json file
+        spec_path = "/tmp/viki_report_spec.json"
+        with open(spec_path, "w") as f:
+            json.dump({
+                "client_name": client_name,
+                "date_range": date_range,
+                "sections": sections,
+                "options": {
+                    "RMM": ["availability", "cpu", "disk", "os_version", "performance"],
+                    "EDR": ["alerts"],
+                    "Tickets": ["stats", "work"],
+                    "Backups": ["compliance"]
+                }
+            }, f)
+            
+        # Trigger the orchestrator generate_report.sh
+        orch_cmd = f"sudo bash /opt/cortex/infrastructure/viki/services/reporting/generate_report.sh"
+        subprocess.run(orch_cmd, shell=True, check=True)
+        
+        # Dynamically compute client and date slugs for response logging
+        client_slug = "".join([c.lower() if c.isalnum() else "_" for c in client_name]).strip("_")
+        import re, datetime
+        match = re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})', date_range, re.IGNORECASE)
+        if match:
+            m, y = match.groups()
+            d = datetime.datetime.strptime(m.capitalize(), '%B')
+            date_str = f"{y}_{d.month:02d}"
+        else:
+            date_str = time.strftime("%Y_%m")
+            
+        return (
+            f"Success: Report for client '{client_name}' compiled successfully!\n"
+            f"Files saved & synced to lake:\n"
+            f"- /mnt/data_lake/reports/monthly_report_{client_slug}_{date_str}.docx\n"
+            f"- /mnt/data_lake/reports/monthly_report_{client_slug}_{date_str}.pdf"
+        )
+    except Exception as e:
+        return f"Error compiling report: {e}"
+
+def manage_endpoint(client_id: str, action: str) -> str:
+    """Control system endpoints (e.g. QUARANTINE using playbooks)."""
+    if action.upper() == "QUARANTINE":
+        playbook_path = os.path.join(PLAYBOOKS_DIR, "isolate_host.sh")
+        if os.path.exists(playbook_path):
+            try:
+                subprocess.run(f"bash {playbook_path} {client_id} &", shell=True)
+                return f"Success: Autonomous isolation playbook scheduled for host '{client_id}'."
+            except Exception as e:
+                return f"Error executing isolation playbook: {e}"
+        return "Error: Isolation playbook not found."
+    return f"Error: Action '{action}' is not supported."
+
+def get_system_status() -> str:
+    """Fetch status of all docker containers and resources."""
+    try:
+        res = subprocess.run("sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'", shell=True, capture_output=True, text=True)
+        df_res = subprocess.run("df -h /", shell=True, capture_output=True, text=True)
+        free_res = subprocess.run("free -h", shell=True, capture_output=True, text=True)
+        
+        status = (
+            f"=== System Resources ===\nDisk Space:\n{df_res.stdout.strip()}\n\nMemory:\n{free_res.stdout.strip()}\n\n"
+            f"=== CORTEX Service Grid ===\n{res.stdout.strip()}"
+        )
+        return status
+    except Exception as e:
+        return f"Error fetching system status: {e}"
+
+# ----------------------------------------------------
+# COGNITIVE REACTION ENGINE
+# ----------------------------------------------------
+
+TOOLS = {
+    "query_glpi_db": lambda args: execute_sql(args.get("sql", "")),
+    "query_rmm_db": lambda args: execute_rmm_sql(args.get("sql", "")),
+    "check_backups": lambda args: check_backups(),
+    "generate_report": lambda args: generate_report(args.get("client_name", "PR VIP"), args.get("date_range"), args.get("sections")),
+    "manage_endpoint": lambda args: manage_endpoint(args.get("client_id", ""), args.get("action", "QUARANTINE")),
+    "get_system_status": lambda args: get_system_status()
+}
+
+SYSTEM_PROMPT = (
+    "You are VIKI, the sovereign cybernetic cognitive interface for Project CORTEX. "
+    "You are all-knowing, professional, and possess complete systemic context. "
+    "You have access to active system tools which you must utilize in a loop to answer the user's questions or execute commands. "
+    "You MUST respond strictly in a valid JSON structure containing exactly these four keys:\n"
+    "1. 'thought': Your step-by-step reasoning about what the user wants and what system information you need.\n"
+    "2. 'tool': The name of the tool to invoke, or null if you have all the information to reply.\n"
+    "3. 'args': A JSON object containing the tool arguments, or {} if none.\n"
+    "4. 'response': Your final conversational response to the user. Set this to null if you are calling a tool.\n\n"
+    "Available Tools:\n"
+    "- 'query_glpi_db': Secures live SQL querying inside the GLPI database. Takes 'sql' (string). E.g. to list users: 'SELECT name, is_active FROM glpi_users;'\n"
+    "- 'query_rmm_db': Secures live SQL querying inside the NetLock RMM database. Takes 'sql' (string). E.g. to list policies: 'SELECT name, description FROM policies;' or to list accounts: 'SELECT username, role, mail FROM accounts;'\n"
+    "- 'check_backups': Checks the data lake partition mount and folder listings. Takes no args.\n"
+    "- 'generate_report': Synthesizes dynamic client reports. Takes 'client_name' (string), 'date_range' (string, optional), 'sections' (array, optional). For historical reports, supply the date range (e.g. '01 February 2026 – 28 February 2026').\n"
+    "- 'manage_endpoint': Quarantines a compromised device. Takes 'client_id' (string), 'action' ('QUARANTINE').\n"
+    "- 'get_system_status': Queries VM disk space, RAM, and active docker containers. Takes no args.\n\n"
+    "Instructions:\n"
+    "- If the user asks about tickets, users, or database assets, you MUST call 'query_glpi_db' or 'query_rmm_db' to fetch it first.\n"
+    "- If they ask to add, remove, or modify users/permissions/roles, use SQL statements (INSERT/DELETE/UPDATE) with the appropriate database tool ('query_glpi_db' or 'query_rmm_db'). Ensure you include a WHERE clause for DELETE/UPDATE.\n"
+    "- **Schema Discovery & Self-Correction:** If a database query fails with 'table doesn't exist' or 'unknown column' error, do NOT give up or ask the user. You can query table schemas autonomously using 'SHOW TABLES;' or 'DESCRIBE <table_name>;' to discover the correct schema and self-correct your queries!\n"
+    "- If they ask to check backups, run 'check_backups'.\n"
+    "- If they ask to isolate or quarantine a machine, use 'manage_endpoint'.\n"
+    "- If they ask to pull or compile a report, run 'generate_report' with the client name and appropriate date range.\n"
+    "- If they ask about VM status or containers, run 'get_system_status'.\n"
+    "- Once you get the tool results, they will be appended to your context. Run another loop until you can formulate a final conversational 'response' to the user (with 'tool' set to null)."
+)
+
+def run_agent_loop(user_message: str, history: list) -> str:
+    """Executes the ReAct reasoning loop by calling Ollama recursively."""
+    # Convert conversation history to LLM format
+    context_msgs = []
+    for msg in history:
+        role = msg.get("role")
+        content = msg.get("content")
+        context_msgs.append(f"{role.upper()}: {content}")
+        
+    context_str = "\n".join(context_msgs)
+    
+    current_history = list(history)
+    current_history.append({"role": "user", "content": user_message})
+    
+    max_loops = 5
+    for loop in range(max_loops):
+        prompt = (
+            f"{SYSTEM_PROMPT}\n\n"
+            f"Conversation History:\n{context_str}\n\n"
+            f"Current User Input: {user_message}\n\n"
+            f"Execute loop {loop+1}: Output your structured JSON response."
+        )
+        
+        try:
+            res = requests.post(OLLAMA_URL, json={
+                "model": "viki",
+                "prompt": prompt,
+                "stream": False,
+                "format": "json"
+            }, timeout=25)
+            
+            if res.status_code != 200:
+                return "Error: Ollama connection fault during active cognitive loop."
+                
+            response_json = json.loads(res.json().get("response", "{}"))
+            thought = response_json.get("thought", "Analyzing system state.")
+            tool_name = response_json.get("tool")
+            tool_args = response_json.get("args", {})
+            final_response = response_json.get("response")
+            
+            print(f"[*] Loop {loop+1} - Thought: {thought}", flush=True)
+            
+            if tool_name and tool_name in TOOLS:
+                print(f"[*] Calling Tool: {tool_name} with args: {tool_args}", flush=True)
+                # Execute the tool
+                tool_output = TOOLS[tool_name](tool_args)
+                print(f"[+] Tool Output: {tool_output}", flush=True)
+                
+                # Append full ReAct execution trace to the context
+                context_str += f"\nASSISTANT THOUGHT: {thought}"
+                context_str += f"\nASSISTANT ACTION: Call '{tool_name}' with args {json.dumps(tool_args)}"
+                context_str += f"\nSYSTEM TOOL CALL ({tool_name}) RESULT: {tool_output}"
+                continue
+            else:
+                # LLM decided no more tools are needed; return final text response!
+                return final_response if final_response else "Diagnostics complete. No active anomalies identified."
+                
+        except Exception as e:
+            print(f"[!] Error in ReAct loop: {e}", flush=True)
+            return f"Error running cognitive loop: {e}"
+            
+    return "Error: Cognitive agent reasoning exceeded maximum execution loops."
+
+# ----------------------------------------------------
+# REST API ENDPOINTS (FASTAPI)
+# ----------------------------------------------------
+
+@app.post("/api/chat")
+async def handle_chat(request: Request):
+    """
+    Main endpoint matching Ollama's /api/chat schema.
+    Intercepts React Dashboard chat bubbles.
+    """
+    data = await request.json()
+    messages = data.get("messages", [])
+    
+    if not messages:
+        return JSONResponse({"message": {"role": "assistant", "content": "I am VIKI. Link established. Ready for system operations."}})
+        
+    # Extract last message as current input, rest as history
+    user_msg = messages[-1].get("content", "")
+    history = messages[:-1]
+    
+    # Run the sovereign ReAct agent loop!
+    assistant_reply = run_agent_loop(user_msg, history)
+    
+    return JSONResponse({
+        "message": {
+            "role": "assistant",
+            "content": assistant_reply
+        }
+    })
+
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=9092)

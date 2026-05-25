@@ -1,0 +1,21 @@
+http:
+  routers:
+    viki-agent-chat:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/viki/api/chat`)"
+      entryPoints:
+        - web
+      service: viki-agent-service
+      middlewares:
+        - strip-viki-chat
+
+  middlewares:
+    strip-viki-chat:
+      stripPrefix:
+        prefixes:
+          - "/api/viki"
+
+  services:
+    viki-agent-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.241:9092"
