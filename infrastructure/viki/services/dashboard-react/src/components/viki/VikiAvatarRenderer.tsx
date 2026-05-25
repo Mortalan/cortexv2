@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, OrbitControls, Environment, useAnimations } from '@react-three/drei';
+import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Procedural low-poly head base generator with ARKit/Oculus viseme morph targets
@@ -372,11 +372,11 @@ const ReactivePointLight = ({ state }: { state: 'idle' | 'thinking' | 'speaking'
 };
 
 interface RendererProps {
-  assetPath: string; 
+  assetPath?: string; 
   vikiState?: 'idle' | 'thinking' | 'speaking' | 'alert';
 }
 
-export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath, vikiState = 'idle' }) => {
+export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle' }) => {
   return (
     <div 
       className="viki-canvas-wrapper" 
