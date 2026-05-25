@@ -229,17 +229,6 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
   );
 };
 
-  return (
-    <group ref={group}>
-      <primitive 
-        object={scene} 
-        position={[0, 0, 0]} 
-        scale={1.05} 
-      />
-    </group>
-  );
-};
-
 const CyberParticles = ({ count = 40, state }: { count?: number; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const pointsRef = useRef<THREE.Points>(null);
   
