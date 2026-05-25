@@ -1,0 +1,23 @@
+services:
+  hermes-agent:
+    build: .
+    container_name: hermes-agent
+    restart: always
+    ports:
+      - "8005:8000"
+    volumes:
+      - ./hermes_agent.py:/app/hermes_agent.py:ro
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - netlock_netlock-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hermes.rule=Host(`hermes.rmmservice.co.za`)"
+      - "traefik.http.routers.hermes.entrypoints=web"
+      - "traefik.http.routers.hermes.middlewares=authelia@docker"
+      - "traefik.http.services.hermes.loadbalancer.server.port=8000"
+
+networks:
+  netlock_netlock-network:
+    external: true
