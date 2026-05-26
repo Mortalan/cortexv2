@@ -28,6 +28,12 @@ authentication_backend:
 access_control:
   default_policy: deny
   rules:
+    - domain:
+        - "rmm.rmmservice.co.za"
+        - "nl-webconsole.rmmservice.co.za"
+        - "nl-backend.rmmservice.co.za"
+        - "nl-relay.rmmservice.co.za"
+      policy: bypass
     - domain: ["rmmservice.co.za", "*.rmmservice.co.za"]
       policy: one_factor
 

@@ -235,7 +235,6 @@ services:
       - 'traefik.enable=true'
       - 'traefik.http.routers.netlock-console.rule=Host(`rmm.rmmservice.co.za`) || Host(`nl-webconsole.rmmservice.co.za`)'
       - 'traefik.http.routers.netlock-console.entrypoints=web'
-      - 'traefik.http.routers.netlock-console.middlewares=authelia@docker'
       - 'traefik.http.services.netlock-console.loadbalancer.server.port=80'
 
     networks:
