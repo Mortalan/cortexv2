@@ -673,7 +673,7 @@ export const VikiDedicatedChat: React.FC = () => {
           </div>
           <div className="hologram-avatar-wrapper">
             <VikiAvatarRenderer 
-              assetPath="/assets/bishop_android.glb" 
+              assetPath="/assets/viki_android_real.glb" 
               vikiState={vikiState} 
             />
           </div>
