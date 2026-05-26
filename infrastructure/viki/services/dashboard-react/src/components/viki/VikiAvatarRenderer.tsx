@@ -122,8 +122,8 @@ const BishopModel = ({ modelPath, state }: { modelPath: string; state: 'idle' | 
     <group ref={group}>
       <primitive
         object={scene}
-        position={[0, -1.82, 0]} // Torso positioned to render chest/head bust framing
-        scale={1.75} // Perfectly scaled for high impact
+        position={[0, -3.9, 0]} // Torso positioned to render chest/head bust framing
+        scale={1.35} // Perfectly scaled for high impact
       />
     </group>
   );
