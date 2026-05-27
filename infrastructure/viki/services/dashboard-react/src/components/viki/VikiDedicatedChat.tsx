@@ -215,49 +215,54 @@ export const VikiDedicatedChat: React.FC = () => {
   const speakResponse = (text: string) => {
     if (isMuted || !('speechSynthesis' in window)) return;
 
-    // Stop any ongoing voice playback
-    window.speechSynthesis.cancel();
+    try {
+      // Stop any ongoing voice playback
+      window.speechSynthesis.cancel();
 
-    // Clean markdown characters for spoken response
-    const cleanText = text
-      .replace(/```[\s\S]*?```/g, 'Code block generated.') // announce code generation
-      .replace(/`([^`]+)`/g, '$1')
-      .replace(/[*_~#\-]/g, '')
-      .trim();
+      // Clean markdown characters for spoken response
+      const cleanText = text
+        .replace(/```[\s\S]*?```/g, 'Code block generated.') // announce code generation
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/[*_~#\-]/g, '')
+        .trim();
 
-    if (!cleanText) return;
+      if (!cleanText) return;
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    // Dynamic voice selection (Premium female english)
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(
-      (v) =>
-        v.lang.startsWith('en') &&
-        (v.name.toLowerCase().includes('female') ||
-          v.name.toLowerCase().includes('zira') ||
-          v.name.toLowerCase().includes('samantha') ||
-          v.name.toLowerCase().includes('google us english') ||
-          v.name.toLowerCase().includes('hazel'))
-    ) || voices.find(v => v.lang.startsWith('en'));
+      // Dynamic voice selection (Premium female english)
+      const voices = window.speechSynthesis.getVoices();
+      const femaleVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          (v.name.toLowerCase().includes('female') ||
+            v.name.toLowerCase().includes('zira') ||
+            v.name.toLowerCase().includes('samantha') ||
+            v.name.toLowerCase().includes('google us english') ||
+            v.name.toLowerCase().includes('hazel'))
+      ) || voices.find(v => v.lang.startsWith('en'));
 
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      }
+
+      utterance.onstart = () => {
+        setVikiState('speaking');
+      };
+
+      utterance.onend = () => {
+        setVikiState('idle');
+      };
+
+      utterance.onerror = () => {
+        setVikiState('idle');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("SpeechSynthesis playback failed safely:", e);
+      setVikiState('idle');
     }
-
-    utterance.onstart = () => {
-      setVikiState('speaking');
-    };
-
-    utterance.onend = () => {
-      setVikiState('idle');
-    };
-
-    utterance.onerror = () => {
-      setVikiState('idle');
-    };
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const updateLastMessage = (content: string) => {
@@ -278,11 +283,15 @@ export const VikiDedicatedChat: React.FC = () => {
     if (textToSend === undefined && !rawMessage.trim()) return;
     if (isLoading) return;
 
-    // Unlock SpeechSynthesis context on user interaction to prevent async blocking
+    // Unlock SpeechSynthesis context safely on user interaction
     if ('speechSynthesis' in window) {
-      const silent = new SpeechSynthesisUtterance('');
-      silent.volume = 0;
-      window.speechSynthesis.speak(silent);
+      try {
+        const silent = new SpeechSynthesisUtterance('');
+        silent.volume = 0;
+        window.speechSynthesis.speak(silent);
+      } catch (e) {
+        console.warn("SpeechSynthesis unlock failed safely:", e);
+      }
     }
 
     const userQuery = rawMessage.trim();
@@ -472,11 +481,15 @@ export const VikiDedicatedChat: React.FC = () => {
   };
 
   const handleMicClick = async () => {
-    // Unlock SpeechSynthesis context on user interaction to prevent async blocking
+    // Unlock SpeechSynthesis context safely on user interaction
     if ('speechSynthesis' in window) {
-      const silent = new SpeechSynthesisUtterance('');
-      silent.volume = 0;
-      window.speechSynthesis.speak(silent);
+      try {
+        const silent = new SpeechSynthesisUtterance('');
+        silent.volume = 0;
+        window.speechSynthesis.speak(silent);
+      } catch (e) {
+        console.warn("SpeechSynthesis unlock failed safely:", e);
+      }
     }
 
     // 1. If native Web Speech API is supported, use it!
