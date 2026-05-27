@@ -428,13 +428,6 @@ export const VikiDedicatedChat: React.FC = () => {
         }
       } else {
         // Non-streaming response parsing for local Viki Agent
-        // Append placeholder Viki bubble
-        setMessages(prev => [...prev, { 
-          role: 'viki', 
-          content: '',
-          modelUsed: modelToUse
-        }]);
-
         const text = await response.text();
         if (!text.trim()) throw new Error('Empty response received from neural link');
 
@@ -442,7 +435,11 @@ export const VikiDedicatedChat: React.FC = () => {
         const content = parsed.message?.content || parsed.response || '';
         if (content) {
           fullContent = content;
-          updateLastMessage(fullContent);
+          setMessages(prev => [...prev, { 
+            role: 'viki', 
+            content: fullContent,
+            modelUsed: modelToUse
+          }]);
           setVikiState('speaking');
         } else {
           throw new Error('Could not parse response content from neural link');
