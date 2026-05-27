@@ -402,6 +402,21 @@ export const VikiDedicatedChat: React.FC = () => {
         }
       }
 
+      // Check for leftover buffer content (fallback for non-streaming or single-JSON responses)
+      const leftover = buffer.trim();
+      if (leftover) {
+        try {
+          const parsed = JSON.parse(leftover);
+          const content = parsed.message?.content || parsed.response || '';
+          if (content && !fullContent) {
+            fullContent = content;
+            updateLastMessage(fullContent);
+          }
+        } catch (e) {
+          console.error("Failed to parse leftover buffer segment:", e);
+        }
+      }
+
       // If muted or TTS is not available, return state to idle immediately after text streaming ends
       if (isMuted || !('speechSynthesis' in window)) {
         setVikiState('idle');
