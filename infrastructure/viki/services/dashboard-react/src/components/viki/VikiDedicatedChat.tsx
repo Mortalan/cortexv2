@@ -114,6 +114,10 @@ export const VikiDedicatedChat: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>(() => {
+    return localStorage.getItem('viki_voice_name') || '';
+  });
 
   // Hybrid Core and Model Override States
   const [modelMode, setModelMode] = useState<'auto' | 'viki' | 'codellama' | 'gpt-4o'>(() => {
@@ -158,6 +162,41 @@ export const VikiDedicatedChat: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
+
+  // Load and monitor available OS speech voices
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+
+    const updateVoices = () => {
+      const allVoices = window.speechSynthesis.getVoices();
+      setAvailableVoices(allVoices);
+      
+      // Select default if not chosen
+      if (allVoices.length > 0 && !localStorage.getItem('viki_voice_name')) {
+        const femaleVoice = allVoices.find(
+          (v) =>
+            v.lang.startsWith('en') &&
+            (v.name.toLowerCase().includes('female') ||
+              v.name.toLowerCase().includes('zira') ||
+              v.name.toLowerCase().includes('samantha') ||
+              v.name.toLowerCase().includes('google us english') ||
+              v.name.toLowerCase().includes('hazel'))
+        ) || allVoices.find(v => v.lang.startsWith('en')) || allVoices[0];
+        
+        if (femaleVoice) {
+          setSelectedVoiceName(femaleVoice.name);
+          localStorage.setItem('viki_voice_name', femaleVoice.name);
+        }
+      }
+    };
+
+    updateVoices();
+    window.speechSynthesis.onvoiceschanged = updateVoices;
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   // Voice Speech Recognition Setup
   useEffect(() => {
@@ -247,9 +286,9 @@ export const VikiDedicatedChat: React.FC = () => {
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
 
-      // Dynamic voice selection (Premium female english)
+      // Dynamic voice selection from settings or default English
       const voices = window.speechSynthesis.getVoices();
-      const femaleVoice = voices.find(
+      const chosenVoice = voices.find(v => v.name === selectedVoiceName) || voices.find(
         (v) =>
           v.lang.startsWith('en') &&
           (v.name.toLowerCase().includes('female') ||
@@ -259,8 +298,8 @@ export const VikiDedicatedChat: React.FC = () => {
             v.name.toLowerCase().includes('hazel'))
       ) || voices.find(v => v.lang.startsWith('en'));
 
-      if (femaleVoice) {
-        utterance.voice = femaleVoice;
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
       }
 
       utterance.onstart = () => {
@@ -799,6 +838,64 @@ export const VikiDedicatedChat: React.FC = () => {
                 <div className="settings-info-badge">
                   <span className="badge-bullet"></span>
                   API Key is stored locally and securely in your browser's LocalStorage.
+                </div>
+
+                <div className="settings-group" style={{ marginTop: '15px' }}>
+                  <label htmlFor="viki-voice" style={{ display: 'block', marginBottom: '5px', color: '#88aaff', fontSize: '12px', fontWeight: 'bold' }}>
+                    🔊 VIKI VOICE SYNTHESIS ENGINE
+                  </label>
+                  <select
+                    id="viki-voice"
+                    value={selectedVoiceName}
+                    onChange={(e) => {
+                      setSelectedVoiceName(e.target.value);
+                      localStorage.setItem('viki_voice_name', e.target.value);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: '#040711',
+                      border: '1px solid rgba(0, 240, 255, 0.25)',
+                      borderRadius: '4px',
+                      color: '#00f0ff',
+                      fontFamily: 'Courier New, monospace',
+                      outline: 'none',
+                      marginTop: '5px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {availableVoices.length === 0 ? (
+                      <option value="">(No system speech voices detected - browser/OS TTS is unconfigured)</option>
+                    ) : (
+                      availableVoices.map((voice) => (
+                        <option key={voice.name} value={voice.name}>
+                          {voice.name} ({voice.lang}) {voice.localService ? '[Local]' : '[Cloud]'}
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => speakResponse("System link established. Voice diagnostics online.")}
+                    style={{
+                      marginTop: '10px',
+                      padding: '6px 12px',
+                      background: 'rgba(0, 240, 255, 0.1)',
+                      border: '1px solid #00f0ff',
+                      color: '#00f0ff',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                      fontFamily: 'Courier New, monospace',
+                      fontSize: '11px',
+                      letterSpacing: '1px',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)')}
+                  >
+                    🔊 RUN VOICE DIAGNOSTIC TEST
+                  </button>
                 </div>
               </div>
             </div>
