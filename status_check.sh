@@ -19,6 +19,7 @@ services=(
   "viki-minio|MinIO"
   "192.168.50.242:11434|Ollama AI"
   "reflex-daemon|Reflex Engine"
+  "hermes-agent|Hermes Agent"
 )
 
 for i in "${!services[@]}"; do
