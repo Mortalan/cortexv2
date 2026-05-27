@@ -157,9 +157,8 @@ const ProceduralFemaleBust = ({ state }: { state: 'idle' | 'thinking' | 'speakin
       {/* 3. HEAD & FACE GROUP */}
       <group ref={headRef} position={[0, 0.35, 0]}>
         {/* Head Shell (Sleek organic face shape) */}
-        <mesh castShadow receiveShadow>
+        <mesh scale={[1, 1.25, 0.95]} castShadow receiveShadow>
           <sphereGeometry args={[0.42, 32, 32]} />
-          <primitive object={new THREE.Vector3(1, 1.25, 0.95)} attach="scale" />
           <meshStandardMaterial 
             color="#fda4af" // Warm organic premium skin tone
             roughness={0.3} 
@@ -169,9 +168,8 @@ const ProceduralFemaleBust = ({ state }: { state: 'idle' | 'thinking' | 'speakin
         </mesh>
 
         {/* Elegant Futuristic Cybernetic Hair / Helmet */}
-        <mesh position={[0, 0.16, -0.06]} castShadow>
+        <mesh position={[0, 0.16, -0.06]} scale={[1.02, 1.15, 0.98]} castShadow>
           <sphereGeometry args={[0.45, 32, 32]} />
-          <primitive object={new THREE.Vector3(1.02, 1.15, 0.98)} attach="scale" />
           <meshStandardMaterial 
             color="#0b0f19" // Metallic dark hair cap
             roughness={0.15} 
@@ -237,17 +235,15 @@ const ProceduralFemaleBust = ({ state }: { state: 'idle' | 'thinking' | 'speakin
         </group>
 
         {/* Sleek, Delicate Nose */}
-        <mesh position={[0, -0.04, 0.38]} castShadow>
+        <mesh position={[0, -0.04, 0.38]} rotation={[-0.1, 0, 0]} castShadow>
           <coneGeometry args={[0.035, 0.16, 4]} />
-          <primitive object={new THREE.Euler(-0.1, 0, 0)} attach="rotation" />
           <meshStandardMaterial color="#fda4af" roughness={0.3} />
         </mesh>
 
         {/* Animated Mouth & Lips */}
         <group position={[0, -0.22, 0.33]} ref={mouthRef}>
-          <mesh scale={[1, 0.1, 1]} castShadow>
+          <mesh scale={[1, 0.1, 1]} rotation={[0, 0, Math.PI]} castShadow>
             <torusGeometry args={[0.065, 0.016, 8, 32, Math.PI]} />
-            <primitive object={new THREE.Euler(0, 0, Math.PI)} attach="rotation" />
             <meshStandardMaterial 
               color="#fb7185" // Soft rose lips
               roughness={0.35} 
@@ -257,13 +253,11 @@ const ProceduralFemaleBust = ({ state }: { state: 'idle' | 'thinking' | 'speakin
         </group>
 
         {/* Emissive Cybernetic Cheek Lines */}
-        <mesh position={[-0.30, -0.08, 0.24]}>
-          <primitive object={new THREE.Euler(0.1, 0.4, -0.2)} attach="rotation" />
+        <mesh position={[-0.30, -0.08, 0.24]} rotation={[0.1, 0.4, -0.2]}>
           <boxGeometry args={[0.12, 0.006, 0.01]} />
           <meshBasicMaterial color="#00e5ff" />
         </mesh>
-        <mesh position={[0.30, -0.08, 0.24]}>
-          <primitive object={new THREE.Euler(0.1, -0.4, 0.2)} attach="rotation" />
+        <mesh position={[0.30, -0.08, 0.24]} rotation={[0.1, -0.4, 0.2]}>
           <boxGeometry args={[0.12, 0.006, 0.01]} />
           <meshBasicMaterial color="#00e5ff" />
         </mesh>
