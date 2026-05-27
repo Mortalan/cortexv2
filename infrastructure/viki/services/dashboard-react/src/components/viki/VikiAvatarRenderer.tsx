@@ -1,103 +1,273 @@
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, useGLTF, useAnimations } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Component that loads, processes, and animates the 3D realistic female android bust model
-const FemaleAndroidModel = ({ modelPath }: { modelPath: string }) => {
-  const group = useRef<THREE.Group>(null);
-  const { scene, animations } = useGLTF(modelPath);
+// Procedural, highly detailed Cybernetic Female AI Bust
+const ProceduralFemaleBust = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const headRef = useRef<THREE.Group>(null);
+  const neckRef = useRef<THREE.Mesh>(null);
+  const leftEyeRef = useRef<THREE.Mesh>(null);
+  const rightEyeRef = useRef<THREE.Mesh>(null);
+  const leftEyelidRef = useRef<THREE.Mesh>(null);
+  const rightEyelidRef = useRef<THREE.Mesh>(null);
+  const mouthRef = useRef<THREE.Group>(null);
+  const torsoRef = useRef<THREE.Group>(null);
 
-  // Convert to non-indexed geometry to bypass WebGL index underflow driver bugs in Firefox on Linux.
-  React.useMemo(() => {
-    scene.traverse((child) => {
-      if ((child as any).isMesh) {
-        const mesh = child as THREE.Mesh;
-        
-        // Enable matrix auto update
-        mesh.matrixAutoUpdate = true;
+  // Eyelid blink state tracker
+  const blinkState = useRef({ isBlinking: false, time: 0, nextBlink: 2.0 });
 
-        // Strip geometry index for Linux Mesa graphics driver stability
-        if (mesh.geometry && mesh.geometry.index) {
-          mesh.geometry = mesh.geometry.toNonIndexed();
-        }
-
-        // Enable shadows for PBR texture depth
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-      }
-    });
-  }, [scene]);
-
-  const sceneRef = useRef(scene);
-  sceneRef.current = scene;
-
-  // Setup useAnimations hook to handle built-in female idle animations
-  const { actions } = useAnimations(animations, sceneRef);
-
-  // Dynamic skeletal bone mapping for custom procedural overlays
-  const bonesRef = useRef<{
-    neck?: THREE.Bone;
-    head?: THREE.Bone;
-    leftClavicle?: THREE.Bone;
-    rightClavicle?: THREE.Bone;
-  }>({});
-
-  // Resolve Rigged female character bones
-  useEffect(() => {
-    const bones: typeof bonesRef.current = {};
-    scene.traverse((child) => {
-      if ((child as any).isBone) {
-        const name = child.name.toLowerCase();
-        // Neck/Head bones
-        if (name.includes('neck')) bones.neck = child as THREE.Bone;
-        if (name.includes('head')) bones.head = child as THREE.Bone;
-        // Clavicle/Shoulder bones
-        if (name.includes('clavicle_l') || name.includes('shoulder_l') || name.includes('clavicle.l')) bones.leftClavicle = child as THREE.Bone;
-        if (name.includes('clavicle_r') || name.includes('shoulder_r') || name.includes('clavicle.r')) bones.rightClavicle = child as THREE.Bone;
-      }
-    });
-    bonesRef.current = bones;
-  }, [scene]);
-
-  // Play the built-in natural breathing animation of the female android
-  useEffect(() => {
-    if (!actions) return;
-
-    // The female model contains a beautiful realistic Idle breathing animation
-    const idleAction = actions['Idle02_F'];
-    if (idleAction) {
-      idleAction.reset().fadeIn(0.5).play();
-    }
-  }, [actions]);
-
-  // Procedural mouse gaze-tracking overlays in useFrame
-  useFrame((threeState) => {
-    const bones = bonesRef.current;
-    if (!bones) return;
-
+  useFrame((threeState, delta) => {
+    const time = threeState.clock.getElapsedTime();
     const pointer = threeState.pointer;
-    const targetX = pointer.x * 0.28; // Horizontal limit
-    const targetY = pointer.y * 0.20; // Vertical limit
 
-    // Apply smooth look-at gaze targeting on top of active clip loops
-    if (bones.head) {
-      bones.head.rotation.y = THREE.MathUtils.lerp(bones.head.rotation.y, targetX * 0.45, 0.08);
-      bones.head.rotation.x = THREE.MathUtils.lerp(bones.head.rotation.x, -targetY * 0.35, 0.08);
+    // 1. DYNAMIC ORGANIC BREATHING (Chest and Head bobbing)
+    const breath = Math.sin(time * 1.5) * 0.02;
+    const microBob = Math.cos(time * 3.0) * 0.005;
+
+    if (torsoRef.current) {
+      torsoRef.current.position.y = -1.1 + breath * 0.35;
+      torsoRef.current.rotation.z = Math.sin(time * 0.75) * 0.005;
     }
-    if (bones.neck) {
-      bones.neck.rotation.y = THREE.MathUtils.lerp(bones.neck.rotation.y, targetX * 0.20, 0.08);
-      bones.neck.rotation.x = THREE.MathUtils.lerp(bones.neck.rotation.x, -targetY * 0.15, 0.08);
+    if (headRef.current) {
+      headRef.current.position.y = 0.35 + breath * 0.5 + microBob;
+      headRef.current.rotation.z = Math.sin(time * 0.75) * 0.008;
+    }
+
+    // 2. SMOOTH MOUSE GAZE TRACKING (Head, neck and eyes follow mouse)
+    const targetX = pointer.x * 0.45; // Horizontal limit
+    const targetY = pointer.y * 0.30; // Vertical limit
+
+    if (headRef.current) {
+      headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, targetX, 0.08);
+      headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -targetY, 0.08);
+    }
+    if (neckRef.current) {
+      neckRef.current.rotation.y = THREE.MathUtils.lerp(neckRef.current.rotation.y, targetX * 0.4, 0.08);
+      neckRef.current.rotation.x = THREE.MathUtils.lerp(neckRef.current.rotation.x, -targetY * 0.2, 0.08);
+    }
+
+    // 3. DYNAMIC EYE LOOK-AT & BLINKING
+    // Random blinking cycle
+    const bs = blinkState.current;
+    if (time > bs.nextBlink) {
+      bs.isBlinking = true;
+      bs.time = 0;
+      bs.nextBlink = time + 2.5 + Math.random() * 4.0; // Next blink in 2.5 - 6.5s
+    }
+
+    if (bs.isBlinking) {
+      bs.time += delta * 8.0; // Speed of blink
+      const scaleY = Math.max(0.01, Math.abs(Math.sin(bs.time * Math.PI)));
+      if (leftEyelidRef.current) leftEyelidRef.current.scale.y = scaleY;
+      if (rightEyelidRef.current) rightEyelidRef.current.scale.y = scaleY;
+      
+      if (bs.time >= 1.0) {
+        bs.isBlinking = false;
+        if (leftEyelidRef.current) leftEyelidRef.current.scale.y = 0.01; // fully open
+        if (rightEyelidRef.current) rightEyelidRef.current.scale.y = 0.01;
+      }
+    }
+
+    // Eye movement during different states
+    let eyeTargetX = targetX * 0.55;
+    let eyeTargetY = targetY * 0.55;
+
+    if (state === 'thinking') {
+      // Look up and away in thought
+      eyeTargetX = 0.15 + Math.sin(time * 2.0) * 0.04;
+      eyeTargetY = 0.12 + Math.cos(time * 2.0) * 0.02;
+    } else if (state === 'alert') {
+      // Dart around alertly
+      eyeTargetX = targetX * 0.7 + Math.sin(time * 8.0) * 0.04;
+      eyeTargetY = targetY * 0.7 + Math.cos(time * 8.0) * 0.04;
+    }
+
+    if (leftEyeRef.current && rightEyeRef.current) {
+      leftEyeRef.current.rotation.y = THREE.MathUtils.lerp(leftEyeRef.current.rotation.y, eyeTargetX, 0.15);
+      leftEyeRef.current.rotation.x = THREE.MathUtils.lerp(leftEyeRef.current.rotation.x, -eyeTargetY, 0.15);
+      rightEyeRef.current.rotation.y = THREE.MathUtils.lerp(rightEyeRef.current.rotation.y, eyeTargetX, 0.15);
+      rightEyeRef.current.rotation.x = THREE.MathUtils.lerp(rightEyeRef.current.rotation.x, -eyeTargetY, 0.15);
+    }
+
+    // 4. LIP SYNC / MOUTH MOVEMENT FOR SPEAKING
+    if (mouthRef.current) {
+      if (state === 'speaking') {
+        const speakAmt = Math.abs(Math.sin(time * 14.0)) * 0.45 + 0.1;
+        mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, speakAmt, 0.2);
+        mouthRef.current.scale.x = THREE.MathUtils.lerp(mouthRef.current.scale.x, 1.25, 0.2);
+      } else {
+        mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, 0.1, 0.1);
+        mouthRef.current.scale.x = THREE.MathUtils.lerp(mouthRef.current.scale.x, 1.0, 0.1);
+      }
     }
   });
 
   return (
-    <group ref={group}>
-      <primitive
-        object={scene}
-        position={[0, -1.65, 0]} // Torso positioned to render beautiful chest/head female bust framing
-        scale={1.0} // Perfect size to display premium textured details
-      />
+    <group>
+      {/* 1. TORSO & SHOULDERS BASE */}
+      <group ref={torsoRef} position={[0, -1.1, 0]}>
+        {/* Curved collarbones & chest plate */}
+        <mesh castShadow receiveShadow>
+          <torusGeometry args={[0.55, 0.18, 16, 48, Math.PI]} />
+          <meshStandardMaterial 
+            color="#1e1b4b" 
+            roughness={0.1} 
+            metalness={0.9} 
+            envMapIntensity={1.5}
+          />
+        </mesh>
+        
+        {/* Sleek cybernetic chest base */}
+        <mesh position={[0, -0.2, 0]} castShadow>
+          <cylinderGeometry args={[0.3, 0.45, 0.35, 32]} />
+          <meshStandardMaterial 
+            color="#0f172a" 
+            roughness={0.2} 
+            metalness={0.8} 
+          />
+        </mesh>
+        
+        {/* Glowing cyber collar ring */}
+        <mesh position={[0, 0.08, 0]} castShadow>
+          <cylinderGeometry args={[0.2, 0.22, 0.06, 32]} />
+          <meshStandardMaterial 
+            color={state === 'alert' ? '#ff3050' : state === 'thinking' ? '#00e5ff' : state === 'speaking' ? '#3b82f6' : '#80c0ff'} 
+            emissive={state === 'alert' ? '#ff3050' : state === 'thinking' ? '#00e5ff' : state === 'speaking' ? '#3b82f6' : '#80c0ff'}
+            emissiveIntensity={1.5}
+          />
+        </mesh>
+      </group>
+
+      {/* 2. NECK (Connected to head but rotates independently) */}
+      <mesh ref={neckRef} position={[0, -0.3, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.13, 0.15, 0.7, 32]} />
+        <meshStandardMaterial 
+          color="#fda4af" // Warm premium skin tone
+          roughness={0.35} 
+          metalness={0.15} 
+        />
+        {/* High-tech glowing spine line */}
+        <mesh position={[0, 0, -0.14]}>
+          <boxGeometry args={[0.03, 0.6, 0.02]} />
+          <meshBasicMaterial color={state === 'alert' ? '#ff3050' : '#00e5ff'} />
+        </mesh>
+      </mesh>
+
+      {/* 3. HEAD & FACE GROUP */}
+      <group ref={headRef} position={[0, 0.35, 0]}>
+        {/* Head Shell (Sleek organic face shape) */}
+        <mesh castShadow receiveShadow>
+          <sphereGeometry args={[0.42, 32, 32]} />
+          <primitive object={new THREE.Vector3(1, 1.25, 0.95)} attach="scale" />
+          <meshStandardMaterial 
+            color="#fda4af" // Warm organic premium skin tone
+            roughness={0.3} 
+            metalness={0.1} 
+            envMapIntensity={1.2}
+          />
+        </mesh>
+
+        {/* Elegant Futuristic Cybernetic Hair / Helmet */}
+        <mesh position={[0, 0.16, -0.06]} castShadow>
+          <sphereGeometry args={[0.45, 32, 32]} />
+          <primitive object={new THREE.Vector3(1.02, 1.15, 0.98)} attach="scale" />
+          <meshStandardMaterial 
+            color="#0b0f19" // Metallic dark hair cap
+            roughness={0.15} 
+            metalness={0.9} 
+          />
+        </mesh>
+        
+        {/* Glowing Headband Accent Line */}
+        <mesh position={[0, 0.28, 0.12]} rotation={[0.2, 0, 0]}>
+          <torusGeometry args={[0.43, 0.015, 8, 48, Math.PI * 1.1]} />
+          <meshStandardMaterial 
+            color={state === 'alert' ? '#ff3050' : state === 'thinking' ? '#00e5ff' : state === 'speaking' ? '#3b82f6' : '#80c0ff'} 
+            emissive={state === 'alert' ? '#ff3050' : state === 'thinking' ? '#00e5ff' : state === 'speaking' ? '#3b82f6' : '#80c0ff'}
+            emissiveIntensity={2.0}
+          />
+        </mesh>
+
+        {/* EYES */}
+        {/* Left Eye Ball */}
+        <group position={[-0.15, 0.08, 0.32]}>
+          <mesh ref={leftEyeRef} castShadow>
+            <sphereGeometry args={[0.07, 32, 32]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.1} />
+            {/* Pupil/Iris */}
+            <mesh position={[0, 0, 0.055]}>
+              <sphereGeometry args={[0.038, 16, 16]} />
+              <meshStandardMaterial 
+                color={state === 'alert' ? '#ff3050' : '#00b0ff'} // Glowing irises
+                emissive={state === 'alert' ? '#ff3050' : '#00b0ff'}
+                emissiveIntensity={1.2}
+                roughness={0.05}
+              />
+            </mesh>
+          </mesh>
+          {/* Eyelid (Blink overlay) */}
+          <mesh ref={leftEyelidRef} position={[0, 0.07, 0.02]} scale={[1.1, 0.01, 1.1]}>
+            <sphereGeometry args={[0.072, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#fda4af" roughness={0.3} />
+          </mesh>
+        </group>
+
+        {/* Right Eye Ball */}
+        <group position={[0.15, 0.08, 0.32]}>
+          <mesh ref={rightEyeRef} castShadow>
+            <sphereGeometry args={[0.07, 32, 32]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.1} />
+            {/* Pupil/Iris */}
+            <mesh position={[0, 0, 0.055]}>
+              <sphereGeometry args={[0.038, 16, 16]} />
+              <meshStandardMaterial 
+                color={state === 'alert' ? '#ff3050' : '#00b0ff'}
+                emissive={state === 'alert' ? '#ff3050' : '#00b0ff'}
+                emissiveIntensity={1.2}
+                roughness={0.05}
+              />
+            </mesh>
+          </mesh>
+          {/* Eyelid (Blink overlay) */}
+          <mesh ref={rightEyelidRef} position={[0, 0.07, 0.02]} scale={[1.1, 0.01, 1.1]}>
+            <sphereGeometry args={[0.072, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#fda4af" roughness={0.3} />
+          </mesh>
+        </group>
+
+        {/* Sleek, Delicate Nose */}
+        <mesh position={[0, -0.04, 0.38]} castShadow>
+          <coneGeometry args={[0.035, 0.16, 4]} />
+          <primitive object={new THREE.Euler(-0.1, 0, 0)} attach="rotation" />
+          <meshStandardMaterial color="#fda4af" roughness={0.3} />
+        </mesh>
+
+        {/* Animated Mouth & Lips */}
+        <group position={[0, -0.22, 0.33]} ref={mouthRef}>
+          <mesh scale={[1, 0.1, 1]} castShadow>
+            <torusGeometry args={[0.065, 0.016, 8, 32, Math.PI]} />
+            <primitive object={new THREE.Euler(0, 0, Math.PI)} attach="rotation" />
+            <meshStandardMaterial 
+              color="#fb7185" // Soft rose lips
+              roughness={0.35} 
+              metalness={0.1} 
+            />
+          </mesh>
+        </group>
+
+        {/* Emissive Cybernetic Cheek Lines */}
+        <mesh position={[-0.30, -0.08, 0.24]}>
+          <primitive object={new THREE.Euler(0.1, 0.4, -0.2)} attach="rotation" />
+          <boxGeometry args={[0.12, 0.006, 0.01]} />
+          <meshBasicMaterial color="#00e5ff" />
+        </mesh>
+        <mesh position={[0.30, -0.08, 0.24]}>
+          <primitive object={new THREE.Euler(0.1, -0.4, 0.2)} attach="rotation" />
+          <boxGeometry args={[0.12, 0.006, 0.01]} />
+          <meshBasicMaterial color="#00e5ff" />
+        </mesh>
+      </group>
     </group>
   );
 };
@@ -139,7 +309,7 @@ interface RendererProps {
   vikiState?: 'idle' | 'thinking' | 'speaking' | 'alert';
 }
 
-export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath = '/assets/viki_android_real.glb', vikiState = 'idle' }) => {
+export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle' }) => {
   return (
     <div 
       className="viki-canvas-wrapper" 
@@ -165,12 +335,12 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath = '/asse
           <ReactivePointLight state={vikiState} />
 
           <Suspense fallback={null}>
-            <FemaleAndroidModel modelPath={assetPath} />
+            <ProceduralFemaleBust state={vikiState} />
             <Environment preset="city" />
           </Suspense>
 
           <OrbitControls 
-            target={[0, 0, 0]} // Focus centered exactly on the head and chest bust projection
+            target={[0, 0.05, 0]} // Focus centered exactly on the head and chest bust projection
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.7} 
@@ -181,6 +351,3 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ assetPath = '/asse
     </div>
   );
 };
-
-// Preload the female android asset to prevent initialization delays
-useGLTF.preload('/assets/viki_android_real.glb');
