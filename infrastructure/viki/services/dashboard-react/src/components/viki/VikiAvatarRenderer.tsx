@@ -94,7 +94,7 @@ const SphereBotModel = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | '
   });
 
   return (
-    <group ref={group} scale={[0.9, 0.9, 0.9]}>
+    <group ref={group} scale={[0.65, 0.65, 0.65]}>
       {/* Shift primitive down by exactly 1.0 unit to center the bot visually */}
       <primitive object={scene} position={[0, -1.0, 0]} />
     </group>

@@ -374,7 +374,7 @@ export const VikiDedicatedChat: React.FC = () => {
                 if (delta) {
                   if (!hasStartedStreaming) {
                     hasStartedStreaming = true;
-                    setVikiState('idle');
+                    setVikiState('speaking');
                   }
                   fullContent += delta;
                   updateLastMessage(fullContent);
@@ -390,7 +390,7 @@ export const VikiDedicatedChat: React.FC = () => {
               if (delta) {
                 if (!hasStartedStreaming) {
                   hasStartedStreaming = true;
-                  setVikiState('idle');
+                  setVikiState('speaking');
                 }
                 fullContent += delta;
                 updateLastMessage(fullContent);
@@ -402,6 +402,10 @@ export const VikiDedicatedChat: React.FC = () => {
         }
       }
 
+      // If muted or TTS is not available, return state to idle immediately after text streaming ends
+      if (isMuted || !('speechSynthesis' in window)) {
+        setVikiState('idle');
+      }
       speakResponse(fullContent);
       
     } catch (error: any) {
