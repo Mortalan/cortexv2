@@ -22,7 +22,11 @@ export const VikiDedicatedChat: React.FC = () => {
       const savedSessions = localStorage.getItem('viki_chat_sessions');
       if (savedSessions) {
         const parsed = JSON.parse(savedSessions);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Robust sanitization: verify all sessions are valid objects with active messages arrays
+          const valid = parsed.filter(s => s && typeof s === 'object' && s.id && Array.isArray(s.messages));
+          if (valid.length > 0) return valid;
+        }
       }
       
       // Migration from old single history if it exists
@@ -38,7 +42,9 @@ export const VikiDedicatedChat: React.FC = () => {
           }];
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to parse sessions from localStorage:", e);
+    }
 
     return [{
       id: 'session-default',
@@ -60,16 +66,17 @@ export const VikiDedicatedChat: React.FC = () => {
 
   const [showArchive, setShowArchive] = useState(false);
 
-  // Derive current messages from active session
+  // Derive current messages with bulletproof array fallback
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0] || { messages: [] };
-  const messages = activeSession.messages;
+  const messages = Array.isArray(activeSession.messages) ? activeSession.messages : [];
 
   // Custom setMessages function that updates the active session nested messages
   const setMessages = (updateFn: Message[] | ((prev: Message[]) => Message[])) => {
     setSessions(prevSessions => {
       return prevSessions.map(s => {
         if (s.id === activeSessionId) {
-          const nextMessages = typeof updateFn === 'function' ? updateFn(s.messages) : updateFn;
+          const currentMsgs = Array.isArray(s.messages) ? s.messages : [];
+          const nextMessages = typeof updateFn === 'function' ? updateFn(currentMsgs) : updateFn;
           
           // Auto-rename session title from the first user message if title is default or basic
           let nextTitle = s.title;
