@@ -35,6 +35,7 @@ const createHeadGeometry = () => {
 
     pos.setXYZ(i, x, y, z);
   }
+  pos.needsUpdate = true;
 
   // 2. Define Morph Targets (offsets relative to the base positions)
   const jawOpenOffsets = new Float32Array(count * 3);
@@ -125,9 +126,9 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
       const mesh = meshRef.current;
 
       if (points.morphTargetInfluences && mesh.morphTargetInfluences) {
-        let targetJaw = 0;
+        let targetJaw: number;
         let targetMouth = 0;
-        let targetSmile = 0;
+        let targetSmile: number;
 
         if (state === 'speaking') {
           targetJaw = amplitude * 0.85;
@@ -142,6 +143,7 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
         } else {
           // Calm idle smile breathing
           targetSmile = 0.25 + Math.sin(time * 0.3) * 0.08;
+          targetJaw = 0;
         }
 
         // Organic compliance lerping
@@ -165,7 +167,8 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
   return (
     <group scale={1.2}>
       {/* Dynamic 3D Matrix Point Cloud */}
-      <points ref={pointsRef} geometry={geometry}>
+      <points ref={pointsRef}>
+        <primitive object={geometry} attach="geometry" />
         <pointsMaterial
           color={color}
           size={0.04}
@@ -176,7 +179,8 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
       </points>
 
       {/* Structural Wireframe Grid Overlay */}
-      <mesh ref={meshRef} geometry={geometry}>
+      <mesh ref={meshRef}>
+        <primitive object={geometry} attach="geometry" />
         <meshBasicMaterial
           color={color}
           wireframe
@@ -191,13 +195,22 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
 const CyberParticles = ({ count = 40, state }: { count?: number; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
   const pointsRef = useRef<THREE.Points>(null);
 
-  // Generate random positions
+  // Generate random positions (using pure deterministic pseudo-random logic to satisfy React 19 purity rules)
   const positions = React.useMemo(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 5;          // x
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 6 - 0.5; // y
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 4;       // z
+      // Deterministic sine-based hash
+      const seedX = i * 12.9898;
+      const seedY = i * 78.233;
+      const seedZ = i * 43.192;
+      
+      const randX = Math.sin(seedX) * 43758.5453123;
+      const randY = Math.sin(seedY) * 43758.5453123;
+      const randZ = Math.sin(seedZ) * 43758.5453123;
+      
+      pos[i * 3] = ((randX - Math.floor(randX)) - 0.5) * 5;          // x
+      pos[i * 3 + 1] = ((randY - Math.floor(randY)) - 0.5) * 6 - 0.5; // y
+      pos[i * 3 + 2] = ((randZ - Math.floor(randZ)) - 0.5) * 4;       // z
     }
     return pos;
   }, [count]);
@@ -218,7 +231,9 @@ const CyberParticles = ({ count = 40, state }: { count?: number; state: 'idle' |
       // Reset if float out of screen
       if (array[i * 3 + 1] > 3.0) {
         array[i * 3 + 1] = -3.4;
-        array[i * 3] = (Math.random() - 0.5) * 5;
+        const seedX = i * time * 12.9898;
+        const randX = Math.sin(seedX) * 43758.5453123;
+        array[i * 3] = ((randX - Math.floor(randX)) - 0.5) * 5;
       }
       // Subtle horizontal sway
       array[i * 3] += Math.sin(time * 0.8 + i) * 0.003;
@@ -306,8 +321,8 @@ const ReactivePointLight = ({ state }: { state: 'idle' | 'thinking' | 'speaking'
     if (!lightRef.current) return;
     const time = threeState.clock.getElapsedTime();
 
-    let targetColor = new THREE.Color('#9b5de5');
-    let targetIntensity = 0.5;
+    const targetColor = new THREE.Color('#9b5de5');
+    let targetIntensity: number;
 
     if (state === 'alert') {
       targetColor.set('#ff003c');
