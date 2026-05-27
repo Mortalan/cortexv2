@@ -207,28 +207,30 @@ export const VikiDedicatedChat: React.FC = () => {
       rec.interimResults = false;
       rec.lang = 'en-US';
 
-      let transcriptText = '';
+      let hasSent = false;
 
       rec.onstart = () => {
         setIsListening(true);
         setVikiState('thinking');
-        transcriptText = '';
+        hasSent = false;
       };
 
       rec.onresult = (event: any) => {
         const text = event.results[0][0].transcript;
         if (text.trim()) {
-          transcriptText = text;
+          hasSent = true;
+          rec.stop();
+          setIsListening(false);
+          setVikiState('thinking');
+          setInput(text);
+          sendMessageRef.current(text);
         }
       };
 
       rec.onend = () => {
         setIsListening(false);
-        setVikiState(prev => prev === 'thinking' ? 'idle' : prev);
-        if (transcriptText) {
-          setInput(transcriptText);
-          sendMessageRef.current(transcriptText);
-          transcriptText = '';
+        if (!hasSent) {
+          setVikiState('idle');
         }
       };
 
@@ -607,7 +609,7 @@ export const VikiDedicatedChat: React.FC = () => {
             console.error('Transcription failed:', err);
           } finally {
             setIsTranscribing(false);
-            setVikiState('idle');
+            setVikiState(prev => prev === 'speaking' ? 'speaking' : 'idle');
           }
         };
         
