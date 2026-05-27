@@ -360,37 +360,35 @@ export const VikiDedicatedChat: React.FC = () => {
         throw new Error(errText || 'Neural link failure');
       }
 
-      // Safe clone for text fallback
-      const responseClone = response.clone();
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      if (!reader) throw new Error('No reader interface available');
-
-      // Append placeholder Viki bubble
-      setMessages(prev => [...prev, { 
-        role: 'viki', 
-        content: '',
-        modelUsed: modelToUse
-      }]);
-
       let fullContent = '';
-      let buffer = '';
-      let hasStartedStreaming = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      if (modelToUse === 'gpt-4o') {
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        if (!reader) throw new Error('No reader interface available');
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        // Append placeholder Viki bubble
+        setMessages(prev => [...prev, { 
+          role: 'viki', 
+          content: '',
+          modelUsed: modelToUse
+        }]);
 
-        for (const line of lines) {
-          const cleanLine = line.trim();
-          if (!cleanLine) continue;
+        let buffer = '';
+        let hasStartedStreaming = false;
 
-          if (modelToUse === 'gpt-4o') {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (!cleanLine) continue;
+
             if (cleanLine === 'data: [DONE]') continue;
             if (cleanLine.startsWith('data: ')) {
               try {
@@ -409,54 +407,45 @@ export const VikiDedicatedChat: React.FC = () => {
                 // Buffer line segment
               }
             }
-          } else {
-            try {
-              const parsed = JSON.parse(cleanLine);
-              const delta = parsed.message?.content || '';
+          }
+        }
+
+        const leftover = buffer.trim();
+        if (leftover && leftover.startsWith('data: ')) {
+          try {
+            const jsonStr = leftover.substring(6);
+            if (jsonStr !== '[DONE]') {
+              const parsed = JSON.parse(jsonStr);
+              const delta = parsed.choices?.[0]?.delta?.content || '';
               if (delta) {
-                if (!hasStartedStreaming) {
-                  hasStartedStreaming = true;
-                  setVikiState('speaking');
-                }
                 fullContent += delta;
                 updateLastMessage(fullContent);
               }
-            } catch (e) {
-              // Buffer segment
             }
+          } catch (e) {
+            console.error("Failed to parse leftover gpt-4o buffer segment:", e);
           }
         }
-      }
+      } else {
+        // Non-streaming response parsing for local Viki Agent
+        // Append placeholder Viki bubble
+        setMessages(prev => [...prev, { 
+          role: 'viki', 
+          content: '',
+          modelUsed: modelToUse
+        }]);
 
-      // Check for leftover buffer content (fallback for non-streaming or single-JSON responses)
-      const leftover = buffer.trim();
-      if (leftover) {
-        try {
-          const parsed = JSON.parse(leftover);
-          const content = parsed.message?.content || parsed.response || '';
-          if (content && !fullContent) {
-            fullContent = content;
-            updateLastMessage(fullContent);
-          }
-        } catch (e) {
-          console.error("Failed to parse leftover buffer segment:", e);
-        }
-      }
+        const text = await response.text();
+        if (!text.trim()) throw new Error('Empty response received from neural link');
 
-      // Final complete fallback if the stream reader failed to extract anything
-      if (!fullContent) {
-        try {
-          const text = await responseClone.text();
-          if (text.trim()) {
-            const parsed = JSON.parse(text);
-            const content = parsed.message?.content || parsed.response || '';
-            if (content) {
-              fullContent = content;
-              updateLastMessage(fullContent);
-            }
-          }
-        } catch (e) {
-          console.error("Fallback text parsing failed:", e);
+        const parsed = JSON.parse(text);
+        const content = parsed.message?.content || parsed.response || '';
+        if (content) {
+          fullContent = content;
+          updateLastMessage(fullContent);
+          setVikiState('speaking');
+        } else {
+          throw new Error('Could not parse response content from neural link');
         }
       }
 
