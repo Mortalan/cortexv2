@@ -31,8 +31,8 @@ const SphereBotModel = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | '
 
         if (mesh.material) {
           const mat = mesh.material as THREE.MeshStandardMaterial;
-          mat.roughness = Math.min(mat.roughness, 0.4); // Sleeker robotic shell
-          mat.metalness = Math.max(mat.metalness, 0.85); // High metallic cyber finish
+          mat.roughness = Math.min(mat.roughness, 0.35); // Sleeker robotic shell
+          mat.metalness = Math.max(mat.metalness, 0.9); // Extremely high metallic cyber finish
         }
       }
     });
@@ -60,17 +60,43 @@ const SphereBotModel = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | '
     }
 
     if (group.current) {
-      // Floating bobbing y-axis movement
-      group.current.position.y = -1.0 + Math.sin(time * 1.5) * 0.08;
-      
-      // Slowly rotate the model to show off the complex hydraulics from all angles
-      group.current.rotation.y = time * 0.15;
+      let bob = 0;
+      let rotY = time * 0.15;
+      let rotX = 0;
+      let rotZ = 0;
+
+      if (state === 'speaking') {
+        // Energetic bouncing / speaking cadence
+        bob = Math.sin(time * 5.0) * 0.12;
+        rotX = Math.sin(time * 6.0) * 0.05; // slight head nodding
+        rotY = Math.sin(time * 1.5) * 0.2 + (time * 0.05); // swaying and slow turning
+      } else if (state === 'thinking') {
+        // Contemplative rocking, shifting side-to-side
+        bob = Math.sin(time * 1.8) * 0.04;
+        rotY = Math.sin(time * 0.8) * 0.3; // scan side to side
+        rotZ = Math.sin(time * 1.2) * 0.04; // slight tilt
+      } else if (state === 'alert') {
+        // Fast alert vibration, fast scanning
+        bob = Math.sin(time * 10.0) * 0.03;
+        rotY = Math.sin(time * 4.0) * 0.4 + (time * 0.1);
+        rotX = 0.05; // tilted forward slightly
+      } else {
+        // Calm slow idle bobbing
+        bob = Math.sin(time * 1.2) * 0.05;
+        rotY = time * 0.1; // slow continuous showcase spin
+      }
+
+      group.current.position.y = bob;
+      group.current.rotation.y = rotY;
+      group.current.rotation.x = rotX;
+      group.current.rotation.z = rotZ;
     }
   });
 
   return (
-    <group ref={group}>
-      <primitive object={scene} />
+    <group ref={group} scale={[0.9, 0.9, 0.9]}>
+      {/* Shift primitive down by exactly 1.0 unit to center the bot visually */}
+      <primitive object={scene} position={[0, -1.0, 0]} />
     </group>
   );
 };
@@ -87,22 +113,53 @@ const ReactivePointLight = ({ state }: { state: 'idle' | 'thinking' | 'speaking'
 
     if (state === 'alert') {
       targetColor.set('#ff003c');
-      targetIntensity = 1.8 + Math.sin(time * 16) * 0.6; // Strong rapid pulse
+      targetIntensity = 2.5 + Math.sin(time * 16) * 0.8; // Strong rapid alarm pulse
     } else if (state === 'thinking') {
       targetColor.set('#00f0ff');
-      targetIntensity = 1.0 + Math.sin(time * 2.5) * 0.3; // Breathing pulse
+      targetIntensity = 1.5 + Math.sin(time * 2.5) * 0.4; // Breathing calculations pulse
     } else if (state === 'speaking') {
       targetColor.set('#ffb703');
-      targetIntensity = 1.4 + Math.sin(time * 9) * 0.4; // Chat pulse
+      targetIntensity = 2.0 + Math.sin(time * 9) * 0.5; // Active verbal telemetry glow
     } else {
-      targetIntensity = 0.9 + Math.sin(time * 0.9) * 0.15; // Calm idle pulse
+      targetIntensity = 1.2 + Math.sin(time * 0.9) * 0.2; // Slow idle pulse
     }
 
     lightRef.current.color.lerp(targetColor, 0.08);
     lightRef.current.intensity = THREE.MathUtils.lerp(lightRef.current.intensity, targetIntensity, 0.08);
   });
 
-  return <pointLight ref={lightRef} position={[2, 3, 2]} />;
+  return <pointLight ref={lightRef} position={[0, 0.5, 2.0]} distance={5} decay={2} />;
+};
+
+const DynamicOrbitingLights = () => {
+  const lightRef1 = useRef<THREE.PointLight>(null);
+  const lightRef2 = useRef<THREE.PointLight>(null);
+
+  useFrame((threeState) => {
+    const time = threeState.clock.getElapsedTime();
+
+    // Orbiting Cyan Light (horizontal circle)
+    if (lightRef1.current) {
+      lightRef1.current.position.x = Math.sin(time * 0.8) * 3.5;
+      lightRef1.current.position.z = Math.cos(time * 0.8) * 3.5;
+      lightRef1.current.position.y = 0.5 + Math.sin(time * 0.4) * 0.5;
+    }
+
+    // Orbiting Magenta Light (slanted diagonal circle)
+    if (lightRef2.current) {
+      lightRef2.current.position.x = Math.cos(time * 1.1) * 3.0;
+      lightRef2.current.position.y = Math.sin(time * 1.1) * 2.5 + 0.8;
+      lightRef2.current.position.z = Math.sin(time * 1.1) * 2.0;
+    }
+  });
+
+  return (
+    <>
+      {/* Specular accent lights circling the bot to create gorgeous sweeps and reflections */}
+      <pointLight ref={lightRef1} intensity={1.8} distance={8} color="#00f0ff" />
+      <pointLight ref={lightRef2} intensity={2.2} distance={8} color="#ff007f" />
+    </>
+  );
 };
 
 interface RendererProps {
@@ -129,19 +186,23 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
-          {/* Enhanced local lighting setup for premium offline/local rendering */}
-          <ambientLight intensity={0.6} />
+          {/* Hollywood-style space-blue ambient grading for shadows */}
+          <ambientLight intensity={0.65} color="#081b33" />
           
-          {/* Key Light */}
-          <directionalLight position={[5, 8, 5]} intensity={1.5} castShadow />
+          {/* Key Light - Warm solar tint */}
+          <directionalLight position={[5, 8, 5]} intensity={2.2} color="#fff6e0" castShadow />
           
-          {/* Fill Light to soften shadows */}
-          <directionalLight position={[-5, 3, -5]} intensity={0.5} />
+          {/* Fill Light - Soft cool cyber tint */}
+          <directionalLight position={[-5, 3, -2]} intensity={0.8} color="#a5f3fc" />
           
-          {/* Rim Light for high metallic contour definitions */}
-          <directionalLight position={[0, 10, -8]} intensity={1.2} />
+          {/* Rim Light - Highlights contours from behind */}
+          <directionalLight position={[-2, 10, -6]} intensity={2.0} color="#e0f2fe" />
           
+          {/* State-Reactive Central Core Light */}
           <ReactivePointLight state={vikiState} />
+
+          {/* Dynamic Speckle Orbiting Specular System */}
+          <DynamicOrbitingLights />
 
           <Suspense fallback={null}>
             <SphereBotModel state={vikiState} />
