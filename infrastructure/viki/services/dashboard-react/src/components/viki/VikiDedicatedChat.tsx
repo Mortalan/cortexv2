@@ -73,8 +73,15 @@ export const VikiDedicatedChat: React.FC = () => {
   // Custom setMessages function that updates the active session nested messages
   const setMessages = (updateFn: Message[] | ((prev: Message[]) => Message[])) => {
     setSessions(prevSessions => {
+      const exists = prevSessions.some(s => s.id === activeSessionId);
+      const targetId = exists ? activeSessionId : (prevSessions[0]?.id || 'session-default');
+
+      if (!exists && prevSessions.length > 0) {
+        setTimeout(() => setActiveSessionId(targetId), 0);
+      }
+
       return prevSessions.map(s => {
-        if (s.id === activeSessionId) {
+        if (s.id === targetId) {
           const currentMsgs = Array.isArray(s.messages) ? s.messages : [];
           const nextMessages = typeof updateFn === 'function' ? updateFn(currentMsgs) : updateFn;
           
