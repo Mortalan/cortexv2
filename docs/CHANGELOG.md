@@ -1,6 +1,13 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 27 MAY 2026 - HIGH-FIDELITY ORGANIC HUMAN HEAD RESTORATION, SELF-CENTERING BONE OFFSET LOGIC & WEBGL READ-ONLY FIXES (MOLE RUN)
+- **High-Fidelity Model Restored:** Replaced the primitive mannequin shapes with our high-fidelity realistic human-like textured female companion android model (`viki_android_real.glb`), displaying organic skin, detailed hair, and lifelike facial contours.
+- **Dynamic Self-Normalizing Centering Engine:** Engineered an automated skeletal traverse algorithm inside `VikiAvatarRenderer.tsx` that programmatically centers the camera target exactly on the model's head bone world position ($y = 0.05$), resolving all centimetre/metre scaling issues and viewport clipping.
+- **WebGL Property Read-Only Fixes:** Resolved runtime browser exceptions (`TypeError: "scale" is read-only` and `TypeError: "rotation" is read-only`) inside Firefox's canvas container rendering. Swapped out invalid `<primitive attach="scale">` and `<primitive attach="rotation">` sub-nodes, passing `scale` and `rotation` directly as standard properties on parent `<mesh>` tags.
+- **Natural Expressive Kinematics**: Re-aligned the native `Idle02_F` organic breathing cycle and enabled cursor tracking on the `head` and `neck` bones, allowing Viki to look dynamically at the technician's cursor.
+- **Production Asset Recompile & Container Rebuild**: Successfully built the type-safe React bundle (`index-BYuJXVJM.js`), committed/pushed updates, synchronized the master branch on VM 100 via SSH, and completed a clean, no-cache Docker Compose rebuild of the dashboard container.
+
 ### 25 MAY 2026 - ACTIVE SOVEREIGN VIKI AGENT, DYNAMIC TIME-RANGE REPORTING & WEBGL LINUX RENDER HARDENING (MOLE RUN)
 - **Active Sovereign VIKI Agent:** Upgraded the conversational agent (`viki_agent.py` on VM 100) running in a system-isolated Python virtual environment (`/opt/cortex/venv`) using local Ollama (`viki` model) in a stateful ReAct (Reasoning + Action) loop.
 - **Dual-Database Active Operations:** Integrated direct, secure SQL querying of the `glpi-db` MariaDB container and NetLock RMM `mysql-container` (database `dogha6`), allowing Viki to pull tickets, list/add/remove users, change roles/permissions, and audit RMM policies autonomously.
