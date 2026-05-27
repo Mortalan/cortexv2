@@ -1,322 +1,76 @@
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Procedural low-poly head base generator with ARKit/Oculus-like viseme morph targets
-const createHeadGeometry = () => {
-  const geometry = new THREE.SphereGeometry(1.2, 32, 32);
-  const pos = geometry.attributes.position;
-  const count = pos.count;
+// Component that loads, compiles, and animates the high-fidelity Sphere Bot model
+const SphereBotModel = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
+  const group = useRef<THREE.Group>(null);
+  
+  // Dynamic GLTF Loader caching the sphere bot model
+  const { scene, animations } = useGLTF('/assets/sphere_bot.glb');
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
 
-  // 1. Deform the sphere to look like a human head (oval, narrowed jaw, flat face)
-  for (let i = 0; i < count; i++) {
-    let x = pos.getX(i);
-    let y = pos.getY(i);
-    let z = pos.getZ(i);
+  // Setup animations using three-stdlib / drei useAnimations hook
+  const { actions } = useAnimations(animations, sceneRef);
 
-    // Scale vertically to oval shape
-    y *= 1.35;
+  // 1. WebGL/Linux Stability: Convert geometries to non-indexed to prevent index buffer underflows in Mesa drivers
+  React.useMemo(() => {
+    scene.traverse((child) => {
+      if ((child as any).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.matrixAutoUpdate = true;
+        
+        if (mesh.geometry && mesh.geometry.index) {
+          mesh.geometry = mesh.geometry.toNonIndexed();
+        }
 
-    // Narrow the lower half (jaw taper)
-    if (y < 0) {
-      const jawTaper = 1.0 + y * 0.45;
-      x *= jawTaper;
-      z *= (1.0 + y * 0.15); // flatten back/front of chin slightly
-    }
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
 
-    // Flat face outline
-    if (z > 0.4) {
-      x *= 0.88;
-    }
-
-    // Narrow head sides (ear zone)
-    x *= 0.82;
-
-    pos.setXYZ(i, x, y, z);
-  }
-  pos.needsUpdate = true;
-
-  // 2. Define Morph Targets (offsets relative to the base positions)
-  const jawOpenOffsets = new Float32Array(count * 3);
-  const mouthOpenOffsets = new Float32Array(count * 3);
-  const smileOffsets = new Float32Array(count * 3);
-
-  for (let i = 0; i < count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-
-    // Morph Target 1: jawOpen (lower chin pull)
-    if (y < -0.1 && z > 0.2) {
-      const distToChin = Math.abs(y + 0.8);
-      const factor = z * (1.0 - Math.min(distToChin, 0.8));
-      jawOpenOffsets[i * 3 + 1] = -0.35 * factor;
-      jawOpenOffsets[i * 3 + 2] = 0.08 * factor;
-    }
-
-    // Morph Target 2: mouthOpen (vertical lips split)
-    const distToLipCenter = Math.sqrt(x * x + (y + 0.18) * (y + 0.18));
-    if (distToLipCenter < 0.35 && z > 0.5) {
-      const factor = (0.35 - distToLipCenter) * z;
-      if (y > -0.18) {
-        mouthOpenOffsets[i * 3 + 1] = 0.16 * factor; // upper lip up
-      } else {
-        mouthOpenOffsets[i * 3 + 1] = -0.16 * factor; // lower lip down
+        if (mesh.material) {
+          const mat = mesh.material as THREE.MeshStandardMaterial;
+          mat.roughness = Math.min(mat.roughness, 0.4); // Sleeker robotic shell
+          mat.metalness = Math.max(mat.metalness, 0.85); // High metallic cyber finish
+        }
       }
+    });
+  }, [scene]);
+
+  // 2. Play the baked stand/walk/hydraulic loop
+  React.useEffect(() => {
+    if (!actions) return;
+    const action = actions['Animation'];
+    if (action) {
+      action.reset().fadeIn(0.5).play();
     }
+  }, [actions]);
 
-    // Morph Target 3: smile (corners horizontal pull and lift)
-    if (Math.abs(y + 0.18) < 0.25 && z > 0.5) {
-      const factor = (0.25 - Math.abs(y + 0.18)) * z;
-      smileOffsets[i * 3] = (x > 0 ? 0.15 : -0.15) * factor;
-      smileOffsets[i * 3 + 1] = 0.1 * factor;
-    }
-  }
-
-  // Set the morph attributes
-  geometry.morphAttributes.position = [];
-  geometry.morphAttributes.position[0] = new THREE.Float32BufferAttribute(jawOpenOffsets, 3);
-  geometry.morphAttributes.position[1] = new THREE.Float32BufferAttribute(mouthOpenOffsets, 3);
-  geometry.morphAttributes.position[2] = new THREE.Float32BufferAttribute(smileOffsets, 3);
-
-  geometry.computeVertexNormals();
-  return geometry;
-};
-
-// Component that renders the glowing, voice-reactive holographic grid matrix face
-const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const pointsRef = useRef<THREE.Points>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  // Generate the responsive geometry
-  const geometry = React.useMemo(() => createHeadGeometry(), []);
-
+  // 3. Dynamic animation speed, bobbing kinetics, and continuous rotation in useFrame
   useFrame((threeState) => {
     const time = threeState.clock.getElapsedTime();
 
-    // 1. Face Floating & Yaw/Pitch Sway
-    if (pointsRef.current && meshRef.current) {
-      const rotY = Math.sin(time * 0.15) * 0.15;
-      const rotX = Math.sin(time * 0.1) * 0.08;
-
-      pointsRef.current.rotation.y = rotY;
-      pointsRef.current.rotation.x = rotX;
-      meshRef.current.rotation.y = rotY;
-      meshRef.current.rotation.x = rotX;
-
-      // Floating y-axis bobbing
-      const floatY = -0.25 + Math.sin(time * 0.5) * 0.06;
-      pointsRef.current.position.y = floatY;
-      meshRef.current.position.y = floatY;
+    if (actions && actions['Animation']) {
+      let speed = 1.0;
+      if (state === 'alert') speed = 2.0;
+      else if (state === 'thinking') speed = 0.5;
+      else if (state === 'speaking') speed = 1.35;
+      actions['Animation'].timeScale = speed;
     }
 
-    // 2. Real-time Amplitude simulation matching speaking envelopes
-    let amplitude = 0;
-    if (state === 'speaking') {
-      const syllableMod = 0.5 + Math.sin(time * 8.0) * 0.3 + Math.sin(time * 22.0) * 0.2;
-      amplitude = Math.max(0.0, syllableMod);
-    } else if (state === 'thinking') {
-      amplitude = 0.05 + Math.sin(time * 18.0) * 0.02; // meditative cognitive hum
-    }
-
-    // 3. Bind frequency data directly to Morph target blend weights
-    if (pointsRef.current && meshRef.current) {
-      const points = pointsRef.current;
-      const mesh = meshRef.current;
-
-      // Safe initialization of morphTargetInfluences arrays
-      if (!points.morphTargetInfluences) points.morphTargetInfluences = [];
-      if (!mesh.morphTargetInfluences) mesh.morphTargetInfluences = [];
-
-      while (points.morphTargetInfluences.length < 3) points.morphTargetInfluences.push(0);
-      while (mesh.morphTargetInfluences.length < 3) mesh.morphTargetInfluences.push(0);
-
-      let targetJaw: number;
-      let targetMouth = 0;
-      let targetSmile: number;
-
-      if (state === 'speaking') {
-        targetJaw = amplitude * 0.85;
-        targetMouth = amplitude * 0.95;
-        targetSmile = 0.15 + amplitude * 0.1;
-      } else if (state === 'thinking') {
-        targetSmile = -0.15; // concentration frown
-        targetJaw = amplitude * 0.1;
-      } else if (state === 'alert') {
-        targetSmile = -0.3; // combat frown
-        targetJaw = 0.05;
-      } else {
-        // Calm idle smile breathing
-        targetSmile = 0.25 + Math.sin(time * 0.3) * 0.08;
-        targetJaw = 0;
-      }
-
-      // Organic compliance lerping
-      points.morphTargetInfluences[0] = THREE.MathUtils.lerp(points.morphTargetInfluences[0], targetJaw, 0.22);
-      points.morphTargetInfluences[1] = THREE.MathUtils.lerp(points.morphTargetInfluences[1], targetMouth, 0.22);
-      points.morphTargetInfluences[2] = THREE.MathUtils.lerp(points.morphTargetInfluences[2], targetSmile, 0.22);
-
-      mesh.morphTargetInfluences[0] = points.morphTargetInfluences[0];
-      mesh.morphTargetInfluences[1] = points.morphTargetInfluences[1];
-      mesh.morphTargetInfluences[2] = points.morphTargetInfluences[2];
-    }
-  });
-
-  // Neon color profiles based on CORTEX state HUD
-  let color = '#00f0ff'; // Neon blue (thinking)
-  if (state === 'alert') color = '#ff0055'; // Neon red
-  else if (state === 'speaking') color = '#39ff14'; // Neon green
-  else if (state === 'idle') color = '#8a2be2'; // Neon violet
-
-  return (
-    <group scale={1.2}>
-      {/* Dynamic 3D Matrix Point Cloud */}
-      <points ref={pointsRef}>
-        <primitive object={geometry} attach="geometry" />
-        <pointsMaterial
-          color={color}
-          size={0.04}
-          transparent
-          opacity={0.85}
-          sizeAttenuation
-        />
-      </points>
-
-      {/* Structural Wireframe Grid Overlay */}
-      <mesh ref={meshRef}>
-        <primitive object={geometry} attach="geometry" />
-        <meshBasicMaterial
-          color={color}
-          wireframe
-          transparent
-          opacity={0.15}
-        />
-      </mesh>
-    </group>
-  );
-};
-
-const CyberParticles = ({ count = 40, state }: { count?: number; state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const pointsRef = useRef<THREE.Points>(null);
-
-  // Generate random positions (using pure deterministic pseudo-random logic to satisfy React 19 purity rules)
-  const positions = React.useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      // Deterministic sine-based hash
-      const seedX = i * 12.9898;
-      const seedY = i * 78.233;
-      const seedZ = i * 43.192;
+    if (group.current) {
+      // Floating bobbing y-axis movement
+      group.current.position.y = -1.0 + Math.sin(time * 1.5) * 0.08;
       
-      const randX = Math.sin(seedX) * 43758.5453123;
-      const randY = Math.sin(seedY) * 43758.5453123;
-      const randZ = Math.sin(seedZ) * 43758.5453123;
-      
-      pos[i * 3] = ((randX - Math.floor(randX)) - 0.5) * 5;          // x
-      pos[i * 3 + 1] = ((randY - Math.floor(randY)) - 0.5) * 6 - 0.5; // y
-      pos[i * 3 + 2] = ((randZ - Math.floor(randZ)) - 0.5) * 4;       // z
-    }
-    return pos;
-  }, [count]);
-
-  useFrame((threeState) => {
-    if (!pointsRef.current || !pointsRef.current.geometry || !pointsRef.current.geometry.attributes.position) return;
-    const time = threeState.clock.getElapsedTime();
-    const array = pointsRef.current.geometry.attributes.position.array as Float32Array;
-
-    let speed = 0.006;
-    if (state === 'alert') speed = 0.022;
-    else if (state === 'thinking') speed = 0.0035;
-    else if (state === 'speaking') speed = 0.010;
-
-    for (let i = 0; i < count; i++) {
-      // Float upwards
-      array[i * 3 + 1] += speed;
-      // Reset if float out of screen
-      if (array[i * 3 + 1] > 3.0) {
-        array[i * 3 + 1] = -3.4;
-        const seedX = i * time * 12.9898;
-        const randX = Math.sin(seedX) * 43758.5453123;
-        array[i * 3] = ((randX - Math.floor(randX)) - 0.5) * 5;
-      }
-      // Subtle horizontal sway
-      array[i * 3] += Math.sin(time * 0.8 + i) * 0.003;
-    }
-    pointsRef.current.geometry.attributes.position.needsUpdate = true;
-  });
-
-  let color = '#9b5de5';
-  if (state === 'alert') color = '#ff003c';
-  else if (state === 'thinking') color = '#00f0ff';
-  else if (state === 'speaking') color = '#ffb703';
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-      </bufferGeometry>
-      <pointsMaterial
-        color={color}
-        size={0.07}
-        transparent
-        opacity={0.55}
-        sizeAttenuation
-      />
-    </points>
-  );
-};
-
-const HolographicPlatform = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const gridRef = useRef<THREE.GridHelper>(null);
-  const ringRef1 = useRef<THREE.Mesh>(null);
-  const ringRef2 = useRef<THREE.Mesh>(null);
-
-  useFrame((threeState) => {
-    const time = threeState.clock.getElapsedTime();
-
-    // Rotate the platform slowly
-    if (gridRef.current) {
-      gridRef.current.rotation.y = time * 0.04;
-      const mat = gridRef.current.material as THREE.Material;
-      if (mat) {
-        mat.transparent = true;
-        mat.opacity = 0.22;
-      }
-    }
-    if (ringRef1.current) {
-      ringRef1.current.rotation.z = -time * 0.06;
-    }
-    if (ringRef2.current) {
-      ringRef2.current.rotation.z = time * 0.09;
+      // Slowly rotate the model to show off the complex hydraulics from all angles
+      group.current.rotation.y = time * 0.15;
     }
   });
 
-  // Dynamic colors based on state
-  let color = '#9b5de5';
-  if (state === 'alert') color = '#ff003c';
-  else if (state === 'thinking') color = '#00f0ff';
-  else if (state === 'speaking') color = '#ffb703';
-
   return (
-    <group position={[0, -3.4, 0]}>
-      {/* Coordinate grid */}
-      <gridHelper ref={gridRef} args={[7, 18, color, color]} />
-
-      {/* Outer Cyber ring */}
-      <mesh ref={ringRef1} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <ringGeometry args={[1.7, 1.85, 32]} />
-        <meshBasicMaterial color={color} side={THREE.DoubleSide} opacity={0.35} transparent wireframe />
-      </mesh>
-
-      {/* Inner Cyber ring */}
-      <mesh ref={ringRef2} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <ringGeometry args={[0.7, 0.76, 24]} />
-        <meshBasicMaterial color={color} side={THREE.DoubleSide} opacity={0.25} transparent wireframe />
-      </mesh>
+    <group ref={group}>
+      <primitive object={scene} />
     </group>
   );
 };
@@ -333,23 +87,22 @@ const ReactivePointLight = ({ state }: { state: 'idle' | 'thinking' | 'speaking'
 
     if (state === 'alert') {
       targetColor.set('#ff003c');
-      targetIntensity = 0.9 + Math.sin(time * 16) * 0.35; // Rapid heartbeat pulse
+      targetIntensity = 1.8 + Math.sin(time * 16) * 0.6; // Strong rapid pulse
     } else if (state === 'thinking') {
       targetColor.set('#00f0ff');
-      targetIntensity = 0.45 + Math.sin(time * 2.5) * 0.15; // Slow breathing pulse
+      targetIntensity = 1.0 + Math.sin(time * 2.5) * 0.3; // Breathing pulse
     } else if (state === 'speaking') {
       targetColor.set('#ffb703');
-      targetIntensity = 0.6 + Math.sin(time * 9) * 0.25; // Energetic chat pulse
+      targetIntensity = 1.4 + Math.sin(time * 9) * 0.4; // Chat pulse
     } else {
-      // Calm, slow idle breathing pulse
-      targetIntensity = 0.4 + Math.sin(time * 0.9) * 0.08;
+      targetIntensity = 0.9 + Math.sin(time * 0.9) * 0.15; // Calm idle pulse
     }
 
     lightRef.current.color.lerp(targetColor, 0.08);
     lightRef.current.intensity = THREE.MathUtils.lerp(lightRef.current.intensity, targetIntensity, 0.08);
   });
 
-  return <pointLight ref={lightRef} position={[-2, -1, -1]} />;
+  return <pointLight ref={lightRef} position={[2, 3, 2]} />;
 };
 
 interface RendererProps {
@@ -366,27 +119,36 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
         width: '100%',
         height: '100%',
         minHeight: '400px',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        background: '#040711' // Futuristic dark sci-fi viewport void
       }}
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <Canvas
-          camera={{ position: [0, -0.5, 7.8], fov: 40 }} // Beautifully aligned framing with zero clipping
+          camera={{ position: [0, 0.5, 3.8], fov: 40 }} // Perfect mid-ground framing for the 2m tall bot
           style={{ width: '100%', height: '100%' }}
           dpr={[1, 2]}
         >
+          {/* Enhanced local lighting setup for premium offline/local rendering */}
           <ambientLight intensity={0.6} />
-          <directionalLight position={[2, 4, 2]} intensity={1.2} castShadow />
+          
+          {/* Key Light */}
+          <directionalLight position={[5, 8, 5]} intensity={1.5} castShadow />
+          
+          {/* Fill Light to soften shadows */}
+          <directionalLight position={[-5, 3, -5]} intensity={0.5} />
+          
+          {/* Rim Light for high metallic contour definitions */}
+          <directionalLight position={[0, 10, -8]} intensity={1.2} />
+          
           <ReactivePointLight state={vikiState} />
 
-          <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
-            <HolographicHead state={vikiState} />
-            <CyberParticles state={vikiState} />
-            <HolographicPlatform state={vikiState} />
+          <Suspense fallback={null}>
+            <SphereBotModel state={vikiState} />
           </Suspense>
 
           <OrbitControls
-            target={[0, -0.25, 0]}
+            target={[0, 0, 0]} // Centered exactly at the origin
             enableZoom={false}
             enablePan={false}
             maxPolarAngle={Math.PI / 1.5}
@@ -397,3 +159,6 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
     </div>
   );
 };
+
+// Preload the Sphere Bot asset to prevent initialization delays on mount
+useGLTF.preload('/assets/sphere_bot.glb');
