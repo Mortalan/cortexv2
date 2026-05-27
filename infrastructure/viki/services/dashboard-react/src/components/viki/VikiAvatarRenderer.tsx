@@ -1,6 +1,6 @@
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Procedural low-poly head base generator with ARKit/Oculus-like viseme morph targets
@@ -125,36 +125,41 @@ const HolographicHead = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 
       const points = pointsRef.current;
       const mesh = meshRef.current;
 
-      if (points.morphTargetInfluences && mesh.morphTargetInfluences) {
-        let targetJaw: number;
-        let targetMouth = 0;
-        let targetSmile: number;
+      // Safe initialization of morphTargetInfluences arrays
+      if (!points.morphTargetInfluences) points.morphTargetInfluences = [];
+      if (!mesh.morphTargetInfluences) mesh.morphTargetInfluences = [];
 
-        if (state === 'speaking') {
-          targetJaw = amplitude * 0.85;
-          targetMouth = amplitude * 0.95;
-          targetSmile = 0.15 + amplitude * 0.1;
-        } else if (state === 'thinking') {
-          targetSmile = -0.15; // concentration frown
-          targetJaw = amplitude * 0.1;
-        } else if (state === 'alert') {
-          targetSmile = -0.3; // combat frown
-          targetJaw = 0.05;
-        } else {
-          // Calm idle smile breathing
-          targetSmile = 0.25 + Math.sin(time * 0.3) * 0.08;
-          targetJaw = 0;
-        }
+      while (points.morphTargetInfluences.length < 3) points.morphTargetInfluences.push(0);
+      while (mesh.morphTargetInfluences.length < 3) mesh.morphTargetInfluences.push(0);
 
-        // Organic compliance lerping
-        points.morphTargetInfluences[0] = THREE.MathUtils.lerp(points.morphTargetInfluences[0], targetJaw, 0.22);
-        points.morphTargetInfluences[1] = THREE.MathUtils.lerp(points.morphTargetInfluences[1], targetMouth, 0.22);
-        points.morphTargetInfluences[2] = THREE.MathUtils.lerp(points.morphTargetInfluences[2], targetSmile, 0.22);
+      let targetJaw: number;
+      let targetMouth = 0;
+      let targetSmile: number;
 
-        mesh.morphTargetInfluences[0] = points.morphTargetInfluences[0];
-        mesh.morphTargetInfluences[1] = points.morphTargetInfluences[1];
-        mesh.morphTargetInfluences[2] = points.morphTargetInfluences[2];
+      if (state === 'speaking') {
+        targetJaw = amplitude * 0.85;
+        targetMouth = amplitude * 0.95;
+        targetSmile = 0.15 + amplitude * 0.1;
+      } else if (state === 'thinking') {
+        targetSmile = -0.15; // concentration frown
+        targetJaw = amplitude * 0.1;
+      } else if (state === 'alert') {
+        targetSmile = -0.3; // combat frown
+        targetJaw = 0.05;
+      } else {
+        // Calm idle smile breathing
+        targetSmile = 0.25 + Math.sin(time * 0.3) * 0.08;
+        targetJaw = 0;
       }
+
+      // Organic compliance lerping
+      points.morphTargetInfluences[0] = THREE.MathUtils.lerp(points.morphTargetInfluences[0], targetJaw, 0.22);
+      points.morphTargetInfluences[1] = THREE.MathUtils.lerp(points.morphTargetInfluences[1], targetMouth, 0.22);
+      points.morphTargetInfluences[2] = THREE.MathUtils.lerp(points.morphTargetInfluences[2], targetSmile, 0.22);
+
+      mesh.morphTargetInfluences[0] = points.morphTargetInfluences[0];
+      mesh.morphTargetInfluences[1] = points.morphTargetInfluences[1];
+      mesh.morphTargetInfluences[2] = points.morphTargetInfluences[2];
     }
   });
 
@@ -216,7 +221,7 @@ const CyberParticles = ({ count = 40, state }: { count?: number; state: 'idle' |
   }, [count]);
 
   useFrame((threeState) => {
-    if (!pointsRef.current) return;
+    if (!pointsRef.current || !pointsRef.current.geometry || !pointsRef.current.geometry.attributes.position) return;
     const time = threeState.clock.getElapsedTime();
     const array = pointsRef.current.geometry.attributes.position.array as Float32Array;
 
@@ -277,8 +282,10 @@ const HolographicPlatform = ({ state }: { state: 'idle' | 'thinking' | 'speaking
     if (gridRef.current) {
       gridRef.current.rotation.y = time * 0.04;
       const mat = gridRef.current.material as THREE.Material;
-      mat.transparent = true;
-      mat.opacity = 0.22;
+      if (mat) {
+        mat.transparent = true;
+        mat.opacity = 0.22;
+      }
     }
     if (ringRef1.current) {
       ringRef1.current.rotation.z = -time * 0.06;
@@ -374,7 +381,6 @@ export const VikiAvatarRenderer: React.FC<RendererProps> = ({ vikiState = 'idle'
 
           <Suspense fallback={<mesh><boxGeometry /><meshStandardMaterial wireframe /></mesh>}>
             <HolographicHead state={vikiState} />
-            <Environment preset="city" />
             <CyberParticles state={vikiState} />
             <HolographicPlatform state={vikiState} />
           </Suspense>
