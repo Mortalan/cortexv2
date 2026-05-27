@@ -271,6 +271,13 @@ export const VikiDedicatedChat: React.FC = () => {
     if (textToSend === undefined && !rawMessage.trim()) return;
     if (isLoading) return;
 
+    // Unlock SpeechSynthesis context on user interaction to prevent async blocking
+    if ('speechSynthesis' in window) {
+      const silent = new SpeechSynthesisUtterance('');
+      silent.volume = 0;
+      window.speechSynthesis.speak(silent);
+    }
+
     const userQuery = rawMessage.trim();
     if (textToSend !== undefined || rawMessage.trim()) {
       setInput('');
@@ -336,6 +343,9 @@ export const VikiDedicatedChat: React.FC = () => {
         const errText = await response.text();
         throw new Error(errText || 'Neural link failure');
       }
+
+      // Safe clone for text fallback
+      const responseClone = response.clone();
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -417,6 +427,23 @@ export const VikiDedicatedChat: React.FC = () => {
         }
       }
 
+      // Final complete fallback if the stream reader failed to extract anything
+      if (!fullContent) {
+        try {
+          const text = await responseClone.text();
+          if (text.trim()) {
+            const parsed = JSON.parse(text);
+            const content = parsed.message?.content || parsed.response || '';
+            if (content) {
+              fullContent = content;
+              updateLastMessage(fullContent);
+            }
+          }
+        } catch (e) {
+          console.error("Fallback text parsing failed:", e);
+        }
+      }
+
       // If muted or TTS is not available, return state to idle immediately after text streaming ends
       if (isMuted || !('speechSynthesis' in window)) {
         setVikiState('idle');
@@ -438,6 +465,13 @@ export const VikiDedicatedChat: React.FC = () => {
   };
 
   const handleMicClick = async () => {
+    // Unlock SpeechSynthesis context on user interaction to prevent async blocking
+    if ('speechSynthesis' in window) {
+      const silent = new SpeechSynthesisUtterance('');
+      silent.volume = 0;
+      window.speechSynthesis.speak(silent);
+    }
+
     // 1. If native Web Speech API is supported, use it!
     if (recognitionRef.current) {
       if (isListening) {
