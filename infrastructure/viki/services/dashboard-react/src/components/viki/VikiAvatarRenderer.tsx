@@ -95,8 +95,8 @@ const FemaleAndroidModel = ({ modelPath }: { modelPath: string }) => {
     <group ref={group}>
       <primitive
         object={scene}
-        position={[0, -1.55, 0]} // Torso positioned to render beautiful chest/head female bust framing
-        scale={1.0} // Perfect size to display premium textured details
+        position={[0, -1.65, 0]} // Torso positioned to render beautiful chest/head female bust framing
+        scale={0.01} // Scale down by 100x since the model was exported in centimeters (208 units tall)
       />
     </group>
   );
