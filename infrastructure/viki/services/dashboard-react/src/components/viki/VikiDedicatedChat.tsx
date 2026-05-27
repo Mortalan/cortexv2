@@ -168,22 +168,29 @@ export const VikiDedicatedChat: React.FC = () => {
       rec.interimResults = false;
       rec.lang = 'en-US';
 
+      let transcriptText = '';
+
       rec.onstart = () => {
         setIsListening(true);
         setVikiState('thinking');
+        transcriptText = '';
       };
 
       rec.onresult = (event: any) => {
         const text = event.results[0][0].transcript;
         if (text.trim()) {
-          setInput(text);
-          sendMessage(text);
+          transcriptText = text;
         }
       };
 
       rec.onend = () => {
         setIsListening(false);
         setVikiState(prev => prev === 'thinking' ? 'idle' : prev);
+        if (transcriptText) {
+          setInput(transcriptText);
+          sendMessageRef.current(transcriptText);
+          transcriptText = '';
+        }
       };
 
       rec.onerror = (err: any) => {
@@ -223,8 +230,11 @@ export const VikiDedicatedChat: React.FC = () => {
     if (isMuted || !('speechSynthesis' in window)) return;
 
     try {
-      // Stop any ongoing voice playback
+      // Stop any ongoing voice playback and force resume if stuck in a paused state
       window.speechSynthesis.cancel();
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
 
       // Clean markdown characters for spoken response
       const cleanText = text
@@ -473,6 +483,10 @@ export const VikiDedicatedChat: React.FC = () => {
     }
   };
 
+  // Keep sendMessageRef updated to prevent stale closures in async voice handlers
+  const sendMessageRef = useRef(sendMessage);
+  sendMessageRef.current = sendMessage;
+
   const handleMicClick = async () => {
     // Unlock SpeechSynthesis context safely on user interaction
     if ('speechSynthesis' in window) {
@@ -546,7 +560,7 @@ export const VikiDedicatedChat: React.FC = () => {
             const data = await response.json();
             if (data.text && data.text.trim()) {
               setInput(data.text);
-              sendMessage(data.text);
+              await sendMessageRef.current(data.text);
             } else if (data.error) {
               console.warn('STT warning:', data.error);
             }
