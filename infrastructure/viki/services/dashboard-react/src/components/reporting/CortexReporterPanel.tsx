@@ -72,6 +72,10 @@ export function CortexReporterPanel() {
     filename: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+
 
   const handleSectionToggle = (key: keyof typeof sections) => {
     setSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -187,6 +191,63 @@ export function CortexReporterPanel() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const triggerEmailDispatch = async () => {
+    if (!recipientEmail) return;
+    setSendingEmail(true);
+    setEmailSuccess(null);
+    setError(null);
+
+    try {
+      const activeSections = Object.entries(sections)
+        .filter(([_, val]) => val)
+        .map(([key]) => key);
+
+      const activeOptions = {
+        RMM: Object.entries(rmmOptions).filter(([_, val]) => val).map(([key]) => key),
+        EDR: Object.entries(edrOptions).filter(([_, val]) => val).map(([key]) => key),
+        Tickets: Object.entries(ticketOptions).filter(([_, val]) => val).map(([key]) => key),
+        Backups: Object.entries(backupOptions).filter(([_, val]) => val).map(([key]) => key),
+      };
+
+      const response = await fetch("/api/send-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: clientName,
+          date_range: dateRange,
+          sections: activeSections,
+          options: activeOptions,
+          email_recipient: recipientEmail,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError = "SMTP Pipeline failed";
+        try {
+          const errObj = JSON.parse(errorText);
+          parsedError = errObj.message || parsedError;
+        } catch {}
+        throw new Error(parsedError);
+      }
+
+      const result = await response.json();
+      if (result.status !== "success") {
+        throw new Error(result.message || "Email dispatch failed");
+      }
+
+      setEmailSuccess(`Report compiled and sent to ${recipientEmail}`);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to dispatch email");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
 
   return (
     <div className="reporter-panel">
@@ -386,14 +447,31 @@ export function CortexReporterPanel() {
                 >
                   DOWNLOAD DOCX
                 </button>
+              </div>
+              <div className="viewer-actions email-dispatch-container" style={{ marginTop: "15px", display: "flex", gap: "10px", alignItems: "center", width: "100%" }}>
+                <input 
+                  type="email" 
+                  placeholder="Enter client email address..." 
+                  value={recipientEmail} 
+                  onChange={(e) => setRecipientEmail(e.target.value)} 
+                  className="reporter-input email-input font-space"
+                  style={{ flex: 1, padding: "10px", background: "rgba(0, 0, 0, 0.3)", border: "1px solid rgba(0, 255, 200, 0.2)", borderRadius: "4px", color: "#00ffc8", fontSize: "14px" }}
+                  disabled={sendingEmail}
+                />
                 <button 
                   className="viewer-action-btn font-space mail"
-                  disabled
-                  title="Direct mail pipeline integration coming in future release"
+                  onClick={triggerEmailDispatch}
+                  disabled={sendingEmail || !recipientEmail}
+                  style={{ whiteSpace: "nowrap" }}
                 >
-                  EMAIL DIRECTLY (SOON)
+                  {sendingEmail ? "SENDING..." : "EMAIL DIRECTLY"}
                 </button>
               </div>
+              {emailSuccess && (
+                <div className="email-status-success font-space" style={{ marginTop: "10px", padding: "10px", background: "rgba(0, 255, 128, 0.1)", border: "1px solid rgb(0, 255, 128)", borderRadius: "4px", color: "#00ff80", fontSize: "13px", textAlign: "center" }}>
+                  ✓ {emailSuccess}
+                </div>
+              )}
               <div className="viewer-frame-container">
                 <iframe 
                   src={reportData.pdfUrl} 

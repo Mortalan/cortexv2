@@ -1,7 +1,7 @@
 http:
   routers:
     viki-reporter:
-      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/generate-report`)"
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && (PathPrefix(`/api/generate-report`) || PathPrefix(`/api/send-report`))"
       entryPoints:
         - web
       service: viki-reporter-service

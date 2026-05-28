@@ -5,8 +5,14 @@ import json
 import time
 import subprocess
 import base64
+import smtplib
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+
 
 # Local import check of docx
 try:
@@ -402,6 +408,88 @@ def convert_to_pdf(docx_path, output_dir=REPORTS_DIR):
         print(f"[!] Headless PDF compilation failed: {e}")
         return None
 
+def send_email_with_attachments(recipient_email, subject, body, attachments=None, smtp_config=None):
+    """
+    Send an email with attached files using secure SMTP connection.
+    smtp_config can provide:
+      - host (defaults to env SMTP_HOST or "localhost")
+      - port (defaults to env SMTP_PORT or 587)
+      - user (defaults to env SMTP_USER or "")
+      - password (defaults to env SMTP_PASSWORD or "")
+      - use_ssl (defaults to env SMTP_SSL or False)
+      - use_tls (defaults to env SMTP_TLS or True)
+      - from_addr (defaults to env SMTP_FROM or "cortex@rmmservice.co.za")
+    """
+    if not smtp_config:
+        smtp_config = {}
+        
+    smtp_host = smtp_config.get("host") or os.environ.get("SMTP_HOST", "localhost")
+    try:
+        smtp_port = int(smtp_config.get("port") or os.environ.get("SMTP_PORT", 587))
+    except ValueError:
+        smtp_port = 587
+        
+    smtp_user = smtp_config.get("user") or os.environ.get("SMTP_USER", "")
+    smtp_pass = smtp_config.get("password") or os.environ.get("SMTP_PASSWORD", "")
+    smtp_from = smtp_config.get("from_addr") or os.environ.get("SMTP_FROM", "cortex@rmmservice.co.za")
+    
+    use_ssl = smtp_config.get("use_ssl", os.environ.get("SMTP_SSL", "false").lower() == "true")
+    use_tls = smtp_config.get("use_tls", os.environ.get("SMTP_TLS", "true").lower() == "true")
+
+    print(f"[*] Connecting to SMTP server {smtp_host}:{smtp_port}...")
+    
+    # Create MIME message
+    msg = MIMEMultipart()
+    msg['From'] = smtp_from
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    
+    # Attach body
+    msg.attach(MIMEText(body, 'html'))
+    
+    # Attach files
+    if attachments:
+        for filepath in attachments:
+            if not os.path.exists(filepath):
+                print(f"[!] Attachment not found: {filepath}")
+                continue
+            filename = os.path.basename(filepath)
+            print(f"[*] Attaching file: {filename}")
+            try:
+                with open(filepath, "rb") as attachment:
+                    part = MIMEBase("application", "octet-stream")
+                    part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename= {filename}",
+                )
+                msg.attach(part)
+            except Exception as ex:
+                print(f"[!] Failed to attach {filepath}: {ex}")
+            
+    # Setup SMTP client
+    try:
+        if use_ssl:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+            if use_tls:
+                server.starttls()
+                
+        if smtp_user and smtp_pass:
+            print(f"[*] Authenticating with user: {smtp_user}")
+            server.login(smtp_user, smtp_pass)
+            
+        print(f"[*] Sending email to {recipient_email}...")
+        server.sendmail(smtp_from, recipient_email, msg.as_string())
+        server.quit()
+        print("[+] Email sent successfully!")
+        return True
+    except Exception as e:
+        print(f"[!] SMTP failed: {e}")
+        return False
+
 # Built-in HTTP Server
 class ReporterHTTPHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -470,6 +558,120 @@ class ReporterHTTPHandler(BaseHTTPRequestHandler):
                 
             except Exception as e:
                 print(f"[!] Error in POST handler: {e}")
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+
+        elif self.path == '/api/send-report':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            params = json.loads(post_data.decode('utf-8'))
+            
+            client_name = params.get("client_name", "PR VIP")
+            date_range = params.get("date_range", "")
+            sections = params.get("sections", ["RMM", "EDR", "Tickets", "Backups"])
+            options = params.get("options", {})
+            recipient_email = params.get("email_recipient")
+            email_subject = params.get("email_subject")
+            email_body = params.get("email_body")
+            smtp_config = params.get("smtp_config", {})
+            
+            if not recipient_email:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": "Missing email_recipient"}).encode('utf-8'))
+                return
+
+            if not email_subject:
+                email_subject = f"CORTEX IT Managed Services Report: {client_name} ({date_range or 'Monthly Summary'})"
+                
+            if not email_body:
+                email_body = f"""
+                <html>
+                  <body style="font-family: Arial, sans-serif; color: #333333; line-height: 1.6; background-color: #f7f9fc; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                      <div style="background: linear-gradient(135deg, #1B365D 0%, #0d1e3d 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                        <h2 style="color: #ffffff; margin: 0; font-family: 'Space Grotesk', Arial, sans-serif; letter-spacing: 1px;">CORTEX SECURE INTELLIGENCE</h2>
+                      </div>
+                      <div style="padding: 25px 15px;">
+                        <p style="font-size: 16px; margin-top: 0;">Dear Administrator / Operational Contact,</p>
+                        <p style="font-size: 14px;">Please find attached the compiled <strong>IT Managed Services Report</strong> for <strong>{client_name}</strong> covering the period of <strong>{date_range or 'the recent cycle'}</strong>.</p>
+                        <p style="font-size: 14px;">This report has been synthesized from the CORTEX Forensic Data Lake, detailing live network telemetry parameters, RMM endpoint states, and patch compliance levels.</p>
+                        <p style="font-size: 14px; margin-bottom: 0;">If you have any questions or require custom active response interventions, please coordinate with the operational desk.</p>
+                      </div>
+                      <div style="border-top: 1px solid #edf2f7; padding-top: 20px; font-size: 11px; color: #a0aec0; text-align: center; font-family: monospace;">
+                        <p style="margin: 0;">This is an automated forensics transmission dispatch from CORTEX core.<br><em>Classification: CONFIDENTIAL // FORENSIC LOG RECORD</em></p>
+                      </div>
+                    </div>
+                  </body>
+                </html>
+                """
+
+            # Format unique temp paths
+            ts = int(time.time())
+            temp_docx = f"/tmp/custom_report_{ts}.docx"
+            temp_pdf = f"/tmp/custom_report_{ts}.pdf"
+            
+            try:
+                # Generate custom report
+                generate_report(
+                    client_name=client_name,
+                    billing_period=date_range,
+                    sections=sections,
+                    options=options,
+                    output_docx=temp_docx
+                )
+                
+                # Convert to PDF
+                pdf_path = convert_to_pdf(temp_docx, output_dir="/tmp")
+                
+                # Setup attachments list
+                attachments = []
+                if os.path.exists(temp_docx):
+                    attachments.append(temp_docx)
+                if pdf_path and os.path.exists(pdf_path):
+                    attachments.append(pdf_path)
+                    
+                # Dispatch Email
+                dispatch_success = send_email_with_attachments(
+                    recipient_email=recipient_email,
+                    subject=email_subject,
+                    body=email_body,
+                    attachments=attachments,
+                    smtp_config=smtp_config
+                )
+                
+                # Clean up temp files
+                if os.path.exists(temp_docx):
+                    os.remove(temp_docx)
+                if pdf_path and os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+                    
+                if dispatch_success:
+                    response = {
+                        "status": "success",
+                        "message": "Report generated and successfully dispatched via secure SMTP pipeline.",
+                        "recipient": recipient_email
+                    }
+                    self.send_response(200)
+                else:
+                    response = {
+                        "status": "error",
+                        "message": "Report compiled successfully, but the SMTP delivery pipeline failed."
+                    }
+                    self.send_response(500)
+                    
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+                
+            except Exception as e:
+                print(f"[!] Error in POST send handler: {e}")
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
