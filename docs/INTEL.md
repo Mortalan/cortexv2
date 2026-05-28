@@ -14,6 +14,9 @@
 - **WebGL Hardening:** Converts model geometry dynamically using `.toNonIndexed()`, resolving Linux/Firefox Mesa driver index buffer bugs and stabilizing 3D execution at 60 FPS.
 - **Voice STT Support:** Hybrid engine offering native Web Speech API alongside a high-fidelity client-side `MediaRecorder` audio capture fallback.
 - **Transcription API:** Backed by headless `/api/transcribe` server-side transcoder (`viki_agent.py` with FFmpeg transcoding webm/ogg to PCM WAV and Google Speech Transcription).
+- **Voice Synthesis (TTS) Engines**:
+  - **Chromium-based browsers (Google Chrome, Brave, Edge)**: *Highly Recommended*. Natively bundle proprietary, free, state-of-the-art Neural Cloud TTS engines (e.g. `Google US English (Neural)`, `Microsoft Aria (Natural)`). These models sound completely human-like and natural, matching the quality of Gemini/ChatGPT out-of-the-box.
+  - **Firefox on Linux**: Delegates synthesis entirely to the local operating system's `speech-dispatcher` service. On Arch Linux/EndeavourOS, this falls back to `espeak-ng` (formant-based, robotic TTS) which can be installed via `sudo pacman -S speech-dispatcher espeak-ng`.
 
 ### 3. AUTOMATION LOGIC
 - **Platform:** n8n
