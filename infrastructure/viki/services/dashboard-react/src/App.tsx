@@ -690,7 +690,7 @@ function App() {
               <div className="viki-trigger-hint font-space">QUANTUM LINK ACCESS</div>
               <VikiAvatarRenderer 
                 assetPath="/assets/viki_android_real.glb" 
-                vikiState={vikiState} 
+                vikiState={vikiState === 'idle' && securityMode === 'HARDENED' ? 'alert' : vikiState} 
               />
             </div>
           </aside>

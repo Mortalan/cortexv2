@@ -163,55 +163,27 @@ const DynamicOrbitingLights = () => {
 };
 
 const ReactiveGridAndFog = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | 'alert' }) => {
-  const gridRef = useRef<THREE.GridHelper>(null);
   const ambientRef = useRef<THREE.AmbientLight>(null);
 
   useFrame((threeState) => {
-    const time = threeState.clock.getElapsedTime();
-    
     // Target cyber colors
-    const targetGridColor = new THREE.Color('#00f0ff');
     const targetFogColor = new THREE.Color('#040711');
     const targetAmbientColor = new THREE.Color('#081b33');
     
-    let gridOpacity = 0.35 + Math.sin(time * 2.0) * 0.1; // slow wave pulse
-    
     if (state === 'alert') {
-      targetGridColor.set('#ff0055');
       targetFogColor.set('#1a030a');
       targetAmbientColor.set('#2d050f');
-      gridOpacity = 0.6 + Math.sin(time * 12.0) * 0.25; // rapid alert warning flash
     } else if (state === 'thinking') {
-      targetGridColor.set('#00ffc8');
       targetFogColor.set('#031215');
       targetAmbientColor.set('#051d24');
     } else if (state === 'speaking') {
-      targetGridColor.set('#ffbe0b');
       targetFogColor.set('#161003');
       targetAmbientColor.set('#241a05');
-      gridOpacity = 0.45 + Math.sin(time * 8.0) * 0.15; // speaking frequency pulse
     }
     
     // Lerp fog color
     if (threeState.scene.fog && (threeState.scene.fog as THREE.Fog).color) {
       (threeState.scene.fog as THREE.Fog).color.lerp(targetFogColor, 0.05);
-    }
-    
-    // Lerp grid colors and opacity
-    if (gridRef.current) {
-      const gridMaterial = gridRef.current.material as THREE.LineBasicMaterial;
-      gridMaterial.color.lerp(targetGridColor, 0.05);
-      gridMaterial.opacity = THREE.MathUtils.lerp(gridMaterial.opacity, gridOpacity, 0.05);
-      gridMaterial.transparent = true;
-      
-      // Add subtle scan-line displacement wave to the grid y position
-      let gridY = -1.05;
-      if (state === 'alert') {
-        gridY += Math.sin(time * 15.0) * 0.01;
-      } else {
-        gridY += Math.sin(time * 2.0) * 0.002;
-      }
-      gridRef.current.position.y = gridY;
     }
     
     // Lerp ambient light
@@ -224,11 +196,6 @@ const ReactiveGridAndFog = ({ state }: { state: 'idle' | 'thinking' | 'speaking'
     <>
       <fog attach="fog" args={['#040711', 1.5, 6.0]} />
       <ambientLight ref={ambientRef} intensity={0.7} />
-      <gridHelper
-        ref={gridRef}
-        args={[30, 30, '#00f0ff', '#1a3b5c']}
-        position={[0, -1.05, 0]}
-      />
     </>
   );
 };
