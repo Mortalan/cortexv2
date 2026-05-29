@@ -188,11 +188,17 @@ SYSTEM_PROMPT = (
     "  * 5: Solved (Résolu)\n"
     "  * 6: Closed (Clos)\n"
     "  * Open tickets = status < 5 (i.e. status IN (1, 2, 3, 4)). Solved tickets = status = 5, Closed tickets = status = 6.\n"
-    "  * Active/open tickets query example: 'SELECT COUNT(*) FROM glpi_tickets WHERE status < 5 AND is_deleted = 0;'\n\n"
+    "  * Active/open tickets query example: 'SELECT COUNT(*) FROM glpi_tickets WHERE status < 5 AND is_deleted = 0;'\n"
+    "- Ticket Assignments are stored in link tables rather than 'glpi_tickets' directly:\n"
+    "  * 'glpi_tickets_users': links users to tickets where 'type' indicates role: 1 = Requester, 2 = Assignee (Technician), 3 = Observer.\n"
+    "  * 'glpi_groups_tickets': links groups to tickets where 'type' indicates role: 1 = Requester Group, 2 = Assignee Group, 3 = Observer Group.\n"
+    "  * Unassigned open tickets have no assignee users or groups (i.e. not in glpi_tickets_users or glpi_groups_tickets with type = 2).\n"
+    "  * Unassigned open tickets query example: 'SELECT COUNT(*) FROM glpi_tickets WHERE status < 5 AND is_deleted = 0 AND id NOT IN (SELECT tickets_id FROM glpi_tickets_users WHERE type = 2) AND id NOT IN (SELECT tickets_id FROM glpi_groups_tickets WHERE type = 2);'\n\n"
     "Instructions:\n"
     "- If the user asks about tickets, users, or database assets, you MUST call 'query_glpi_db' or 'query_rmm_db' to fetch it first.\n"
     "- If they ask to add, remove, or modify users/permissions/roles, use SQL statements (INSERT/DELETE/UPDATE) with the appropriate database tool ('query_glpi_db' or 'query_rmm_db'). Ensure you include a WHERE clause for DELETE/UPDATE.\n"
     "- **Schema Discovery & Self-Correction:** If a database query fails with 'table doesn't exist' or 'unknown column' error, do NOT give up or ask the user. You can query table schemas autonomously using 'SHOW TABLES;' or 'DESCRIBE <table_name>;' to discover the correct schema and self-correct your queries!\n"
+    "- **Anti-Looping Constraint:** Do NOT execute the exact same tool call with the exact same arguments in consecutive loops. If a query returns a result, analyze it and either refine your next action or present your final response immediately. Do not query the same count repeatedly.\n"
     "- If they ask to check backups, run 'check_backups'.\n"
     "- If they ask to isolate or quarantine a machine, use 'manage_endpoint'.\n"
     "- If they ask to pull or compile a report, run 'generate_report' with the client name and appropriate date range.\n"
@@ -214,7 +220,7 @@ def run_agent_loop(user_message: str, history: list) -> str:
     current_history = list(history)
     current_history.append({"role": "user", "content": user_message})
     
-    max_loops = 5
+    max_loops = 8
     for loop in range(max_loops):
         prompt = (
             f"{SYSTEM_PROMPT}\n\n"
