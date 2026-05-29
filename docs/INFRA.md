@@ -32,3 +32,17 @@ To prevent infrastructure degradation (404s/502s/401s), the following rules must
 - **Traefik Dashboard:** The Traefik API requires the trailing slash (`/dashboard/`) when accessed via standard routing links.
 - **Python / Host-Level Services:** Services running on the host systemd (e.g., `viki-agent` listening on port `9092` on VM 100) are routed via dynamic Traefik file providers (`dynamic/viki-agent.yml`) using `http.services` with `loadBalancer.servers` pointing to host loopback or internal IP endpoints to bypass Docker boundaries seamlessly.
 
+### 5. SSL & DOMAIN WORKFLOW (MULTI-DOMAIN SAN)
+To maintain 100% automated, zero-maintenance SSL renewals, CORTEX uses a **Multi-Domain SAN SSL certificate** terminated at the HAProxy gateway (`192.168.50.239`). Wildcard certificates are bypassed to avoid manual DNS challenge dependencies.
+
+#### **Protocol for Adding New Features / Subdomains**
+When adding a new component that requires a public subdomain (e.g., `newservice.rmmservice.co.za`):
+1. **User Notification (DNS Step):** The AI Agent **MUST** explicitly instruct the Service Manager to point the new subdomain via A record to the public gateway IP:
+   > **Public Gateway IP:** `156.155.97.18`
+2. **DNS Propagation Check:** Wait for the DNS record to propagate before proceeding with certificate re-issuance.
+3. **HAProxy Configuration:** Add the new subdomain to `/etc/haproxy/haproxy.cfg` under `frontend fe_https` (SNI matching rule and routing backend).
+4. **Certbot Re-issuance:** Run the Certbot standalone command on the HAProxy server, appending the new domain with `-d newservice.rmmservice.co.za`.
+5. **Unified PEM Generation:** Concatenate the private key and full chain, and overwrite `/etc/haproxy/rmmservice.co.za.pem`.
+6. **Reload Gateway:** Reload HAProxy via `systemctl reload haproxy`.
+
+

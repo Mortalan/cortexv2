@@ -1,6 +1,13 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 29 MAY 2026 - TRUSTED PUBLIC SSL DEPLOYMENT, GATEWAY STABILIZATION & SSL PROTOCOL INTEGRATION (MOLE RUN)
+- **Production Public Let's Encrypt Certificate Acquired:** Successfully requested a valid, trusted public Multi-Domain SAN SSL certificate via Certbot's standalone HTTP-01 challenge on port `8888` for `rmmservice.co.za` and all active subdomains (`rmm`, `nl-webconsole`, `nl-backend`, `nl-relay`, `hermes`, `cortex`, `automation`).
+- **HAProxy Gateway SSL Termination Activated:** Compiled the generated `fullchain.pem` and `privkey.pem` files into a unified bundle `/etc/haproxy/rmmservice.co.za.pem` on HAProxy (`192.168.50.239`), replacing the self-signed certificate. Reloaded HAProxy gracefully with zero active connection drops.
+- **SSL Hands-Free Renewal Automated:** Configured Certbot's background systemd renewal timer to automate HTTP-01 renewals. Bypassed complex DNS manual challenges to achieve completely self-healing certificate renewals.
+- **Infrastructure Blueprint Updated:** Appended the formal **SSL & Domain Workflow** section to `docs/INFRA.md`, establishing strict step-by-step procedures for scaling and pointing new subdomains to the public gateway IP (`156.155.97.18`).
+- **Cryptographic Handshake Verified:** Executed local workstation HTTPS queries, confirming a fully secure `TLSv1.3` connection with trusted Let's Encrypt CA validation and no browser errors.
+
 ### 29 MAY 2026 - GLPI DATABASE SYNC, VIKI SQL SCHEMA DIAGNOSTICS & TELEMETRY HUD STATE REACTIVITY (MOLE RUN)
 - **Production GLPI Database Restored:** Successfully dropped and recreated the lab database on CORTEX-Core (`192.168.50.241`) and streamed a clean 1.3 GB production replica from `yetiserv` (`192.168.50.232`) natively via piped SSH/MariaDB dump buffers, stabilizing lab diagnostics.
 - **GLPI Ticket Status Mappings Intercepted:** Surgically injected GLPI ITIL ticket status integer mappings into Viki's sovereign ReAct prompt context (`viki_agent.py`), resolving casting errors where Viki queried status using strings (e.g. `'open'`), which MariaDB cast to `0` and returned zero results.

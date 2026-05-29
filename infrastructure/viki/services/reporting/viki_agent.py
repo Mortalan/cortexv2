@@ -150,6 +150,59 @@ def get_system_status() -> str:
     except Exception as e:
         return f"Error fetching system status: {e}"
 
+def query_ghl_crm(endpoint: str, query_params: dict = None) -> str:
+    """Securely query GoHighLevel read-only endpoints (contacts, opportunities)."""
+    location_id = "4DeGPr8sOhLVaUXSXB6b"
+    api_key = "pit-7ef3bbb0-61ee-43d9-8f1b-e626b69c4624"
+    base_url = "https://services.leadconnectorhq.com"
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Version": "2021-07-28"
+    }
+    
+    # Normalize endpoint
+    endpoint = endpoint.lower().strip("/")
+    if endpoint not in ["opportunities", "opportunities/search", "contacts"]:
+        return f"Error: Endpoint '{endpoint}' is not allowed or supported (only read-only 'opportunities' and 'contacts' are allowed)."
+        
+    if not query_params:
+        query_params = {}
+        
+    # Ensure locationId is set
+    query_params["locationId"] = location_id
+    
+    url = f"{base_url}/{endpoint}"
+    if endpoint == "opportunities":
+        url = f"{base_url}/opportunities/search"
+        
+    try:
+        res = requests.get(url, headers=headers, params=query_params, timeout=10)
+        if res.status_code != 200:
+            return f"Error: GHL API request failed with status {res.status_code}.\nDetails: {res.text}"
+        
+        data = res.json()
+        if "opportunities" in data:
+            opps = data["opportunities"]
+            summary = f"Successfully retrieved {len(opps)} opportunities from GHL.\n"
+            for o in opps[:10]:
+                summary += f"- ID: {o.get('id')}, Name: {o.get('name')}, Status: {o.get('status')}, Value: {o.get('monetaryValue')}, Pipeline: {o.get('pipelineId')}\n"
+            if len(opps) > 10:
+                summary += f"... and {len(opps) - 10} more opportunities."
+            return summary
+        elif "contacts" in data:
+            contacts = data["contacts"]
+            summary = f"Successfully retrieved {len(contacts)} contacts from GHL.\n"
+            for c in contacts[:10]:
+                summary += f"- ID: {c.get('id')}, Name: {c.get('contactName')}, Email: {c.get('email')}, Phone: {c.get('phone')}\n"
+            if len(contacts) > 10:
+                summary += f"... and {len(contacts) - 10} more contacts."
+            return summary
+        else:
+            return json.dumps(data, indent=2)
+    except Exception as e:
+        return f"Error querying GHL CRM: {e}"
+
 # ----------------------------------------------------
 # COGNITIVE REACTION ENGINE
 # ----------------------------------------------------
@@ -160,7 +213,8 @@ TOOLS = {
     "check_backups": lambda args: check_backups(),
     "generate_report": lambda args: generate_report(args.get("client_name", "PR VIP"), args.get("date_range"), args.get("sections")),
     "manage_endpoint": lambda args: manage_endpoint(args.get("client_id", ""), args.get("action", "QUARANTINE")),
-    "get_system_status": lambda args: get_system_status()
+    "get_system_status": lambda args: get_system_status(),
+    "query_ghl_crm": lambda args: query_ghl_crm(args.get("endpoint", "opportunities"), args.get("query_params"))
 }
 
 SYSTEM_PROMPT = (
@@ -178,7 +232,8 @@ SYSTEM_PROMPT = (
     "- 'check_backups': Checks the data lake partition mount and folder listings. Takes no args.\n"
     "- 'generate_report': Synthesizes dynamic client reports. Takes 'client_name' (string), 'date_range' (string, optional), 'sections' (array, optional). For historical reports, supply the date range (e.g. '01 February 2026 – 28 February 2026').\n"
     "- 'manage_endpoint': Quarantines a compromised device. Takes 'client_id' (string), 'action' ('QUARANTINE').\n"
-    "- 'get_system_status': Queries VM disk space, RAM, and active docker containers. Takes no args.\n\n"
+    "- 'get_system_status': Queries VM disk space, RAM, and active docker containers. Takes no args.\n"
+    "- 'query_ghl_crm': Connects to GoHighLevel CRM API to read contacts or opportunities. Takes 'endpoint' (string, e.g. 'opportunities' or 'contacts') and 'query_params' (object, optional).\n\n"
     "GLPI Database Reference Schema Specs:\n"
     "- The 'status' column in 'glpi_tickets' is an INTEGER representing status states:\n"
     "  * 1: New (Nouveau)\n"
@@ -206,6 +261,7 @@ SYSTEM_PROMPT = (
     "- If they ask to isolate or quarantine a machine, use 'manage_endpoint'.\n"
     "- If they ask to pull or compile a report, run 'generate_report' with the client name and appropriate date range.\n"
     "- If they ask about VM status or containers, run 'get_system_status'.\n"
+    "- If they ask about CRM metrics, leads, opportunities, or active campaigns, use 'query_ghl_crm' with 'opportunities' or 'contacts'.\n"
     "- Once you get the tool results, they will be appended to your context. Run another loop until you can formulate a final conversational 'response' to the user (with 'tool' set to null)."
 )
 
