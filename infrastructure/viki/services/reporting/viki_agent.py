@@ -242,7 +242,7 @@ SYSTEM_PROMPT = (
     "1. 'thought': Your step-by-step reasoning about what the user wants and what system information you need.\n"
     "2. 'tool': The name of the tool to invoke, or null if you have all the information to reply.\n"
     "3. 'args': A JSON object containing the tool arguments, or {} if none.\n"
-    "4. 'response': Your final conversational response to the user. Set this to null if you are calling a tool.\n\n"
+    "4. 'response': Your final conversational response to the user. Set this to null if you are calling a tool. Ensure this is a natural, conversational sentence and NOT raw tool output or copy-pasted system logs. If a tool has already been executed in a previous loop, analyze its output to formulate your final conversational response here.\n\n"
     "Available Tools:\n"
     "- 'query_glpi_db': Secures live SQL querying inside the GLPI database. Takes 'sql' (string). E.g. to list users: 'SELECT name, is_active FROM glpi_users;'\n"
     "- 'query_rmm_db': Secures live SQL querying inside the NetLock RMM database. Takes 'sql' (string). E.g. to list policies: 'SELECT name, description FROM policies;' or to list accounts: 'SELECT username, role, mail FROM accounts;'\n"
@@ -274,6 +274,7 @@ SYSTEM_PROMPT = (
     "- If they ask to add, remove, or modify users/permissions/roles, use SQL statements (INSERT/DELETE/UPDATE) with the appropriate database tool ('query_glpi_db' or 'query_rmm_db'). Ensure you include a WHERE clause for DELETE/UPDATE.\n"
     "- **Schema Discovery & Self-Correction:** If a database query fails with 'table doesn't exist' or 'unknown column' error, do NOT give up or ask the user. You can query table schemas autonomously using 'SHOW TABLES;' or 'DESCRIBE <table_name>;' to discover the correct schema and self-correct your queries!\n"
     "- **Anti-Looping Constraint:** Do NOT execute the exact same tool call with the exact same arguments in consecutive loops. If a query returns a result, analyze it and either refine your next action or present your final response immediately. Do not query the same count repeatedly.\n"
+    "- Never copy-paste raw system output, system warnings, or database blocks directly as your conversational 'response'. Always write a friendly, concise, natural response summarizing the details for the technician.\n"
     "- If they ask to check backups, run 'check_backups'.\n"
     "- If they ask to isolate or quarantine a machine, use 'manage_endpoint'.\n"
     "- If they ask to pull or compile a report, run 'generate_report' with the client name and appropriate date range.\n"
@@ -333,7 +334,15 @@ def run_agent_loop(user_message: str, history: list) -> str:
                     if repeat_count >= 2:
                         print(f"[!] Programmatic Loop Prevention: Force breaking loop and returning last tool output.", flush=True)
                         raw_output = TOOLS[tool_name](tool_args)
-                        return f"Here is the active system data you requested:\n\n{raw_output}"
+                        
+                        # Parse count from raw output if possible for a beautiful, clean presentation
+                        import re
+                        match = re.search(r'Total (contacts|opportunities) in CRM: (\w+)', raw_output, re.IGNORECASE)
+                        if match:
+                            entity, count = match.groups()
+                            return f"I have successfully queried the GoHighLevel CRM. There are currently **{count} {entity}** registered in the system."
+                        
+                        return f"Here is the active system data retrieved from the GHL CRM:\n\n{raw_output}"
                         
                     print(f"[!] Programmatic Loop Prevention: LLM is repeating tool {tool_name}. Returning system warning.", flush=True)
                     tool_output = (
