@@ -169,8 +169,15 @@ def query_ghl_crm(endpoint: str, query_params: dict = None) -> str:
     if not query_params:
         query_params = {}
         
-    # Ensure locationId is set
-    query_params["locationId"] = location_id
+    # Standardize parameter keys based on endpoint naming schemas
+    if "opportunities" in endpoint:
+        query_params["location_id"] = location_id
+        # Remove camelCase version if mistakenly passed
+        query_params.pop("locationId", None)
+    else:
+        query_params["locationId"] = location_id
+        # Remove snake_case version if mistakenly passed
+        query_params.pop("location_id", None)
     
     url = f"{base_url}/{endpoint}"
     if endpoint == "opportunities":
@@ -182,21 +189,31 @@ def query_ghl_crm(endpoint: str, query_params: dict = None) -> str:
             return f"Error: GHL API request failed with status {res.status_code}.\nDetails: {res.text}"
         
         data = res.json()
+        total_count = data.get("meta", {}).get("total", "Unknown")
+        
         if "opportunities" in data:
             opps = data["opportunities"]
-            summary = f"Successfully retrieved {len(opps)} opportunities from GHL.\n"
+            summary = (
+                f"Successfully queried opportunities.\n"
+                f"Total opportunities in CRM: {total_count}\n"
+                f"Showing first {len(opps[:10])} entries:\n"
+            )
             for o in opps[:10]:
                 summary += f"- ID: {o.get('id')}, Name: {o.get('name')}, Status: {o.get('status')}, Value: {o.get('monetaryValue')}, Pipeline: {o.get('pipelineId')}\n"
             if len(opps) > 10:
-                summary += f"... and {len(opps) - 10} more opportunities."
+                summary += f"... and {len(opps) - 10} more opportunities in this batch."
             return summary
         elif "contacts" in data:
             contacts = data["contacts"]
-            summary = f"Successfully retrieved {len(contacts)} contacts from GHL.\n"
+            summary = (
+                f"Successfully queried contacts.\n"
+                f"Total contacts in CRM: {total_count}\n"
+                f"Showing first {len(contacts[:10])} entries:\n"
+            )
             for c in contacts[:10]:
                 summary += f"- ID: {c.get('id')}, Name: {c.get('contactName')}, Email: {c.get('email')}, Phone: {c.get('phone')}\n"
             if len(contacts) > 10:
-                summary += f"... and {len(contacts) - 10} more contacts."
+                summary += f"... and {len(contacts) - 10} more contacts in this batch."
             return summary
         else:
             return json.dumps(data, indent=2)
