@@ -12,7 +12,7 @@ app = FastAPI(title="Hermes Agent: Cognitive Dispatcher")
 
 HERMES_WEBHOOK_SECRET = os.getenv("HERMES_WEBHOOK_SECRET", "cortex_hermes_secret_2026")
 
-async def verify_hmac(request: Request):
+async def verify_hmac(request: Request) -> None:
     """
     Verifies that the incoming request is signed with HMAC-SHA256 matching the pre-shared secret,
     or has been authenticated via Authelia SSO.
@@ -48,7 +48,7 @@ INCIDENTS_LOG = "/mnt/data_lake/logs/hermes_incidents.json"
 KB_PATH = "/mnt/data_lake/logs/hermes_knowledgebase.json"
 PLAYBOOKS_DIR = "/opt/cortex/infrastructure/viki/playbooks"
 
-def load_incidents():
+def load_incidents() -> list:
     if os.path.exists(INCIDENTS_LOG):
         try:
             with open(INCIDENTS_LOG, "r") as f:
@@ -57,12 +57,12 @@ def load_incidents():
             return []
     return []
 
-def save_incidents(incidents):
+def save_incidents(incidents: list) -> None:
     os.makedirs(os.path.dirname(INCIDENTS_LOG), exist_ok=True)
     with open(INCIDENTS_LOG, "w") as f:
         json.dump(incidents, f)
 
-def load_kb():
+def load_kb() -> list:
     if os.path.exists(KB_PATH):
         try:
             with open(KB_PATH, "r") as f:
@@ -80,13 +80,13 @@ def load_kb():
         json.dump(default_kb, f)
     return default_kb
 
-def save_kb(kb):
+def save_kb(kb: list) -> None:
     os.makedirs(os.path.dirname(KB_PATH), exist_ok=True)
     with open(KB_PATH, "w") as f:
         json.dump(kb, f)
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_dashboard():
+async def serve_dashboard() -> HTMLResponse:
     incidents = load_incidents()
     kb = load_kb()
     
@@ -548,7 +548,7 @@ async def serve_dashboard():
     return html_content
 
 @app.api_route("/api/hermes/knowledgebase", methods=["POST", "DELETE"])
-async def handle_kb_api(request: Request):
+async def handle_kb_api(request: Request) -> JSONResponse:
     kb = load_kb()
     
     if request.method == "POST":
@@ -582,7 +582,7 @@ async def handle_kb_api(request: Request):
         return JSONResponse({"status": "success"})
 
 @app.post("/api/hermes/triage")
-async def handle_triage(request: Request):
+async def handle_triage(request: Request) -> JSONResponse:
     """
     Stateful triage endpoint: Ingests unstructured alerts, checks against the 
     approved exception rules (Knowledgebase), queries Ollama, and executes mitigations.

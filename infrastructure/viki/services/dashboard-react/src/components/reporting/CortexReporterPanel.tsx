@@ -171,10 +171,10 @@ export function CortexReporterPanel() {
         pdfBlob,
         filename: result.filename || "monthly_report",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearInterval(interval);
       console.error(err);
-      setError(err.message || "An error occurred during report generation");
+      setError(err instanceof Error ? err.message : "An error occurred during report generation");
     } finally {
       setLoading(false);
     }
@@ -240,9 +240,9 @@ export function CortexReporterPanel() {
       }
 
       setEmailSuccess(`Report compiled and sent to ${recipientEmail}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Failed to dispatch email");
+      setError(err instanceof Error ? err.message : "Failed to dispatch email");
     } finally {
       setSendingEmail(false);
     }

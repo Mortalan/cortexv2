@@ -281,7 +281,7 @@ def run_agent_loop(user_message: str, history: list) -> str:
 # ----------------------------------------------------
 
 @app.post("/api/chat")
-async def handle_chat(request: Request):
+async def handle_chat(request: Request) -> JSONResponse:
     """
     Main endpoint matching Ollama's /api/chat schema.
     Intercepts React Dashboard chat bubbles.
@@ -307,7 +307,7 @@ async def handle_chat(request: Request):
     })
 
 @app.post("/api/transcribe")
-async def handle_transcribe(file: UploadFile = File(...)):
+async def handle_transcribe(file: UploadFile = File(...)) -> JSONResponse:
     """Transcribe webm/ogg audio from browsers using ffmpeg + SpeechRecognition."""
     in_path = None
     out_path = None

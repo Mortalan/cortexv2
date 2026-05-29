@@ -121,7 +121,7 @@ export const VikiDedicatedChat: React.FC = () => {
 
   // Hybrid Core and Model Override States
   const [modelMode, setModelMode] = useState<'auto' | 'viki' | 'codellama' | 'gpt-4o'>(() => {
-    return (localStorage.getItem('viki_model_mode') as any) || 'auto';
+    return (localStorage.getItem('viki_model_mode') as 'auto' | 'viki' | 'codellama' | 'gpt-4o' | null) || 'auto';
   });
   const [openaiKey, setOpenaiKey] = useState(() => {
     return localStorage.getItem('viki_openai_key') || '';
@@ -131,9 +131,9 @@ export const VikiDedicatedChat: React.FC = () => {
 
   // References
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const mediaRecorderRef = useRef<any>(null);
-  const audioChunksRef = useRef<any[]>([]);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Firefox Speech Recognition Fallback States
   const [showMicError, setShowMicError] = useState(false);
@@ -215,7 +215,7 @@ export const VikiDedicatedChat: React.FC = () => {
         hasSent = false;
       };
 
-      rec.onresult = (event: any) => {
+      rec.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
         const text = event.results[0][0].transcript;
         if (text.trim()) {
           hasSent = true;
@@ -234,7 +234,7 @@ export const VikiDedicatedChat: React.FC = () => {
         }
       };
 
-      rec.onerror = (err: any) => {
+      rec.onerror = (err: { error: string }) => {
         console.error('STT Voice Error:', err);
         setIsListening(false);
         setVikiState('idle');
@@ -510,11 +510,12 @@ export const VikiDedicatedChat: React.FC = () => {
       }
       speakResponse(fullContent);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('API Error:', error);
+      const errMsg = error instanceof Error ? error.message : String(error);
       setMessages(prev => [...prev, { 
         role: 'viki', 
-        content: `Emergency Alert: Neural link failure. ${error.message || 'Connection severed.'}`,
+        content: `Emergency Alert: Neural link failure. ${errMsg || 'Connection severed.'}`,
         modelUsed: modelToUse
       }]);
       setVikiState('alert');

@@ -2,7 +2,7 @@ import subprocess
 import json
 import datetime
 
-def run_vql(query):
+def run_vql(query: str) -> list:
     cmd = ['docker', 'exec', 'velociraptor', './velociraptor', '--config', '/velociraptor/server.config.yaml', 'query', query, '--format', 'json']
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -16,7 +16,7 @@ def run_vql(query):
     except:
         return []
 
-def generate_report():
+def generate_report() -> None:
     print("# CORTEX: NIST 2.0 COMPLIANCE REPORT")
     print(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("\n## 1. ASSET MANAGEMENT (ID.AM)")

@@ -30,7 +30,7 @@ REPORTS_DIR = "/opt/cortex/reports"
 TEMPLATE_DOCX = os.path.join(REPORTS_DIR, "cortex_monthly_report.docx")
 OUTPUT_PDF = os.path.join(REPORTS_DIR, "cortex_monthly_report.pdf")
 
-def run_db_query(sql):
+def run_db_query(sql: str) -> list[str]:
     """Run a query inside the glpi-db container and return the stdout lines."""
     cmd = f"sudo docker exec -i glpi-db mariadb -u glpi_user -pglpi_password glpi -s -N -e \"{sql}\""
     try:
@@ -40,7 +40,7 @@ def run_db_query(sql):
         print(f"[!] DB Query failed: {e}")
         return []
 
-def get_telemetry_data():
+def get_telemetry_data() -> dict:
     """Parse Vector telemetry alerts file to compile statistics."""
     critical_count = 0
     warning_count = 0
@@ -73,7 +73,7 @@ def get_telemetry_data():
         "total_alerts": len(alerts)
     }
 
-def get_glpi_data():
+def get_glpi_data() -> dict:
     """Retrieve ticket metrics and asset counts from GLPI database."""
     tickets_count_res = run_db_query("SELECT COUNT(*) FROM glpi_tickets WHERE is_deleted=0;")
     total_tickets = int(tickets_count_res[0]) if tickets_count_res else 0
@@ -107,12 +107,12 @@ def get_glpi_data():
         "work_completed": work_completed
     }
 
-def set_cell_background(cell, color_hex):
+def set_cell_background(cell: 'docx.table._Cell', color_hex: str) -> None:
     """Set the background color of a table cell (hex string, e.g. '1B365D')."""
     shading_xml = f'<w:shd {nsdecls("w")} w:fill="{color_hex}"/>'
     cell._tc.get_or_add_tcPr().append(parse_xml(shading_xml))
 
-def set_table_borders(table, color_hex):
+def set_table_borders(table: 'docx.table.Table', color_hex: str) -> None:
     """Set thin table borders."""
     tblPr = table._tbl.tblPr
     borders_xml = f"""
@@ -127,7 +127,7 @@ def set_table_borders(table, color_hex):
     """
     tblPr.append(parse_xml(borders_xml))
 
-def generate_report(client_name="PR VIP", billing_period=None, sections=None, options=None, output_docx=TEMPLATE_DOCX):
+def generate_report(client_name: str = "PR VIP", billing_period: str = None, sections: list[str] = None, options: dict = None, output_docx: str = TEMPLATE_DOCX) -> str:
     if not billing_period:
         billing_period = datetime.now().strftime("01 %B %Y – %d %B %Y")
         
@@ -395,7 +395,7 @@ def generate_report(client_name="PR VIP", billing_period=None, sections=None, op
     print(f"[+] DOCX Report saved to: {output_docx}")
     return output_docx
 
-def convert_to_pdf(docx_path, output_dir=REPORTS_DIR):
+def convert_to_pdf(docx_path: str, output_dir: str = REPORTS_DIR) -> str:
     """Convert the compiled DOCX into PDF using headless LibreOffice."""
     print("[*] Launching headless LibreOffice compiler for PDF generation...")
     cmd = f"libreoffice --headless --convert-to pdf --outdir {output_dir} {docx_path}"
@@ -406,9 +406,9 @@ def convert_to_pdf(docx_path, output_dir=REPORTS_DIR):
         return pdf_path
     except Exception as e:
         print(f"[!] Headless PDF compilation failed: {e}")
-        return None
+        return ""
 
-def send_email_with_attachments(recipient_email, subject, body, attachments=None, smtp_config=None):
+def send_email_with_attachments(recipient_email: str, subject: str, body: str, attachments: list[str] = None, smtp_config: dict = None) -> bool:
     """
     Send an email with attached files using secure SMTP connection.
     smtp_config can provide:

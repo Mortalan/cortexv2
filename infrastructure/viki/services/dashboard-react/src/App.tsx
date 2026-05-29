@@ -412,7 +412,7 @@ function App() {
   const [, setAcknowledgedAlerts] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("cortex_acknowledged_alerts");
-      return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+      return saved ? (JSON.parse(saved) as unknown[]).map((id) => String(id)) : [];
     } catch {
       return [];
     }
@@ -442,7 +442,7 @@ function App() {
           const acked = (() => {
             try {
               const saved = localStorage.getItem("cortex_acknowledged_alerts");
-              return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+              return saved ? (JSON.parse(saved) as unknown[]).map((id) => String(id)) : [];
             } catch {
               return [];
             }
@@ -516,7 +516,7 @@ function App() {
             const acked = (() => {
               try {
                 const saved = localStorage.getItem("cortex_acknowledged_alerts");
-                return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+                return saved ? (JSON.parse(saved) as unknown[]).map((id) => String(id)) : [];
               } catch {
                 return [];
               }
@@ -573,7 +573,7 @@ function App() {
     const acked = (() => {
       try {
         const saved = localStorage.getItem("cortex_acknowledged_alerts");
-        return saved ? JSON.parse(saved).map((id: any) => String(id)) : [];
+        return saved ? (JSON.parse(saved) as unknown[]).map((id) => String(id)) : [];
       } catch {
         return [];
       }

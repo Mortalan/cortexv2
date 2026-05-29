@@ -18,8 +18,8 @@ const SphereBotModel = ({ state }: { state: 'idle' | 'thinking' | 'speaking' | '
   // 1. WebGL/Linux Stability: Convert geometries to non-indexed to prevent index buffer underflows in Mesa drivers
   React.useMemo(() => {
     scene.traverse((child) => {
-      if ((child as any).isMesh) {
-        const mesh = child as THREE.Mesh;
+      if (child instanceof THREE.Mesh) {
+        const mesh = child;
         mesh.matrixAutoUpdate = true;
         
         if (mesh.geometry && mesh.geometry.index) {
