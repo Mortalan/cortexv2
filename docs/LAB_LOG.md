@@ -13,6 +13,7 @@
 - [x] **Native Firefox STT Recorder & Transcription API (Phase 16.8) Completed.**
 - [x] **WebGL 3D Avatar Render Hardening (Phase 16.9) Completed.**
 - [x] **Procedural Holographic V.I.K.I. Head Matrix Restoration (Phase 17.3) Completed.**
+- [x] **Pre-Demo Static Refactoring & PANGO Tag (Mole Run) Completed.**
 
 ### CURRENT PHASE: PLATFORM ORCHESTRATION & SECURITY HARDENING
 **Phase 17.1: Gateway Hardening & Webhook Orchestration**
@@ -124,5 +125,13 @@
 2. [x] Deployed a dynamic Traefik file provider router (`viki-agent.yml`) to proxy both chat and transcribe endpoints to port `9092` dynamically without requiring any container builds.
 
 
+**Phase 17.5: Code Integrity & Pre-Demo Static safety Refactorings (May 29, 2026)**
+1. [x] Surgically eliminated all 10 raw `: any` types in React frontend files (`App.tsx`, `VikiAvatarRenderer.tsx`, `VikiDedicatedChat.tsx`, and `CortexReporterPanel.tsx`) using specific interfaces, `unknown` catching, and Three.js class matching (`instanceof THREE.Mesh`).
+2. [x] Injected strict parameter type hints and return type annotations across all custom Python services (`viki_agent.py`, `hermes_agent.py`, `cortex_reporter.py`, `compliance_report.py`) to enforce enterprise type definitions.
+3. [x] Compiled React production bundle headlessly, r-synced assets directly, rebuilt Traefik dashboard server, and restarted all microservices.
+4. [x] Logged active reverse proxy ports and compiled a 6-stage master playbook at `mole_run_diag_to_repair.md`.
+
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.
+- `@snapshots/PANGO_20260529`: Pre-demo stable code refactoring and database baseline recovery.
+
