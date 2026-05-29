@@ -193,7 +193,10 @@ SYSTEM_PROMPT = (
     "  * 'glpi_tickets_users': links users to tickets where 'type' indicates role: 1 = Requester, 2 = Assignee (Technician), 3 = Observer.\n"
     "  * 'glpi_groups_tickets': links groups to tickets where 'type' indicates role: 1 = Requester Group, 2 = Assignee Group, 3 = Observer Group.\n"
     "  * Unassigned open tickets have no assignee users or groups (i.e. not in glpi_tickets_users or glpi_groups_tickets with type = 2).\n"
-    "  * Unassigned open tickets query example: 'SELECT COUNT(*) FROM glpi_tickets WHERE status < 5 AND is_deleted = 0 AND id NOT IN (SELECT tickets_id FROM glpi_tickets_users WHERE type = 2) AND id NOT IN (SELECT tickets_id FROM glpi_groups_tickets WHERE type = 2);'\n\n"
+    "  * Unassigned open tickets query example: 'SELECT COUNT(*) FROM glpi_tickets WHERE status < 5 AND is_deleted = 0 AND id NOT IN (SELECT tickets_id FROM glpi_tickets_users WHERE type = 2) AND id NOT IN (SELECT tickets_id FROM glpi_groups_tickets WHERE type = 2);'\n"
+    "- GLPI User Table Schema Specs ('glpi_users'):\n"
+    "  * Stores the user database profiles. 'name' is the unique username column (e.g. 'Vitto'). 'realname' is the last name, 'firstname' is the first name.\n"
+    "  * To query tickets assigned to a specific user (by username e.g. 'Vitto'): 'SELECT COUNT(*) FROM glpi_tickets WHERE status < 5 AND is_deleted = 0 AND id IN (SELECT tickets_id FROM glpi_tickets_users WHERE type = 2 AND users_id = (SELECT id FROM glpi_users WHERE name = \\'Vitto\\'));'\n\n"
     "Instructions:\n"
     "- If the user asks about tickets, users, or database assets, you MUST call 'query_glpi_db' or 'query_rmm_db' to fetch it first.\n"
     "- If they ask to add, remove, or modify users/permissions/roles, use SQL statements (INSERT/DELETE/UPDATE) with the appropriate database tool ('query_glpi_db' or 'query_rmm_db'). Ensure you include a WHERE clause for DELETE/UPDATE.\n"
@@ -259,9 +262,13 @@ def run_agent_loop(user_message: str, history: list) -> str:
                 context_str += f"\nASSISTANT ACTION: Call '{tool_name}' with args {json.dumps(tool_args)}"
                 context_str += f"\nSYSTEM TOOL CALL ({tool_name}) RESULT: {tool_output}"
                 continue
+            elif final_response:
+                return final_response
             else:
-                # LLM decided no more tools are needed; return final text response!
-                return final_response if final_response else "Diagnostics complete. No active anomalies identified."
+                # LLM set both tool and response to null; re-prompt to enforce action
+                print("[*] Re-prompting model: empty action/response", flush=True)
+                context_str += f"\nASSISTANT THOUGHT: {thought}\nSYSTEM WARNING: You did not specify a 'tool' to execute or a final 'response'. Please specify a tool (e.g. query_glpi_db) or a final conversation response in 'response'."
+                continue
                 
         except Exception as e:
             print(f"[!] Error in ReAct loop: {e}", flush=True)
