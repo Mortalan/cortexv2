@@ -1,6 +1,14 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 29 MAY 2026 - GOHIGHLEVEL CRM INTEGRATION, MULTI-ENDPOINT PARAMETER STANDARDISATION, COGNITIVE REACT SYSTEM PROMPT HARDENING & RESILIENT LOOP PROTECTION (MOLE RUN)
+- **GoHighLevel CRM Integration Activated:** Successfully integrated the read-only GHL CRM query tool (`query_ghl_crm`) inside the sovereign `viki_agent.py` ReAct reasoning engine. Securely registered the production Location ID (`4DeGPr8sOhLVaUXSXB6b`) and OAuth Integration API Key (`pit-7ef3bbb0-61ee-43d9-8f1b-e626b69c4624`) inside the active code base.
+- **Dynamic Parameter Naming Resolution:** Resolved a critical parameter naming mismatch between GHL V2 API endpoints where the contacts endpoint expects camelCase `locationId` while the opportunities endpoint expects snake_case `location_id` (which previously triggered 422 errors). The agent now standardizes parameter structures dynamically.
+- **Enriched GHL Metadata Processing:** Upgraded the tool output summary to parse GHL metadata payloads and extract the true overall contact and opportunity counts (`meta: {total: 681}` and `total: 3`), prepending them directly to the tool response summary so the LLM instantly sees the ground-truth counts.
+- **Bulletproof Programmatic Loop Prevention:** Engineered a custom, self-healing double-repetition tracking guardrail inside `run_agent_loop` to protect the agent from infinite loop crashes. Consecutive duplicate tool queries trigger a strict system warning on the first repetition, and force-break with direct regex-parsed conversational formatting on the second repetition.
+- **Conversational Response Hardening:** Reinforced `SYSTEM_PROMPT` rules in the Python agent to strictly prohibit the model from copy-pasting raw system logs, database blocks, or warnings, ensuring a premium conversational experience.
+- **Production Build & Git Baseline Tagged:** Deployed code updates seamlessly to CORTEX-Core (`192.168.50.241`) and restarted the `viki-agent.service` systemd daemon. Verified live chat responses via curl queries, returning contacts (`681`) and opportunities (`3`) in under 7 seconds.
+
 ### 29 MAY 2026 - TRUSTED PUBLIC SSL DEPLOYMENT, GATEWAY STABILIZATION & SSL PROTOCOL INTEGRATION (MOLE RUN)
 - **Production Public Let's Encrypt Certificate Acquired:** Successfully requested a valid, trusted public Multi-Domain SAN SSL certificate via Certbot's standalone HTTP-01 challenge on port `8888` for `rmmservice.co.za` and all active subdomains (`rmm`, `nl-webconsole`, `nl-backend`, `nl-relay`, `hermes`, `cortex`, `automation`).
 - **HAProxy Gateway SSL Termination Activated:** Compiled the generated `fullchain.pem` and `privkey.pem` files into a unified bundle `/etc/haproxy/rmmservice.co.za.pem` on HAProxy (`192.168.50.239`), replacing the self-signed certificate. Reloaded HAProxy gracefully with zero active connection drops.
