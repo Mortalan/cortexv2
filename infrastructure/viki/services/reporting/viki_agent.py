@@ -296,6 +296,8 @@ def run_agent_loop(user_message: str, history: list) -> str:
     current_history = list(history)
     current_history.append({"role": "user", "content": user_message})
     
+    last_tool_call = None
+    repeat_count = 0
     max_loops = 8
     for loop in range(max_loops):
         prompt = (
@@ -325,9 +327,27 @@ def run_agent_loop(user_message: str, history: list) -> str:
             print(f"[*] Loop {loop+1} - Thought: {thought}", flush=True)
             
             if tool_name and tool_name in TOOLS:
-                print(f"[*] Calling Tool: {tool_name} with args: {tool_args}", flush=True)
-                # Execute the tool
-                tool_output = TOOLS[tool_name](tool_args)
+                current_call = (tool_name, json.dumps(tool_args, sort_keys=True))
+                if current_call == last_tool_call:
+                    repeat_count += 1
+                    if repeat_count >= 2:
+                        print(f"[!] Programmatic Loop Prevention: Force breaking loop and returning last tool output.", flush=True)
+                        raw_output = TOOLS[tool_name](tool_args)
+                        return f"Here is the active system data you requested:\n\n{raw_output}"
+                        
+                    print(f"[!] Programmatic Loop Prevention: LLM is repeating tool {tool_name}. Returning system warning.", flush=True)
+                    tool_output = (
+                        "SYSTEM WARNING: You have already executed this exact tool call in the previous step. "
+                        "Do NOT repeat the exact same tool call with the same arguments. "
+                        "You already have the data! Please analyze the tool result from the previous loop and provide your final conversational answer in the 'response' key immediately (setting 'tool' to null)."
+                    )
+                else:
+                    last_tool_call = current_call
+                    repeat_count = 0
+                    print(f"[*] Calling Tool: {tool_name} with args: {tool_args}", flush=True)
+                    # Execute the tool
+                    tool_output = TOOLS[tool_name](tool_args)
+                    
                 print(f"[+] Tool Output: {tool_output}", flush=True)
                 
                 # Append full ReAct execution trace to the context
