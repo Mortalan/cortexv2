@@ -1,6 +1,15 @@
 # CORTEX: CHANGELOG
 ## [MAY 2026]
 
+### 29 MAY 2026 - GLPI DATABASE SYNC, VIKI SQL SCHEMA DIAGNOSTICS & TELEMETRY HUD STATE REACTIVITY (MOLE RUN)
+- **Production GLPI Database Restored:** Successfully dropped and recreated the lab database on CORTEX-Core (`192.168.50.241`) and streamed a clean 1.3 GB production replica from `yetiserv` (`192.168.50.232`) natively via piped SSH/MariaDB dump buffers, stabilizing lab diagnostics.
+- **GLPI Ticket Status Mappings Intercepted:** Surgically injected GLPI ITIL ticket status integer mappings into Viki's sovereign ReAct prompt context (`viki_agent.py`), resolving casting errors where Viki queried status using strings (e.g. `'open'`), which MariaDB cast to `0` and returned zero results.
+- **Unassigned & Assigned SQL Joins Fortified:** Integrated detailed schema definitions for ticket assignee link tables (`glpi_tickets_users` and `glpi_groups_tickets`) and direct username subquery checks against `glpi_users`. Viki now correctly resolves "unassigned" open tickets (returning exactly `35`) and tickets assigned to Vitto Perfetti (returning exactly `499`).
+- **Cognitive Loop Re-prompter (Self-Healing):** Re-engineered Viki's reasoning loop in `viki_agent.py` to handle lightweight LLM JSON parser collapses. If Viki yields empty action/response parameters, the engine automatically intercepts and re-prompts her inside the active loop to enforce schema checks and self-correction, expanding the loop cap from `5` to `8`.
+- **Dynamic 3D Canvas Threat HUD Reactivity:** Directly mapped Viki's 3D avatar viewport rendering state to the global dashboard `securityMode` in `App.tsx`. Switching to Reflex Mode (HARDENED) instantly triggers volumetric crimson fog, red alarm ambient highlights, and rapid alert bot vibrations.
+- **GridHelper Decommissioned:** Completely removed the 3D `<gridHelper>` wireframe line array from `VikiAvatarRenderer.tsx` floor plane, enabling the bot to float cleanly inside the viewport void without floor boundaries.
+- **Production Asset Compilation & Push:** Compiled the final React production bundle `index-D5J7Jb9n.js` with zero TypeScript errors, committed it under the "Mole Run" protocol, and deployed it dynamically to the live Traefik-proxy container.
+
 ### 28 MAY 2026 - SPEECHRECOGNITION RACE CONDITION RESOLUTION, KINETIC AVATAR PRESERVATION & NEURAL VOICE UPGRADE (MOLE RUN)
 - **SpeechRecognition Race Condition Fixed**: Resolved a critical async race condition where native browser `SpeechRecognition` `onend` and `onresult` callbacks were firing out of sync. Refactored `onresult` to capture transcripts, stop the hardware stream immediately, and trigger `sendMessage` directly, ensuring 100% reliable voice input.
 - **Avatar Kinetic Cutoff Fixed**: Corrected a visual state override inside the `MediaRecorder` fallback `onstop` callback where the `finally` block prematurely set Viki's state to `idle` right after sending a message. Added a conditional check (`prev => prev === 'speaking' ? 'speaking' : 'idle'`) that preserves Viki's physical speaking animations until the speech synthesis naturally completes.
