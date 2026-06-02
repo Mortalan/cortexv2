@@ -1,9 +1,9 @@
 # CORTEX: SYSTEM MAP & INDEX
-## [VERSION 2.3 - MAY 2026] - COGNITIVE INTEGRATION & STABILIZATION
+## [VERSION 2.4 - JUNE 2026] - COGNITIVE INTEGRATION & STABILIZATION
 
 
 ### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
-> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and user_roadmap.md to begin implementing Phase 18.2 (Stateful BTRFS Logging) or the new multi-user widgets. Do not read unrelated files."
+> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and user_roadmap.md to begin implementing Section 4 (Microsoft Graph Calendar Sync Integration) or the new Outlook Appointments widget. Do not read unrelated files."
 
 ---
 
@@ -39,7 +39,7 @@
   3. Expand the Active Mitigation Console React UI with a glassmorphic Incident History timeline.
 
 ---
-*Last Updated: Friday, 29 May 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, DNS stabilization, Custom DOCX/PDF Reporting Engine, Cognitive Stateful Hermes Agent, Active Sovereign Viki Agent, Firefox Speech Recognition STT /api/transcribe fallback, WebGL Linux Render Hardening, Production GLPI Database Sync, Viki SQL Schema Diagnostics, ReAct loop re-prompter recovery, Dynamic 3D Canvas Threat HUD Reactivity, and GoHighLevel CRM API Integration)*
+*Last Updated: Tuesday, 02 June 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, DNS stabilization, Custom DOCX/PDF Reporting Engine, Cognitive Stateful Hermes Agent, Active Sovereign Viki Agent, Firefox Speech Recognition STT /api/transcribe fallback, WebGL Linux Render Hardening, Production GLPI Database Sync, Viki SQL Schema Diagnostics, ReAct loop re-prompter recovery, Dynamic 3D Canvas Threat HUD Reactivity, GoHighLevel CRM API Integration, Stateful BTRFS Security Logging, Glassmorphic Mitigation Incident History Timeline, Multi-User Context-Filtered Widgets, Granular Security Permissions Matrix, and Dynamic Website Quality Control & Scraper Reporter Integration)*
 
 
 
