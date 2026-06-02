@@ -1756,7 +1756,7 @@ function App() {
             <>
               {/* Dynamic Unified Multi-User Widget Grid - Rendered EXCLUSIVELY for Non-Admins */}
               {!isUserAdmin && (
-                <section className="section" style={{ marginBottom: "1.5rem" }}>
+                <section className="section widgets-section">
                   <h2 className="section-title">ROLE-BASED COGNITIVE WIDGETS ({activeUserRecord.role.toUpperCase()})</h2>
                   <div className="widgets-grid-container">
                     
@@ -1903,7 +1903,7 @@ function App() {
               )}
 
               {/* Core gate links list - Rendered natively for all users */}
-              <section className="section">
+              <section className="section gateways-section">
                 <h2 className="section-title">CORE NETWORK INGRESS GATEWAYS</h2>
                 <div className="grid">
                   {servicesData.map((section) => 
