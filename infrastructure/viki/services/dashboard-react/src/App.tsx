@@ -1679,8 +1679,8 @@ function App() {
           )}
         </main>
 
-        {/* Floating Holographic 3D Head Sidebar - Completely Stripped if Unassigned */}
-        {activeUserRecord.viki_assigned && isUserAdmin && (
+        {/* Floating Holographic 3D Head Sidebar - Completely Stripped if Unassigned or in Admin Console */}
+        {activeUserRecord.viki_assigned && isUserAdmin && currentMode !== "admin" && (
           <aside className="monitor-sidebar">
             <div 
               onClick={() => window.open("/?mode=viki-chat", "_blank")}
