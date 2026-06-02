@@ -4,6 +4,7 @@ import socket
 import json
 import hashlib
 import hmac
+import threading
 from flask import Flask, request, jsonify
 from flask_sock import Sock
 
@@ -95,72 +96,89 @@ DEFAULT_APPS = {
     "WireGuard": True
 }
 
+db_lock = threading.Lock()
+
 def get_permissions() -> dict:
     perm_file = get_data_lake_path(PERMISSIONS_PATH)
     perms = None
-    if os.path.exists(perm_file):
-        with open(perm_file, "r") as f:
-            try:
-                perms = json.load(f)
-            except:
-                pass
-    if not perms:
-        perms = {
-            "users": [
-                {
-                    "username": "Louis",
-                    "role": "Cortex-Admins",
-                    "viki_assigned": True,
-                    "permissions": {
-                        "view_telemetry": True,
-                        "execute_playbooks": True,
-                        "run_qc_scans": True,
-                        "edit_appointments": True,
-                        "edit_user_permissions": True
-                    },
-                    "apps": DEFAULT_APPS.copy()
-                },
-                {
-                    "username": "Felicia",
-                    "role": "Cortex-Admins",
-                    "viki_assigned": True,
-                    "permissions": {
-                        "view_telemetry": True,
-                        "execute_playbooks": True,
-                        "run_qc_scans": True,
-                        "edit_appointments": True,
-                        "edit_user_permissions": True
-                    },
-                    "apps": DEFAULT_APPS.copy()
-                },
-                {
-                    "username": "Vitto",
-                    "role": "Cortex-Technicians",
-                    "viki_assigned": False,
-                    "permissions": {
-                        "view_telemetry": True,
-                        "execute_playbooks": False,
-                        "run_qc_scans": False,
-                        "edit_appointments": True,
-                        "edit_user_permissions": False
-                    },
-                    "apps": DEFAULT_APPS.copy()
-                },
-                {
-                    "username": "Sarah",
-                    "role": "Cortex-Designers",
-                    "viki_assigned": False,
-                    "permissions": {
-                        "view_telemetry": True,
-                        "execute_playbooks": False,
-                        "run_qc_scans": True,
-                        "edit_appointments": False,
-                        "edit_user_permissions": False
-                    },
-                    "apps": DEFAULT_APPS.copy()
+    
+    with db_lock:
+        if os.path.exists(perm_file):
+            for attempt in range(3):
+                try:
+                    with open(perm_file, "r") as f:
+                        content = f.read()
+                        if content.strip():
+                            perms = json.loads(content)
+                            break
+                except Exception as e:
+                    print(f"[!] Database read attempt {attempt + 1} failed: {e}", flush=True)
+                    time.sleep(0.05)
+                    
+        if not perms:
+            if not os.path.exists(perm_file) or os.path.getsize(perm_file) == 0:
+                perms = {
+                    "users": [
+                        {
+                            "username": "Louis",
+                            "role": "Cortex-Admins",
+                            "viki_assigned": True,
+                            "permissions": {
+                                "view_telemetry": True,
+                                "execute_playbooks": True,
+                                "run_qc_scans": True,
+                                "edit_appointments": True,
+                                "edit_user_permissions": True
+                            },
+                            "apps": DEFAULT_APPS.copy(),
+                            "password": "password"
+                        },
+                        {
+                            "username": "Felicia",
+                            "role": "Cortex-Admins",
+                            "viki_assigned": True,
+                            "permissions": {
+                                "view_telemetry": True,
+                                "execute_playbooks": True,
+                                "run_qc_scans": True,
+                                "edit_appointments": True,
+                                "edit_user_permissions": True
+                            },
+                            "apps": DEFAULT_APPS.copy(),
+                            "password": "password"
+                        },
+                        {
+                            "username": "Vitto",
+                            "role": "Cortex-Technicians",
+                            "viki_assigned": False,
+                            "permissions": {
+                                "view_telemetry": True,
+                                "execute_playbooks": False,
+                                "run_qc_scans": False,
+                                "edit_appointments": True,
+                                "edit_user_permissions": False
+                            },
+                            "apps": DEFAULT_APPS.copy(),
+                            "password": "password"
+                        },
+                        {
+                            "username": "Sarah",
+                            "role": "Cortex-Designers",
+                            "viki_assigned": False,
+                            "permissions": {
+                                "view_telemetry": True,
+                                "execute_playbooks": False,
+                                "run_qc_scans": True,
+                                "edit_appointments": False,
+                                "edit_user_permissions": False
+                            },
+                            "apps": DEFAULT_APPS.copy(),
+                            "password": "password"
+                        }
+                    ]
                 }
-            ]
-        }
+            else:
+                raise RuntimeError("Permissions database exists but is corrupted or locked. Aborting default reset to protect data.")
     
     # Ensure every user has 'apps', 'password' and all defaults exist
     modified = False
@@ -184,8 +202,21 @@ def get_permissions() -> dict:
 
 def save_permissions(data: dict) -> None:
     perm_file = get_data_lake_path(PERMISSIONS_PATH)
-    with open(perm_file, "w") as f:
-        json.dump(data, f, indent=2)
+    with db_lock:
+        temp_file = perm_file + ".tmp"
+        try:
+            with open(temp_file, "w") as f:
+                json.dump(data, f, indent=2)
+            os.replace(temp_file, perm_file)
+        except Exception as e:
+            print(f"[!] Error writing permissions database atomically: {e}", flush=True)
+            if os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass
+            with open(perm_file, "w") as f:
+                json.dump(data, f, indent=2)
 
 def get_alerts() -> list:
     alerts_path = get_alerts_path()
