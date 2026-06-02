@@ -1869,6 +1869,18 @@ body {
   color: var(--online);
 }
 
+.role-tag.cortex-management {
+  background: rgba(218, 112, 214, 0.1);
+  border: 1px solid rgba(218, 112, 214, 0.3);
+  color: #da70d6;
+}
+
+.role-tag.cortex-office {
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  color: #ffa500;
+}
+
 /* Glassmorphic Toggle Switch */
 .toggle-switch {
   position: relative;

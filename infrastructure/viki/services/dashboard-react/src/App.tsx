@@ -1037,6 +1037,22 @@ function App() {
                   edit_appointments: true,
                   edit_user_permissions: false
                 };
+              } else if (newRole === "Cortex-Management") {
+                newPerms = {
+                  view_telemetry: true,
+                  execute_playbooks: false,
+                  run_qc_scans: true,
+                  edit_appointments: true,
+                  edit_user_permissions: false
+                };
+              } else if (newRole === "Cortex-Office") {
+                newPerms = {
+                  view_telemetry: false,
+                  execute_playbooks: false,
+                  run_qc_scans: false,
+                  edit_appointments: true,
+                  edit_user_permissions: false
+                };
               } else {
                 newPerms = {
                   view_telemetry: true,
@@ -1098,17 +1114,53 @@ function App() {
     if (!newUsername.trim() || !newUserRole) return;
     const name = newUsername.trim();
 
+    let defaultPerms = {
+      view_telemetry: true,
+      execute_playbooks: false,
+      run_qc_scans: true,
+      edit_appointments: false,
+      edit_user_permissions: false
+    };
+
+    if (newUserRole === "Cortex-Admins") {
+      defaultPerms = {
+        view_telemetry: true,
+        execute_playbooks: true,
+        run_qc_scans: true,
+        edit_appointments: true,
+        edit_user_permissions: true
+      };
+    } else if (newUserRole === "Cortex-Technicians") {
+      defaultPerms = {
+        view_telemetry: true,
+        execute_playbooks: false,
+        run_qc_scans: false,
+        edit_appointments: true,
+        edit_user_permissions: false
+      };
+    } else if (newUserRole === "Cortex-Management") {
+      defaultPerms = {
+        view_telemetry: true,
+        execute_playbooks: false,
+        run_qc_scans: true,
+        edit_appointments: true,
+        edit_user_permissions: false
+      };
+    } else if (newUserRole === "Cortex-Office") {
+      defaultPerms = {
+        view_telemetry: false,
+        execute_playbooks: false,
+        run_qc_scans: false,
+        edit_appointments: true,
+        edit_user_permissions: false
+      };
+    }
+
     const newUser: PermissionUser = {
       username: name,
       role: newUserRole,
       viki_assigned: newUserViki,
-      permissions: {
-        view_telemetry: true,
-        execute_playbooks: newUserRole === "Cortex-Admins",
-        run_qc_scans: newUserRole !== "Cortex-Technicians",
-        edit_appointments: newUserRole !== "Cortex-Designers",
-        edit_user_permissions: newUserRole === "Cortex-Admins"
-      }
+      permissions: defaultPerms
     };
 
     setPermissions(prev => {
@@ -1310,6 +1362,8 @@ function App() {
                         >
                           <option value="Cortex-Admins">Admin</option>
                           <option value="Cortex-Technicians">Technician</option>
+                          <option value="Cortex-Management">Management</option>
+                          <option value="Cortex-Office">Office</option>
                           <option value="Cortex-Designers">Designer</option>
                         </select>
                         <label className="checkbox-label font-space font-xs text-dim" style={{ fontSize: "0.65rem" }}>
@@ -1354,6 +1408,8 @@ function App() {
                         >
                           <option value="Cortex-Admins">Cortex-Admins (Full Control)</option>
                           <option value="Cortex-Technicians">Cortex-Technicians (Field Tech)</option>
+                          <option value="Cortex-Management">Cortex-Management (Management)</option>
+                          <option value="Cortex-Office">Cortex-Office (Office Administration)</option>
                           <option value="Cortex-Designers">Cortex-Designers (UI/UX Designer)</option>
                         </select>
                       </div>

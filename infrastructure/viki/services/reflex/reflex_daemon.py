@@ -426,7 +426,6 @@ def api_toggle_permission() -> object:
             elif permission_name == "role":
                 old_val = u.get("role", "Cortex-Technicians")
                 u["role"] = value
-                # Auto-adjust standard permissions templates on role switch
                 if value == "Cortex-Admins":
                     u["permissions"] = {
                         "view_telemetry": True,
@@ -438,6 +437,22 @@ def api_toggle_permission() -> object:
                 elif value == "Cortex-Technicians":
                     u["permissions"] = {
                         "view_telemetry": True,
+                        "execute_playbooks": False,
+                        "run_qc_scans": False,
+                        "edit_appointments": True,
+                        "edit_user_permissions": False
+                    }
+                elif value == "Cortex-Management":
+                    u["permissions"] = {
+                        "view_telemetry": True,
+                        "execute_playbooks": False,
+                        "run_qc_scans": True,
+                        "edit_appointments": True,
+                        "edit_user_permissions": False
+                    }
+                elif value == "Cortex-Office":
+                    u["permissions"] = {
+                        "view_telemetry": False,
                         "execute_playbooks": False,
                         "run_qc_scans": False,
                         "edit_appointments": True,
@@ -509,17 +524,53 @@ def api_create_user() -> object:
         if u["username"].lower() == username.lower():
             return jsonify({"error": f"User '{username}' already exists"}), 400
             
+    # Apply default template per role
+    if role == "Cortex-Admins":
+        default_perms = {
+            "view_telemetry": True,
+            "execute_playbooks": True,
+            "run_qc_scans": True,
+            "edit_appointments": True,
+            "edit_user_permissions": True
+        }
+    elif role == "Cortex-Technicians":
+        default_perms = {
+            "view_telemetry": True,
+            "execute_playbooks": False,
+            "run_qc_scans": False,
+            "edit_appointments": True,
+            "edit_user_permissions": False
+        }
+    elif role == "Cortex-Management":
+        default_perms = {
+            "view_telemetry": True,
+            "execute_playbooks": False,
+            "run_qc_scans": True,
+            "edit_appointments": True,
+            "edit_user_permissions": False
+        }
+    elif role == "Cortex-Office":
+        default_perms = {
+            "view_telemetry": False,
+            "execute_playbooks": False,
+            "run_qc_scans": False,
+            "edit_appointments": True,
+            "edit_user_permissions": False
+        }
+    else: # Cortex-Designers
+        default_perms = {
+            "view_telemetry": True,
+            "execute_playbooks": False,
+            "run_qc_scans": True,
+            "edit_appointments": False,
+            "edit_user_permissions": False
+        }
+
     new_user = {
         "username": username,
         "role": role,
         "viki_assigned": viki_assigned,
-        "permissions": {
-            "view_telemetry": True,
-            "execute_playbooks": role == "Cortex-Admins",
-            "run_qc_scans": role != "Cortex-Technicians",
-            "edit_appointments": role != "Cortex-Designers",
-            "edit_user_permissions": role == "Cortex-Admins"
-        },
+        "permissions": default_perms,
         "apps": DEFAULT_APPS.copy()
     }
     perms["users"].append(new_user)
