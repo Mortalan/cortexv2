@@ -231,7 +231,7 @@ def perform_active_site_audit(target_url: str) -> dict:
         "contrast_ratio": contrast_ratio
     }
 
-def generate_website_qc_report(client_name: str, billing_period: str, output_docx: str) -> str:
+def generate_website_qc_report(client_name: str, billing_period: str, output_docx: str) -> tuple[str, dict]:
     target_site = client_name.replace("QC Web Audit:", "").strip()
     
     # Run dynamic scanner / crawler audit
@@ -660,9 +660,9 @@ def generate_website_qc_report(client_name: str, billing_period: str, output_doc
     os.makedirs(os.path.dirname(output_docx), exist_ok=True)
     doc.save(output_docx)
     print(f"[+] Website QC DOCX Report saved to: {output_docx}")
-    return output_docx
+    return output_docx, audit
 
-def generate_report(client_name: str = "PR VIP", billing_period: str = None, sections: list[str] = None, options: dict = None, output_docx: str = TEMPLATE_DOCX) -> str:
+def generate_report(client_name: str = "PR VIP", billing_period: str = None, sections: list[str] = None, options: dict = None, output_docx: str = TEMPLATE_DOCX) -> tuple[str, dict | None]:
     if not billing_period:
         billing_period = datetime.now().strftime("01 %B %Y – %d %B %Y")
         
@@ -931,7 +931,7 @@ def generate_report(client_name: str = "PR VIP", billing_period: str = None, sec
     os.makedirs(os.path.dirname(output_docx), exist_ok=True)
     doc.save(output_docx)
     print(f"[+] DOCX Report saved to: {output_docx}")
-    return output_docx
+    return output_docx, None
 
 def convert_to_pdf(docx_path: str, output_dir: str = REPORTS_DIR) -> str:
     """Convert the compiled DOCX into PDF using headless LibreOffice."""
@@ -1055,7 +1055,7 @@ class ReporterHTTPHandler(BaseHTTPRequestHandler):
             
             try:
                 # Generate custom report
-                generate_report(
+                temp_docx, audit_data = generate_report(
                     client_name=client_name,
                     billing_period=date_range,
                     sections=sections,
@@ -1085,7 +1085,8 @@ class ReporterHTTPHandler(BaseHTTPRequestHandler):
                     "status": "success",
                     "docx_base64": docx_b64,
                     "pdf_base64": pdf_b64,
-                    "filename": f"custom_report_{client_name.lower().replace(' ', '_')}"
+                    "filename": f"custom_report_{client_name.lower().replace(' ', '_')}",
+                    "audit_results": audit_data
                 }
                 
                 self.send_response(200)
@@ -1156,7 +1157,7 @@ class ReporterHTTPHandler(BaseHTTPRequestHandler):
             
             try:
                 # Generate custom report
-                generate_report(
+                temp_docx, audit_data = generate_report(
                     client_name=client_name,
                     billing_period=date_range,
                     sections=sections,
@@ -1251,7 +1252,7 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"[!] Failed to parse spec: {e}")
                 
-        generate_report(
+        report_path, audit_data = generate_report(
             client_name=client_name, 
             billing_period=billing_period, 
             sections=sections, 
