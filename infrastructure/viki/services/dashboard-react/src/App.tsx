@@ -130,8 +130,7 @@ const servicesData = [
     items: [
       { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za/dashboard/", icon: "🚦" },
       { name: "Authelia", subtitle: "Identity Gate", url: "https://auth.rmmservice.co.za", icon: "🔑" },
-      { name: "WireGuard", subtitle: "Secure Tunnel", url: "disabled", icon: "🛡️" },
-      { name: "Security Console", subtitle: "RBAC Directory & Logs", url: "security-console", icon: "🔒" }
+      { name: "WireGuard", subtitle: "Secure Tunnel", url: "disabled", icon: "🛡️" }
     ],
   },
 ];
@@ -528,12 +527,14 @@ function App() {
   const [isHudVisible, setIsHudVisible] = useState(true);
   const [securityMode, setSecurityMode] = useState<string>("STANDARD");
 
-  // Multi-User Identity & View State
-  const [currentUser, setCurrentUser] = useState<string>("Louis"); // "Louis", "Felicia", "Vitto", "Sarah"
+  // Multi-User Identity & Permissions Context (Decoded from URL parameter or default root Admin)
+  const [currentUser, setCurrentUser] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("user") || "Louis"; // Defaults to Louis (Admin)
+  });
   const [permissions, setPermissions] = useState<PermissionsData | null>(null);
   const [incidentHistory, setIncidentHistory] = useState<AuditRecord[]>([]);
-  const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<"dashboard" | "security">("dashboard");
+  const isOffline = false;
 
   // Admin user CRUD forms
   const [newUsername, setNewUsername] = useState("");
@@ -557,7 +558,7 @@ function App() {
     }
   });
 
-  // Get active settings for the simulated user
+  // Get active settings for the logged-in user
   const activeUserRecord = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
     username: currentUser,
     role: currentUser === "Louis" || currentUser === "Felicia" ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
@@ -570,6 +571,8 @@ function App() {
       edit_user_permissions: currentUser === "Louis" || currentUser === "Felicia"
     }
   };
+
+  const isUserAdmin = activeUserRecord.role === "Cortex-Admins";
 
   const handleSolveTicket = (id: string) => {
     const isAdminUser = activeUserRecord.role === "Cortex-Admins";
@@ -593,7 +596,7 @@ function App() {
       {
         timestamp: new Date().toISOString(),
         type: "CALENDAR_SYNC",
-        message: `Microsoft Graph API cancelled meeting slot [${id}] for host ${currentUser}.`,
+        message: `Microsoft Graph API cancelled meeting slot [${id}] for host {currentUser}.`,
         signature: "790acbe01237cbead1e848a6c827361849dbcf1b28d610817364b192837bc9d8"
       },
       ...prev
@@ -710,12 +713,13 @@ function App() {
   }, [isOffline]);
 
   useEffect(() => {
-    // Check parameters for initial viewMode route
+    // Check parameters for active user
     const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get("mode");
-    if (modeParam === "security") {
-      setViewMode("security");
+    const userParam = params.get("user");
+    if (userParam) {
+      setCurrentUser(userParam);
     }
+
 
     const fetchStatus = () => {
       if (isOffline) {
@@ -1000,7 +1004,7 @@ function App() {
     }
   };
 
-  // Create User Action (Backend & Stateful log sync)
+  // Create User Action (Backend & BTRFS signed log sync)
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername.trim() || !newUserRole) return;
@@ -1058,7 +1062,7 @@ function App() {
     }
   };
 
-  // Delete User Action (Backend & Stateful log sync)
+  // Delete User Action (Backend & BTRFS signed log sync)
   const handleDeleteUser = async (name: string) => {
     setPermissions(prev => {
       if (!prev) return prev;
@@ -1117,252 +1121,6 @@ function App() {
     setToDo(prev => prev.filter(t => t.id !== id));
   };
 
-  // Screen View Rendering: 🔒 FULLSCREEN SPACIOUS SECURITY CONTROL CENTER
-  if (viewMode === "security") {
-    return (
-      <div className="security-console-fullscreen theme-dark font-space">
-        <header className="security-fullscreen-header glassmorphic">
-          <div className="sec-title-meta">
-            <span className="sec-pulse-indicator blinking"></span>
-            <h2>CORTEX | SECURITY & RBAC COMMAND COCKPIT</h2>
-          </div>
-          <button 
-            className="sec-return-btn font-space"
-            onClick={() => setViewMode("dashboard")}
-          >
-            ← Return to Operations Dashboard
-          </button>
-        </header>
-
-        <div className="security-spacious-layout">
-          
-          {/* Left spacious column: Directory & Permission Switches */}
-          <div className="sec-column-left">
-            
-            {/* User Directory Management */}
-            <div className="spacious-security-card glassmorphic">
-              <div className="card-header-underlined">
-                <span>📁</span>
-                <h3>SOVEREIGN USER DIRECTORY & CREDENTIALS</h3>
-              </div>
-              <div className="user-directory-wrapper">
-                <table className="spacious-table font-space">
-                  <thead>
-                    <tr>
-                      <th>USERNAME</th>
-                      <th>ORGANIZATIONAL GROUP</th>
-                      <th>VIKI SYSTEM ASSIGNED</th>
-                      <th>DIRECTORY COMMAND</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {permissions?.users.map(u => (
-                      <tr key={u.username} className="directory-row">
-                        <td className="dir-user-name">{u.username}</td>
-                        <td>
-                          <span className={`role-tag ${u.role.toLowerCase()}`}>{u.role}</span>
-                        </td>
-                        <td>
-                          <span className={`viki-indicator-badge ${u.viki_assigned ? 'assigned' : 'unassigned'}`}>
-                            {u.viki_assigned ? "ACTIVE QUANTUM LINK" : "STRIPPED / RESTRICTED"}
-                          </span>
-                        </td>
-                        <td>
-                          {u.username.toLowerCase() === "louis" ? (
-                            <span className="system-protected-label">SYSTEM ROOT PROTECTED</span>
-                          ) : (
-                            <button 
-                              className="dir-delete-btn font-space"
-                              onClick={() => handleDeleteUser(u.username)}
-                              title="Delete user credentials and permissions permanently"
-                            >
-                              DELETE USER
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Inline form to Create User */}
-                <form onSubmit={handleCreateUser} className="spacious-create-user-form">
-                  <div className="form-title font-space font-xs text-dim">DEPOSIT NEW ORGANIZATIONAL USER PROFILE:</div>
-                  <div className="form-fields-group">
-                    <input 
-                      type="text" 
-                      placeholder="Username (e.g. Sarah)..."
-                      className="spacious-input"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      required
-                    />
-                    <select 
-                      className="spacious-select"
-                      value={newUserRole}
-                      onChange={(e) => setNewUserRole(e.target.value)}
-                    >
-                      <option value="Cortex-Admins">Cortex-Admins (Administrator)</option>
-                      <option value="Cortex-Technicians">Cortex-Technicians (Field Tech)</option>
-                      <option value="Cortex-Designers">Cortex-Designers (Web Designer)</option>
-                    </select>
-                    <label className="checkbox-label font-space font-xs text-dim">
-                      <input 
-                        type="checkbox" 
-                        checked={newUserViki}
-                        onChange={(e) => setNewUserViki(e.target.checked)}
-                      />
-                      Assign VIKI AI
-                    </label>
-                    <button type="submit" className="spacious-submit-btn font-space">
-                      CREATE & ENROLL
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            {/* Granular Permission toggles matrix */}
-            <div className="spacious-security-card glassmorphic">
-              <div className="card-header-underlined">
-                <span>🔒</span>
-                <h3>GRANULAR SYSTEM PERMISSIONS MATRIX</h3>
-              </div>
-              <div className="permissions-matrix-wrapper">
-                <table className="spacious-table font-space text-center">
-                  <thead>
-                    <tr>
-                      <th>USER</th>
-                      <th>VIKI ENABLED</th>
-                      <th>TELEMETRY</th>
-                      <th>PLAYBOOKS</th>
-                      <th>QC SCANS</th>
-                      <th>CALENDAR</th>
-                      <th>EDIT MATRIX</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {permissions?.users.map(u => (
-                      <tr key={u.username}>
-                        <td className="dir-user-name text-left">{u.username}</td>
-                        <td>
-                          <label className="toggle-switch">
-                            <input 
-                              type="checkbox" 
-                              checked={u.viki_assigned}
-                              onChange={() => handlePermissionToggle(u.username, "viki_assigned", u.viki_assigned)}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="toggle-switch">
-                            <input 
-                              type="checkbox" 
-                              checked={u.permissions.view_telemetry}
-                              onChange={() => handlePermissionToggle(u.username, "view_telemetry", u.permissions.view_telemetry)}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="toggle-switch">
-                            <input 
-                              type="checkbox" 
-                              checked={u.permissions.execute_playbooks}
-                              onChange={() => handlePermissionToggle(u.username, "execute_playbooks", u.permissions.execute_playbooks)}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="toggle-switch">
-                            <input 
-                              type="checkbox" 
-                              checked={u.permissions.run_qc_scans}
-                              onChange={() => handlePermissionToggle(u.username, "run_qc_scans", u.permissions.run_qc_scans)}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="toggle-switch">
-                            <input 
-                              type="checkbox" 
-                              checked={u.permissions.edit_appointments}
-                              onChange={() => handlePermissionToggle(u.username, "edit_appointments", u.permissions.edit_appointments)}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="toggle-switch">
-                            <input 
-                              type="checkbox" 
-                              checked={u.permissions.edit_user_permissions}
-                              onChange={() => handlePermissionToggle(u.username, "edit_user_permissions", u.permissions.edit_user_permissions)}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Right spacious column: Forensic Incident Log History */}
-          <div className="sec-column-right">
-            <div className="spacious-security-card glassmorphic timeline-spacious-card">
-              <div className="card-header-underlined">
-                <span>🛡️</span>
-                <h3>FORENSIC BTRFS IMMUTABLE AUDIT LEDGER</h3>
-              </div>
-              <div className="matrix-info-alert font-space font-xs" style={{ margin: "0.5rem 0 1rem 0" }}>
-                🔑 CRYPTOGRAPHIC INTEGRITY: CHRONOLOGICAL BTRFS DATA LAKE LEDGER LOADED DIRECTLY FROM /mnt/data_lake/audit/ WITH LIVE HMAC-SHA256 CHECKSUMS.
-              </div>
-              <div className="spacious-timeline-wrapper scrollable">
-                {incidentHistory.length === 0 ? (
-                  <div className="todo-empty">NO AUDIT LOGS INGESTED</div>
-                ) : (
-                  <div className="timeline-list spacious">
-                    {incidentHistory.map((incident, idx) => {
-                      const type = incident.type || "INFO";
-                      const signature = incident.signature || "UNRECOGNIZED_INTEGRITY_SIGNATURE";
-                      
-                      let badgeClass = "badge-info";
-                      if (type.includes("MUTIGATION") || type.includes("QUARANTINE") || type.includes("DELETION")) badgeClass = "badge-danger";
-                      if (type.includes("MODE") || type.includes("CREATION")) badgeClass = "badge-warning";
-                      if (type.includes("PERMISSION")) badgeClass = "badge-permissions";
-                      
-                      return (
-                        <div key={idx} className="timeline-item spacious">
-                          <div className="timeline-meta">
-                            <span className={`timeline-badge ${badgeClass}`}>{type}</span>
-                            <span className="timeline-time">{new Date(incident.timestamp).toLocaleString()}</span>
-                          </div>
-                          <p className="timeline-msg font-space">{incident.message}</p>
-                          <div className="timeline-signature-box font-space" title="Cryptographically signed to BTRFS Forensic Lake using HMAC-SHA256">
-                            <span>FORENSIC SIGNATURE: {signature}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    );
-  }
-
-  // Dashboard homepage view
   return (
     <div className={`dashboard ${alerts.length > 0 ? "critical-state" : ""}`}>
       <AlertOverlay alerts={alerts} onClear={clearAlerts} />
@@ -1372,219 +1130,172 @@ function App() {
         <p className="subtitle">The Nervous System | Operations Command</p>
       </header>
 
-      {/* Premium Integrated Selector Bar */}
-      <section className="role-simulation-bar glassmorphic">
-        <div className="simulation-title-group">
-          <span className="sim-pulse"></span>
-          <span className="font-space font-xs text-dim text-spaced">IDENTITY CONTROLLER FRAME</span>
-        </div>
-        
-        <div className="simulation-actions">
-          {/* Offline/Disconnected Toggle */}
-          <div className="offline-simulator-toggle">
-            <span className="font-space font-xs text-dim" style={{ marginRight: "0.5rem" }}>OFFLINE RE-ROUTE SIMULATION:</span>
-            <button 
-              className={`sim-offline-btn ${isOffline ? "active" : ""}`}
-              onClick={() => setIsOffline(!isOffline)}
-              title="Toggle Graph API / GLPI offline network drop simulation"
-            >
-              {isOffline ? "DESYNC ENABLED (OFFLINE)" : "LINK RESTORED (ONLINE)"}
-            </button>
-          </div>
-
-          <div className="user-select-group">
-            <span className="font-space font-xs text-dim" style={{ marginRight: "0.5rem" }}>SIMULATE DECODED ROLE:</span>
-            <div className="user-btns">
-              {["Louis", "Felicia", "Vitto", "Sarah"].map(name => (
-                <button
-                  key={name}
-                  className={`sim-user-btn ${currentUser === name ? "active" : ""}`}
-                  onClick={() => setCurrentUser(name)}
-                >
-                  {name} ({name === "Louis" || name === "Felicia" ? "Admin" : name === "Vitto" ? "Tech" : "Designer"})
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       <div className="main-layout">
         <main className="content">
           
-          {/* Dynamic Unified Multi-User Widget Grid */}
-          <section className="section" style={{ marginBottom: "1.5rem" }}>
-            <h2 className="section-title">ROLE-BASED COGNITIVE WIDGETS ({activeUserRecord.role.toUpperCase()})</h2>
-            <div className="widgets-grid-container">
-              
-              {/* Widget A: Open Tickets */}
-              <div className="widget-card glassmorphic">
-                <div className="widget-header">
-                  <div className="widget-title">
-                    <span>🎫</span>
-                    <h4>ASSIGNED OPEN TICKETS</h4>
+          {/* Dynamic Unified Multi-User Widget Grid - Rendered EXCLUSIVELY for Non-Admins */}
+          {!isUserAdmin && (
+            <section className="section" style={{ marginBottom: "1.5rem" }}>
+              <h2 className="section-title">ROLE-BASED COGNITIVE WIDGETS ({activeUserRecord.role.toUpperCase()})</h2>
+              <div className="widgets-grid-container">
+                
+                {/* Widget A: Open Tickets */}
+                <div className="widget-card glassmorphic">
+                  <div className="widget-header">
+                    <div className="widget-title">
+                      <span>🎫</span>
+                      <h4>ASSIGNED OPEN TICKETS</h4>
+                    </div>
+                    {isOffline && <span className="hud-badge cached">CACHED</span>}
                   </div>
-                  {isOffline && <span className="hud-badge cached">CACHED</span>}
-                </div>
-                <div className="widget-body scrollable">
-                  <table className="widget-table font-space">
-                    <thead>
-                      <tr>
-                        <th>TICKET</th>
-                        <th>SEVERITY</th>
-                        <th>SUBMITTER</th>
-                        <th>ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tickets.map(t => (
-                        <tr key={t.id} className={`ticket-row ${t.severity.toLowerCase()}`}>
-                          <td>
-                            <div className="ticket-title-cell">
-                              <span className="ticket-id">[{t.id}]</span>
-                              <span className="ticket-title-text">{t.title}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`ticket-sev-badge ${t.severity.toLowerCase()}`}>
-                              {t.severity}
-                            </span>
-                          </td>
-                          <td className="text-dim">{t.submitter}</td>
-                          <td>
-                            <button 
-                              className="solve-ticket-btn font-space"
-                              onClick={() => handleSolveTicket(t.id)}
-                              title={activeUserRecord.role === "Cortex-Admins" ? "Close helpdesk ticket permanently" : "Resolve helpdesk ticket"}
-                            >
-                              {activeUserRecord.role === "Cortex-Admins" ? "CLOSE" : "SOLVE"}
-                            </button>
-                          </td>
+                  <div className="widget-body scrollable">
+                    <table className="widget-table font-space">
+                      <thead>
+                        <tr>
+                          <th>TICKET</th>
+                          <th>SEVERITY</th>
+                          <th>SUBMITTER</th>
+                          <th>ACTION</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Widget B: 3-Day To-Do Tracker */}
-              <div className="widget-card glassmorphic">
-                <div className="widget-header">
-                  <div className="widget-title">
-                    <span>🗓️</span>
-                    <h4>3-DAY TO-DO LIST (72H)</h4>
+                      </thead>
+                      <tbody>
+                        {tickets.map(t => (
+                          <tr key={t.id} className={`ticket-row ${t.severity.toLowerCase()}`}>
+                            <td>
+                              <div className="ticket-title-cell">
+                                <span className="ticket-id">[{t.id}]</span>
+                                <span className="ticket-title-text">{t.title}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`ticket-sev-badge ${t.severity.toLowerCase()}`}>
+                                {t.severity}
+                              </span>
+                            </td>
+                            <td className="text-dim">{t.submitter}</td>
+                            <td>
+                              <button 
+                                className="solve-ticket-btn font-space"
+                                onClick={() => handleSolveTicket(t.id)}
+                                title="Resolve helpdesk ticket"
+                              >
+                                SOLVE
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-                <div className="widget-body">
-                  <div className="todo-list-wrapper scrollable">
-                    {todo.length === 0 ? (
-                      <div className="todo-empty">All objectives achieved. Grid stabilized.</div>
-                    ) : (
-                      todo.map(t => (
-                        <div key={t.id} className={`todo-item-row ${t.completed ? 'completed' : ''}`}>
-                          <div className="todo-check-group" onClick={() => handleToggleTodo(t.id)}>
-                            <div className={`todo-checkbox ${t.completed ? 'checked' : ''}`}>
-                              {t.completed && "✔"}
+
+                {/* Widget B: 3-Day To-Do Tracker */}
+                <div className="widget-card glassmorphic">
+                  <div className="widget-header">
+                    <div className="widget-title">
+                      <span>🗓️</span>
+                      <h4>3-DAY TO-DO LIST (72H)</h4>
+                    </div>
+                  </div>
+                  <div className="widget-body">
+                    <div className="todo-list-wrapper scrollable">
+                      {todo.length === 0 ? (
+                        <div className="todo-empty">All objectives achieved. Grid stabilized.</div>
+                      ) : (
+                        todo.map(t => (
+                          <div key={t.id} className={`todo-item-row ${t.completed ? 'completed' : ''}`}>
+                            <div className="todo-check-group" onClick={() => handleToggleTodo(t.id)}>
+                              <div className={`todo-checkbox ${t.completed ? 'checked' : ''}`}>
+                                {t.completed && "✔"}
+                              </div>
+                              <div className="todo-text-group">
+                                <span className="todo-task-text">{t.task}</span>
+                                <span className="todo-due-badge">{t.due}</span>
+                              </div>
                             </div>
-                            <div className="todo-text-group">
-                              <span className="todo-task-text">{t.task}</span>
-                              <span className="todo-due-badge">{t.due}</span>
-                            </div>
+                            <button className="todo-delete-btn" onClick={() => handleDeleteTodo(t.id)}>✖</button>
                           </div>
-                          <button className="todo-delete-btn" onClick={() => handleDeleteTodo(t.id)}>✖</button>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
+                    <form onSubmit={handleAddTodo} className="todo-inline-form">
+                      <input 
+                        type="text" 
+                        placeholder="Add urgent objective..."
+                        className="todo-input"
+                        value={newTodoText}
+                        onChange={(e) => setNewTodoText(e.target.value)}
+                      />
+                      <select 
+                        className="todo-select"
+                        value={newTodoDue}
+                        onChange={(e) => setNewTodoDue(e.target.value)}
+                      >
+                        <option value="In 4 hours">In 4h</option>
+                        <option value="In 24 hours">In 24h</option>
+                        <option value="In 48 hours">In 48h</option>
+                        <option value="In 72 hours">In 72h</option>
+                      </select>
+                      <button type="submit" className="todo-add-btn">+</button>
+                    </form>
                   </div>
-                  <form onSubmit={handleAddTodo} className="todo-inline-form">
-                    <input 
-                      type="text" 
-                      placeholder="Add urgent objective..."
-                      className="todo-input"
-                      value={newTodoText}
-                      onChange={(e) => setNewTodoText(e.target.value)}
-                    />
-                    <select 
-                      className="todo-select"
-                      value={newTodoDue}
-                      onChange={(e) => setNewTodoDue(e.target.value)}
-                    >
-                      <option value="In 4 hours">In 4h</option>
-                      <option value="In 24 hours">In 24h</option>
-                      <option value="In 48 hours">In 48h</option>
-                      <option value="In 72 hours">In 72h</option>
-                    </select>
-                    <button type="submit" className="todo-add-btn">+</button>
-                  </form>
                 </div>
+
+                {/* Widget C: 3-Day Outlook Appointments */}
+                <div className="widget-card glassmorphic">
+                  <div className="widget-header">
+                    <div className="widget-title">
+                      <span>📅</span>
+                      <h4>3-DAY OUTLOOK CALENDAR</h4>
+                    </div>
+                    {isOffline && <span className="hud-badge conflict-warning">DESYNCED</span>}
+                  </div>
+                  <div className="widget-body scrollable">
+                    <div className="appointments-list">
+                      {appointments.map(a => (
+                        <div key={a.id} className={`appointment-card ${a.status.toLowerCase()}`}>
+                          <div className="appt-badge-status-group">
+                            <span className={`appt-status-indicator ${a.status.toLowerCase()}`}></span>
+                            <span className="appt-subject font-space">{a.subject}</span>
+                            {a.status !== "Free" && activeUserRecord.permissions.edit_appointments && (
+                              <button 
+                                className="appt-cancel-btn font-space" 
+                                onClick={() => handleCancelAppointment(a.id)}
+                                title="Cancel appointment slot"
+                              >
+                                ✖
+                              </button>
+                            )}
+                          </div>
+                          <div className="appt-meta font-space text-dim font-xs">
+                            <div>TIME: {a.time}</div>
+                            <div>HOST: {a.organizer} | ROLE: <span className="status-label">{a.status.toUpperCase()}</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
               </div>
+            </section>
+          )}
 
-              {/* Widget C: 3-Day Outlook Appointments */}
-              <div className="widget-card glassmorphic">
-                <div className="widget-header">
-                  <div className="widget-title">
-                    <span>📅</span>
-                    <h4>3-DAY OUTLOOK CALENDAR</h4>
-                  </div>
-                  {isOffline && <span className="hud-badge conflict-warning">DESYNCED</span>}
-                </div>
-                <div className="widget-body scrollable">
-                  <div className="appointments-list">
-                    {appointments.map(a => (
-                      <div key={a.id} className={`appointment-card ${a.status.toLowerCase()}`}>
-                        <div className="appt-badge-status-group">
-                          <span className={`appt-status-indicator ${a.status.toLowerCase()}`}></span>
-                          <span className="appt-subject font-space">{a.subject}</span>
-                          {a.status !== "Free" && activeUserRecord.permissions.edit_appointments && (
-                            <button 
-                              className="appt-cancel-btn font-space" 
-                              onClick={() => handleCancelAppointment(a.id)}
-                              title="Cancel appointment slot"
-                            >
-                              ✖
-                            </button>
-                          )}
-                        </div>
-                        <div className="appt-meta font-space text-dim font-xs">
-                          <div>TIME: {a.time}</div>
-                          <div>HOST: {a.organizer} | ROLE: <span className="status-label">{a.status.toUpperCase()}</span></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </section>
-
-          {/* Standard services listing links */}
+          {/* Core gate links list - Rendered natively for all users */}
           <section className="section">
             <h2 className="section-title">CORE NETWORK INGRESS GATEWAYS</h2>
             <div className="grid">
               {servicesData.map((section) => 
                 section.items.map((item) => {
                   const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
-                  
-                  // Hide Security Console gateway card if user has no permission
-                  if (item.url === "security-console" && !activeUserRecord.permissions.edit_user_permissions) {
-                    return null;
-                  }
-                  
                   return (
                     <a 
                       key={item.name} 
-                      href={item.url === "disabled" || item.url === "security-console" ? undefined : item.url} 
-                      target={item.url === "disabled" || item.url === "security-console" ? undefined : "_blank"} 
+                      href={item.url === "disabled" ? undefined : item.url} 
+                      target={item.url === "disabled" ? undefined : "_blank"} 
                       rel="noopener noreferrer" 
                       className={`card ${isOnline ? "online-card" : "offline-card"}`}
-                      onClick={(e) => { 
-                        if (item.url === "disabled") e.preventDefault(); 
-                        else if (item.url === "security-console") {
-                          e.preventDefault();
-                          setViewMode("security");
-                        }
-                      }}
+                      onClick={(e) => { if (item.url === "disabled") e.preventDefault(); }}
                     >
                       <div className="icon">{item.icon}</div>
                       <div className="info">
@@ -1599,7 +1310,168 @@ function App() {
             </div>
           </section>
 
-          {/* Status HUD grid */}
+          {/* Sovereign User Directory & Permissions Console Matrix - Rendered natively on the Homepage for Admins in place of Widgets */}
+          {isUserAdmin && permissions && (
+            <section className="section" style={{ marginBottom: "1.5rem" }}>
+              <h2 className="section-title">🔒 SOVEREIGN USER DIRECTORY & SECURE ACCESS MATRIX</h2>
+              
+              <div className="widgets-grid-container" style={{ gridTemplateColumns: "1.3fr 1fr" }}>
+                
+                {/* Directory Management & Enrollment */}
+                <div className="spacious-security-card glassmorphic">
+                  <div className="card-header-underlined">
+                    <span>📁</span>
+                    <h4>USER DIRECTORY CREDENTIALS</h4>
+                  </div>
+                  <div className="user-directory-wrapper">
+                    <table className="spacious-table font-space">
+                      <thead>
+                        <tr>
+                          <th>USERNAME</th>
+                          <th>ROLE GROUP</th>
+                          <th>VIKI SYSTEM</th>
+                          <th>COMMAND</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {permissions.users.map(u => (
+                          <tr key={u.username} className="directory-row">
+                            <td className="dir-user-name">{u.username}</td>
+                            <td>
+                              <span className={`role-tag ${u.role.toLowerCase()}`}>{u.role}</span>
+                            </td>
+                            <td>
+                              <span className={`viki-indicator-badge ${u.viki_assigned ? 'assigned' : 'unassigned'}`}>
+                                {u.viki_assigned ? "ACTIVE LINK" : "RESTRICTED"}
+                              </span>
+                            </td>
+                            <td>
+                              {u.username.toLowerCase() === "louis" ? (
+                                <span className="system-protected-label">ROOT SECURE</span>
+                              ) : (
+                                <button 
+                                  className="dir-delete-btn font-space"
+                                  onClick={() => handleDeleteUser(u.username)}
+                                  title="Delete credentials permanently"
+                                >
+                                  DELETE
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Inline form to Create User */}
+                    <form onSubmit={handleCreateUser} className="spacious-create-user-form" style={{ marginTop: "1rem" }}>
+                      <div className="form-fields-group">
+                        <input 
+                          type="text" 
+                          placeholder="New Username..."
+                          className="spacious-input"
+                          value={newUsername}
+                          onChange={(e) => setNewUsername(e.target.value)}
+                          required
+                        />
+                        <select 
+                          className="spacious-select"
+                          value={newUserRole}
+                          onChange={(e) => setNewUserRole(e.target.value)}
+                        >
+                          <option value="Cortex-Admins">Cortex-Admins (Admin)</option>
+                          <option value="Cortex-Technicians">Cortex-Technicians (Tech)</option>
+                          <option value="Cortex-Designers">Cortex-Designers (Designer)</option>
+                        </select>
+                        <label className="checkbox-label font-space font-xs text-dim">
+                          <input 
+                            type="checkbox" 
+                            checked={newUserViki}
+                            onChange={(e) => setNewUserViki(e.target.checked)}
+                          />
+                          Viki AI
+                        </label>
+                        <button type="submit" className="spacious-submit-btn font-space" style={{ padding: "6px 12px" }}>
+                          ENROLL
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Permissions matrix switches */}
+                <div className="spacious-security-card glassmorphic">
+                  <div className="card-header-underlined">
+                    <span>🔒</span>
+                    <h4>GRANULAR ROLE toggles</h4>
+                  </div>
+                  <div className="permissions-matrix-wrapper">
+                    <table className="spacious-table font-space text-center" style={{ fontSize: "0.7rem" }}>
+                      <thead>
+                        <tr>
+                          <th className="text-left">USER</th>
+                          <th>VIKI</th>
+                          <th>TELEMETRY</th>
+                          <th>PLAYBOOKS</th>
+                          <th>QC SCANS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {permissions.users.map(u => (
+                          <tr key={u.username}>
+                            <td className="dir-user-name text-left">{u.username}</td>
+                            <td>
+                              <label className="toggle-switch">
+                                <input 
+                                  type="checkbox" 
+                                  checked={u.viki_assigned}
+                                  onChange={() => handlePermissionToggle(u.username, "viki_assigned", u.viki_assigned)}
+                                />
+                                <span className="toggle-slider"></span>
+                              </label>
+                            </td>
+                            <td>
+                              <label className="toggle-switch">
+                                <input 
+                                  type="checkbox" 
+                                  checked={u.permissions.view_telemetry}
+                                  onChange={() => handlePermissionToggle(u.username, "view_telemetry", u.permissions.view_telemetry)}
+                                />
+                                <span className="toggle-slider"></span>
+                              </label>
+                            </td>
+                            <td>
+                              <label className="toggle-switch">
+                                <input 
+                                  type="checkbox" 
+                                  checked={u.permissions.execute_playbooks}
+                                  onChange={() => handlePermissionToggle(u.username, "execute_playbooks", u.permissions.execute_playbooks)}
+                                />
+                                <span className="toggle-slider"></span>
+                              </label>
+                            </td>
+                            <td>
+                              <label className="toggle-switch">
+                                <input 
+                                  type="checkbox" 
+                                  checked={u.permissions.run_qc_scans}
+                                  onChange={() => handlePermissionToggle(u.username, "run_qc_scans", u.permissions.run_qc_scans)}
+                                />
+                                <span className="toggle-slider"></span>
+                              </label>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+          )}
+
+          {/* Status HUD grid - Rendered natively for Admin / permitted users */}
           {activeUserRecord.permissions.view_telemetry && (
             <section className="section topology-section-main" style={{ marginTop: "1.5rem" }}>
               <h2 className="section-title">Global Status Monitor</h2>
@@ -1626,7 +1498,7 @@ function App() {
         </main>
 
         {/* Floating Holographic 3D Head Sidebar - Completely Stripped if Unassigned */}
-        {activeUserRecord.viki_assigned && activeUserRecord.role === "Cortex-Admins" && (
+        {activeUserRecord.viki_assigned && isUserAdmin && (
           <aside className="monitor-sidebar">
             <div 
               onClick={() => window.open("/?mode=viki-chat", "_blank")}
