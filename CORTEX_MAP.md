@@ -3,7 +3,7 @@
 
 
 ### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
-> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and continue with the next phase. Do not read unrelated files."
+> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and user_roadmap.md to begin implementing Phase 18.2 (Stateful BTRFS Logging) or the new multi-user widgets. Do not read unrelated files."
 
 ---
 
