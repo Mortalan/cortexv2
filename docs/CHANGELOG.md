@@ -1,4 +1,15 @@
 # CORTEX: CHANGELOG
+## [JUNE 2026]
+
+### 02 JUNE 2026 - PRODUCT STRATEGY SPECIFICATION, GRANULAR PERMISSION MATRICES, DYNAMIC LIGHTHOUSE QC & MS 365 GRAPH API INTEGRATION PLAN (ARCHITECT MODE)
+- **Product Strategy Roadmap Created:** Formulated and deployed the comprehensive [user_roadmap.md](file:///home/louis/cortex/user_roadmap.md) architectural specification tracking core portal expansion vectors.
+- **Granular Permissions & VIKI Assignment:** Specified a glassmorphic Administrative console for explicit RBAC toggling and a secure master toggle to "Assign/Unassign VIKI" (dynamically loading/stripping LLM, STT, TTS, and 3D rendering modules per user profile).
+- **On-Demand Lighthouse QC Scanner:** Engineered the blueprint for a manual, on-demand pre-live website auditor. Integrated broken link crawlers, a localized South African English (en-ZA) spellcheck microservice via LanguageTool, and headless Lighthouse CLI checks for Performance, SEO, and accessibility metrics.
+- **MS 365 / Outlook Graph API Integration:** Mapped the bidirectional synchronization flow with MS 365. Configured conflict avoidance logic using Graph API's `calendarView` to query availability before scheduling GLPI tickets or GoHighLevel CRM appointments.
+- **Overtime System Absorption:** Planned the native FastAPI/React absorption of the standalone C# and PostgreSQL overtime tracker located at `/other_apps/OvertimeSystem/`, eliminating container sprawl and establishing unified dashboard widgets.
+- **Disaster Recovery, API Kill Switches, & Security Audits:** Documented Bareos (Wasabi) and Restic (B2) database backup/restore procedures to ensure up-to-date carbon-copy restoration. Added plans for a Redis-locked Outbound API Kill Switch triggered manually or via Reflex Daemon EDR indicators. Conducted white-box strict typing audits and simulated EDR black-box breach testing (`simulate_breach.sh`).
+- **Master Index Synchronized:** Cataloged the roadmap inside the primary system map at [CORTEX_MAP.md](file:///home/louis/cortex/CORTEX_MAP.md).
+
 ## [MAY 2026]
 
 ### 29 MAY 2026 - GOHIGHLEVEL CRM INTEGRATION, MULTI-ENDPOINT PARAMETER STANDARDISATION, COGNITIVE REACT SYSTEM PROMPT HARDENING & RESILIENT LOOP PROTECTION (MOLE RUN)

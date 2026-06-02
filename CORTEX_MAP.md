@@ -27,6 +27,7 @@
 | **Execution Lab** | `docs/LAB_LOG.md` | Current Phase, Atomic Steps, and Progress Tracker. |
 | **Change History** | `docs/CHANGELOG.md` | Version history and session summaries. |
 | **Migration** | `docs/MIGRATION_AGY.md` | Notes on Gemini CLI -> Antigravity migration. |
+| **Product Strategy** | `user_roadmap.md` | Multi-user widgets, Permission matrix, Web QC scan, Outlook Calendar, Overtime System. |
 
 ---
 
