@@ -131,6 +131,7 @@ const servicesData = [
       { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za/dashboard/", icon: "🚦" },
       { name: "Authelia", subtitle: "Identity Gate", url: "https://auth.rmmservice.co.za", icon: "🔑" },
       { name: "WireGuard", subtitle: "Secure Tunnel", url: "disabled", icon: "🛡️" },
+      { name: "Security Console", subtitle: "RBAC Directory & Logs", url: "security-console", icon: "🔒" }
     ],
   },
 ];
@@ -414,7 +415,7 @@ function ActiveMitigationConsole({
           <h3>ACTIVE MITIGATION CONSOLE</h3>
         </div>
         <div className="hud-badges">
-          {isOffline && <span className="hud-badge cached">CACHED / DESYNCED</span>}
+          {isOffline && <span className="hud-badge cached">CACHED</span>}
           <span className={`hud-badge mode-status ${isHardened ? "hardened" : "standard"}`}>
             {currentMode}
           </span>
@@ -527,11 +528,17 @@ function App() {
   const [isHudVisible, setIsHudVisible] = useState(true);
   const [securityMode, setSecurityMode] = useState<string>("STANDARD");
 
-  // Multi-User Identity & Permissions State
+  // Multi-User Identity & View State
   const [currentUser, setCurrentUser] = useState<string>("Louis"); // "Louis", "Felicia", "Vitto", "Sarah"
   const [permissions, setPermissions] = useState<PermissionsData | null>(null);
   const [incidentHistory, setIncidentHistory] = useState<AuditRecord[]>([]);
   const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<"dashboard" | "security">("dashboard");
+
+  // Admin user CRUD forms
+  const [newUsername, setNewUsername] = useState("");
+  const [newUserRole, setNewUserRole] = useState("Cortex-Technicians");
+  const [newUserViki, setNewUserViki] = useState(false);
   
   // Custom interactive mock widgets state
   const [tickets, setTickets] = useState<GLPITicket[]>(initialTickets);
@@ -539,6 +546,30 @@ function App() {
   const [appointments, setAppointments] = useState<CalendarAppointment[]>(initialAppointments);
   const [newTodoText, setNewTodoText] = useState("");
   const [newTodoDue, setNewTodoDue] = useState("In 24 hours");
+
+  // Track acknowledged alert IDs in state
+  const [, setAcknowledgedAlerts] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("cortex_acknowledged_alerts");
+      return saved ? (JSON.parse(saved) as unknown[]).map((id) => String(id)) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Get active settings for the simulated user
+  const activeUserRecord = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
+    username: currentUser,
+    role: currentUser === "Louis" || currentUser === "Felicia" ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
+    viki_assigned: currentUser === "Louis" || currentUser === "Felicia",
+    permissions: {
+      view_telemetry: true,
+      execute_playbooks: currentUser === "Louis" || currentUser === "Felicia",
+      run_qc_scans: currentUser !== "Vitto",
+      edit_appointments: currentUser !== "Sarah",
+      edit_user_permissions: currentUser === "Louis" || currentUser === "Felicia"
+    }
+  };
 
   const handleSolveTicket = (id: string) => {
     const isAdminUser = activeUserRecord.role === "Cortex-Admins";
@@ -562,22 +593,12 @@ function App() {
       {
         timestamp: new Date().toISOString(),
         type: "CALENDAR_SYNC",
-        message: `Microsoft Graph API cancelled meeting slot [${id}] for host {currentUser}.`,
+        message: `Microsoft Graph API cancelled meeting slot [${id}] for host ${currentUser}.`,
         signature: "790acbe01237cbead1e848a6c827361849dbcf1b28d610817364b192837bc9d8"
       },
       ...prev
     ]);
   };
-
-  // Track acknowledged alert IDs in state
-  const [, setAcknowledgedAlerts] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("cortex_acknowledged_alerts");
-      return saved ? (JSON.parse(saved) as unknown[]).map((id) => String(id)) : [];
-    } catch {
-      return [];
-    }
-  });
 
   // Load permissions and incident history
   const fetchPermissions = () => {
@@ -587,7 +608,6 @@ function App() {
         setPermissions(data);
       })
       .catch(() => {
-        // Fallback default permissions
         setPermissions({
           users: [
             {
@@ -652,7 +672,6 @@ function App() {
         setIncidentHistory(data);
       })
       .catch(() => {
-        // Mock timeline items if desynced/failed
         setIncidentHistory([
           {
             timestamp: new Date(Date.now() - 600000).toISOString(),
@@ -691,9 +710,15 @@ function App() {
   }, [isOffline]);
 
   useEffect(() => {
+    // Check parameters for initial viewMode route
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get("mode");
+    if (modeParam === "security") {
+      setViewMode("security");
+    }
+
     const fetchStatus = () => {
       if (isOffline) {
-        // Simulated offline statuses
         setStatus(servicesData.flatMap(c => c.items.map(i => ({ 
           name: i.name, 
           status: i.name === "NetLock RMM" || i.name === "GLPI" ? "offline" as const : "online" as const
@@ -737,7 +762,6 @@ function App() {
     const statusInterval = setInterval(fetchStatus, 30000);
     const alertInterval = setInterval(fetchAlerts, 10000);
 
-    // --- TELEMETRY WEBSOCKET INTEGRATION ---
     let ws: WebSocket;
     let reconnectTimeout: ReturnType<typeof setTimeout>;
 
@@ -770,7 +794,6 @@ function App() {
             data.id = String(Date.now());
           }
 
-          // Ingest mode changes or permission audit loops
           if (data.type === "PERMISSION_CHANGE" || data.type === "MODE_CHANGE" || data.type === "MITIGATION") {
             fetchIncidentHistory();
             fetchPermissions();
@@ -870,7 +893,6 @@ function App() {
 
   const handleModeToggle = async (newMode: "NORMAL" | "REFLEX") => {
     if (isOffline) {
-      // Local simulated mode change
       setSecurityMode(newMode === "REFLEX" ? "HARDENED" : "STANDARD");
       setIncidentHistory(prev => [
         {
@@ -900,7 +922,6 @@ function App() {
 
   const handleExecutePlaybook = async (playbook: string, target: string): Promise<boolean> => {
     if (isOffline) {
-      // Local simulated playbooks
       setIncidentHistory(prev => [
         {
           timestamp: new Date().toISOString(),
@@ -928,11 +949,9 @@ function App() {
     }
   };
 
-  // Granular Permissions Switch Update on Backend
   const handlePermissionToggle = async (username: string, permission: string, currentValue: boolean) => {
     const newValue = !currentValue;
     
-    // Optimistic state update
     setPermissions((prev) => {
       if (!prev) return prev;
       return {
@@ -977,25 +996,106 @@ function App() {
       setTimeout(fetchIncidentHistory, 500);
     } catch (err) {
       console.error("[-] Error toggling permission:", err);
-      fetchPermissions(); // rollback on error
+      fetchPermissions();
     }
   };
 
-  // Get active settings for the simulated user
-  const activeUserRecord = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
-    username: currentUser,
-    role: currentUser === "Louis" || currentUser === "Felicia" ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
-    viki_assigned: currentUser === "Louis" || currentUser === "Felicia",
-    permissions: {
-      view_telemetry: true,
-      execute_playbooks: currentUser === "Louis" || currentUser === "Felicia",
-      run_qc_scans: currentUser !== "Vitto",
-      edit_appointments: currentUser !== "Sarah",
-      edit_user_permissions: currentUser === "Louis" || currentUser === "Felicia"
+  // Create User Action (Backend & Stateful log sync)
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUsername.trim() || !newUserRole) return;
+    const name = newUsername.trim();
+
+    const newUser: PermissionUser = {
+      username: name,
+      role: newUserRole,
+      viki_assigned: newUserViki,
+      permissions: {
+        view_telemetry: true,
+        execute_playbooks: newUserRole === "Cortex-Admins",
+        run_qc_scans: newUserRole !== "Cortex-Technicians",
+        edit_appointments: newUserRole !== "Cortex-Designers",
+        edit_user_permissions: newUserRole === "Cortex-Admins"
+      }
+    };
+
+    setPermissions(prev => {
+      if (!prev) return prev;
+      return {
+        users: [...prev.users, newUser]
+      };
+    });
+
+    setNewUsername("");
+    setNewUserViki(false);
+
+    if (isOffline) {
+      setIncidentHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          type: "USER_CREATION",
+          message: `[MOCK CACHED] New user '${name}' created with role '${newUserRole}'.`,
+          signature: "abcde928bcbe710daef10cda81b0aefcde928bcfe021bc7df8a9a0fbe29acbe2"
+        },
+        ...prev
+      ]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/permissions/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: name, role: newUserRole, viki_assigned: newUserViki })
+      });
+      if (!res.ok) throw new Error("Failed to create user");
+      const data = await res.json();
+      setPermissions(data.permissions);
+      setTimeout(fetchIncidentHistory, 500);
+    } catch (err) {
+      console.error("[-] Error creating user:", err);
+      fetchPermissions();
     }
   };
 
-  // Interactive to-do handlers
+  // Delete User Action (Backend & Stateful log sync)
+  const handleDeleteUser = async (name: string) => {
+    setPermissions(prev => {
+      if (!prev) return prev;
+      return {
+        users: prev.users.filter(u => u.username.toLowerCase() !== name.toLowerCase())
+      };
+    });
+
+    if (isOffline) {
+      setIncidentHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          type: "USER_DELETION",
+          message: `[MOCK CACHED] User '${name}' was deleted from operational directory.`,
+          signature: "790acbe01237cbead1e848a6c827361849dbcf1b28d610817364b192837bc9d9"
+        },
+        ...prev
+      ]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/permissions/user", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: name })
+      });
+      if (!res.ok) throw new Error("Failed to delete user");
+      const data = await res.json();
+      setPermissions(data.permissions);
+      setTimeout(fetchIncidentHistory, 500);
+    } catch (err) {
+      console.error("[-] Error deleting user:", err);
+      fetchPermissions();
+    }
+  };
+
   const handleToggleTodo = (id: string) => {
     setToDo(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
   };
@@ -1017,6 +1117,252 @@ function App() {
     setToDo(prev => prev.filter(t => t.id !== id));
   };
 
+  // Screen View Rendering: 🔒 FULLSCREEN SPACIOUS SECURITY CONTROL CENTER
+  if (viewMode === "security") {
+    return (
+      <div className="security-console-fullscreen theme-dark font-space">
+        <header className="security-fullscreen-header glassmorphic">
+          <div className="sec-title-meta">
+            <span className="sec-pulse-indicator blinking"></span>
+            <h2>CORTEX | SECURITY & RBAC COMMAND COCKPIT</h2>
+          </div>
+          <button 
+            className="sec-return-btn font-space"
+            onClick={() => setViewMode("dashboard")}
+          >
+            ← Return to Operations Dashboard
+          </button>
+        </header>
+
+        <div className="security-spacious-layout">
+          
+          {/* Left spacious column: Directory & Permission Switches */}
+          <div className="sec-column-left">
+            
+            {/* User Directory Management */}
+            <div className="spacious-security-card glassmorphic">
+              <div className="card-header-underlined">
+                <span>📁</span>
+                <h3>SOVEREIGN USER DIRECTORY & CREDENTIALS</h3>
+              </div>
+              <div className="user-directory-wrapper">
+                <table className="spacious-table font-space">
+                  <thead>
+                    <tr>
+                      <th>USERNAME</th>
+                      <th>ORGANIZATIONAL GROUP</th>
+                      <th>VIKI SYSTEM ASSIGNED</th>
+                      <th>DIRECTORY COMMAND</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {permissions?.users.map(u => (
+                      <tr key={u.username} className="directory-row">
+                        <td className="dir-user-name">{u.username}</td>
+                        <td>
+                          <span className={`role-tag ${u.role.toLowerCase()}`}>{u.role}</span>
+                        </td>
+                        <td>
+                          <span className={`viki-indicator-badge ${u.viki_assigned ? 'assigned' : 'unassigned'}`}>
+                            {u.viki_assigned ? "ACTIVE QUANTUM LINK" : "STRIPPED / RESTRICTED"}
+                          </span>
+                        </td>
+                        <td>
+                          {u.username.toLowerCase() === "louis" ? (
+                            <span className="system-protected-label">SYSTEM ROOT PROTECTED</span>
+                          ) : (
+                            <button 
+                              className="dir-delete-btn font-space"
+                              onClick={() => handleDeleteUser(u.username)}
+                              title="Delete user credentials and permissions permanently"
+                            >
+                              DELETE USER
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Inline form to Create User */}
+                <form onSubmit={handleCreateUser} className="spacious-create-user-form">
+                  <div className="form-title font-space font-xs text-dim">DEPOSIT NEW ORGANIZATIONAL USER PROFILE:</div>
+                  <div className="form-fields-group">
+                    <input 
+                      type="text" 
+                      placeholder="Username (e.g. Sarah)..."
+                      className="spacious-input"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      required
+                    />
+                    <select 
+                      className="spacious-select"
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value)}
+                    >
+                      <option value="Cortex-Admins">Cortex-Admins (Administrator)</option>
+                      <option value="Cortex-Technicians">Cortex-Technicians (Field Tech)</option>
+                      <option value="Cortex-Designers">Cortex-Designers (Web Designer)</option>
+                    </select>
+                    <label className="checkbox-label font-space font-xs text-dim">
+                      <input 
+                        type="checkbox" 
+                        checked={newUserViki}
+                        onChange={(e) => setNewUserViki(e.target.checked)}
+                      />
+                      Assign VIKI AI
+                    </label>
+                    <button type="submit" className="spacious-submit-btn font-space">
+                      CREATE & ENROLL
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Granular Permission toggles matrix */}
+            <div className="spacious-security-card glassmorphic">
+              <div className="card-header-underlined">
+                <span>🔒</span>
+                <h3>GRANULAR SYSTEM PERMISSIONS MATRIX</h3>
+              </div>
+              <div className="permissions-matrix-wrapper">
+                <table className="spacious-table font-space text-center">
+                  <thead>
+                    <tr>
+                      <th>USER</th>
+                      <th>VIKI ENABLED</th>
+                      <th>TELEMETRY</th>
+                      <th>PLAYBOOKS</th>
+                      <th>QC SCANS</th>
+                      <th>CALENDAR</th>
+                      <th>EDIT MATRIX</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {permissions?.users.map(u => (
+                      <tr key={u.username}>
+                        <td className="dir-user-name text-left">{u.username}</td>
+                        <td>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={u.viki_assigned}
+                              onChange={() => handlePermissionToggle(u.username, "viki_assigned", u.viki_assigned)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </td>
+                        <td>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={u.permissions.view_telemetry}
+                              onChange={() => handlePermissionToggle(u.username, "view_telemetry", u.permissions.view_telemetry)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </td>
+                        <td>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={u.permissions.execute_playbooks}
+                              onChange={() => handlePermissionToggle(u.username, "execute_playbooks", u.permissions.execute_playbooks)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </td>
+                        <td>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={u.permissions.run_qc_scans}
+                              onChange={() => handlePermissionToggle(u.username, "run_qc_scans", u.permissions.run_qc_scans)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </td>
+                        <td>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={u.permissions.edit_appointments}
+                              onChange={() => handlePermissionToggle(u.username, "edit_appointments", u.permissions.edit_appointments)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </td>
+                        <td>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={u.permissions.edit_user_permissions}
+                              onChange={() => handlePermissionToggle(u.username, "edit_user_permissions", u.permissions.edit_user_permissions)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right spacious column: Forensic Incident Log History */}
+          <div className="sec-column-right">
+            <div className="spacious-security-card glassmorphic timeline-spacious-card">
+              <div className="card-header-underlined">
+                <span>🛡️</span>
+                <h3>FORENSIC BTRFS IMMUTABLE AUDIT LEDGER</h3>
+              </div>
+              <div className="matrix-info-alert font-space font-xs" style={{ margin: "0.5rem 0 1rem 0" }}>
+                🔑 CRYPTOGRAPHIC INTEGRITY: CHRONOLOGICAL BTRFS DATA LAKE LEDGER LOADED DIRECTLY FROM /mnt/data_lake/audit/ WITH LIVE HMAC-SHA256 CHECKSUMS.
+              </div>
+              <div className="spacious-timeline-wrapper scrollable">
+                {incidentHistory.length === 0 ? (
+                  <div className="todo-empty">NO AUDIT LOGS INGESTED</div>
+                ) : (
+                  <div className="timeline-list spacious">
+                    {incidentHistory.map((incident, idx) => {
+                      const type = incident.type || "INFO";
+                      const signature = incident.signature || "UNRECOGNIZED_INTEGRITY_SIGNATURE";
+                      
+                      let badgeClass = "badge-info";
+                      if (type.includes("MUTIGATION") || type.includes("QUARANTINE") || type.includes("DELETION")) badgeClass = "badge-danger";
+                      if (type.includes("MODE") || type.includes("CREATION")) badgeClass = "badge-warning";
+                      if (type.includes("PERMISSION")) badgeClass = "badge-permissions";
+                      
+                      return (
+                        <div key={idx} className="timeline-item spacious">
+                          <div className="timeline-meta">
+                            <span className={`timeline-badge ${badgeClass}`}>{type}</span>
+                            <span className="timeline-time">{new Date(incident.timestamp).toLocaleString()}</span>
+                          </div>
+                          <p className="timeline-msg font-space">{incident.message}</p>
+                          <div className="timeline-signature-box font-space" title="Cryptographically signed to BTRFS Forensic Lake using HMAC-SHA256">
+                            <span>FORENSIC SIGNATURE: {signature}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // Dashboard homepage view
   return (
     <div className={`dashboard ${alerts.length > 0 ? "critical-state" : ""}`}>
       <AlertOverlay alerts={alerts} onClear={clearAlerts} />
@@ -1212,104 +1558,6 @@ function App() {
             </div>
           </section>
 
-          {/* Granular Permissions & Security/Access Matrix - Admins Only */}
-          {activeUserRecord.permissions.edit_user_permissions && permissions && (
-            <section className="section" style={{ marginBottom: "1.5rem" }}>
-              <h2 className="section-title">🔒 SECURITY & ACCESS MATRIX PANEL (ADMINISTRATORS ONLY)</h2>
-              <div className="security-matrix-card glassmorphic">
-                <div className="matrix-info-alert font-space font-xs">
-                  ⚠️ SYSTEM CONTROL ENGINE: MODIFICATIONS WILL BE IMMEDIATELY SIGNED AND LOGGED TO THE FORENSIC BTRFS DATA LAKE UNDER /mnt/data_lake/audit/
-                </div>
-                <div className="matrix-table-wrapper">
-                  <table className="matrix-table font-space">
-                    <thead>
-                      <tr>
-                        <th>USER</th>
-                        <th>ORGANIZATIONAL ROLE</th>
-                        <th>ASSIGN VIKI</th>
-                        <th>VIEW TELEMETRY</th>
-                        <th>EXECUTE PLAYBOOKS</th>
-                        <th>RUN QC SCANS</th>
-                        <th>EDIT CALENDAR</th>
-                        <th>EDIT PERMISSIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {permissions.users.map(u => (
-                        <tr key={u.username}>
-                          <td className="user-cell">{u.username}</td>
-                          <td>
-                            <span className={`role-tag ${u.role.toLowerCase()}`}>{u.role}</span>
-                          </td>
-                          <td>
-                            <label className="toggle-switch">
-                              <input 
-                                type="checkbox" 
-                                checked={u.viki_assigned}
-                                onChange={() => handlePermissionToggle(u.username, "viki_assigned", u.viki_assigned)}
-                              />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </td>
-                          <td>
-                            <label className="toggle-switch">
-                              <input 
-                                type="checkbox" 
-                                checked={u.permissions.view_telemetry}
-                                onChange={() => handlePermissionToggle(u.username, "view_telemetry", u.permissions.view_telemetry)}
-                              />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </td>
-                          <td>
-                            <label className="toggle-switch">
-                              <input 
-                                type="checkbox" 
-                                checked={u.permissions.execute_playbooks}
-                                onChange={() => handlePermissionToggle(u.username, "execute_playbooks", u.permissions.execute_playbooks)}
-                              />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </td>
-                          <td>
-                            <label className="toggle-switch">
-                              <input 
-                                type="checkbox" 
-                                checked={u.permissions.run_qc_scans}
-                                onChange={() => handlePermissionToggle(u.username, "run_qc_scans", u.permissions.run_qc_scans)}
-                              />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </td>
-                          <td>
-                            <label className="toggle-switch">
-                              <input 
-                                type="checkbox" 
-                                checked={u.permissions.edit_appointments}
-                                onChange={() => handlePermissionToggle(u.username, "edit_appointments", u.permissions.edit_appointments)}
-                              />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </td>
-                          <td>
-                            <label className="toggle-switch">
-                              <input 
-                                type="checkbox" 
-                                checked={u.permissions.edit_user_permissions}
-                                onChange={() => handlePermissionToggle(u.username, "edit_user_permissions", u.permissions.edit_user_permissions)}
-                              />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          )}
-
           {/* Standard services listing links */}
           <section className="section">
             <h2 className="section-title">CORE NETWORK INGRESS GATEWAYS</h2>
@@ -1317,14 +1565,26 @@ function App() {
               {servicesData.map((section) => 
                 section.items.map((item) => {
                   const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
+                  
+                  // Hide Security Console gateway card if user has no permission
+                  if (item.url === "security-console" && !activeUserRecord.permissions.edit_user_permissions) {
+                    return null;
+                  }
+                  
                   return (
                     <a 
                       key={item.name} 
-                      href={item.url === "disabled" ? undefined : item.url} 
-                      target={item.url === "disabled" ? undefined : "_blank"} 
+                      href={item.url === "disabled" || item.url === "security-console" ? undefined : item.url} 
+                      target={item.url === "disabled" || item.url === "security-console" ? undefined : "_blank"} 
                       rel="noopener noreferrer" 
                       className={`card ${isOnline ? "online-card" : "offline-card"}`}
-                      onClick={(e) => { if (item.url === "disabled") e.preventDefault(); }}
+                      onClick={(e) => { 
+                        if (item.url === "disabled") e.preventDefault(); 
+                        else if (item.url === "security-console") {
+                          e.preventDefault();
+                          setViewMode("security");
+                        }
+                      }}
                     >
                       <div className="icon">{item.icon}</div>
                       <div className="info">

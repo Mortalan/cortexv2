@@ -2119,4 +2119,366 @@ body {
   opacity: 1;
 }
 
+/* ==========================================================================
+   🔒 FULLSCREEN SECURITY COMMAND COCKPIT SPACIOUS STYLING
+   ========================================================================== */
+.security-console-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-color);
+  background-image: 
+    linear-gradient(rgba(255, 77, 77, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 77, 77, 0.01) 1px, transparent 1px);
+  background-size: 60px 60px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.5rem 2rem;
+  box-sizing: border-box;
+}
+
+.security-fullscreen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border: 1px solid rgba(255, 77, 77, 0.25);
+  border-radius: 8px;
+  background: rgba(15, 5, 5, 0.6);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 0 25px rgba(255, 77, 77, 0.05);
+  margin-bottom: 1.5rem;
+}
+
+.sec-title-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sec-title-meta h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  background: linear-gradient(to bottom, #fff, var(--offline));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px rgba(255, 77, 77, 0.2));
+}
+
+.sec-pulse-indicator {
+  width: 10px;
+  height: 10px;
+  background-color: var(--offline);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--offline);
+}
+
+.sec-return-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sec-return-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.security-spacious-layout {
+  display: flex;
+  flex: 1;
+  gap: 1.5rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sec-column-left {
+  flex: 1.3;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.sec-column-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.spacious-security-card {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  background: rgba(10, 15, 25, 0.45);
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card-header-underlined {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.75rem;
+}
+
+.card-header-underlined span {
+  font-size: 1.3rem;
+}
+
+.card-header-underlined h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.spacious-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.spacious-table th {
+  text-align: left;
+  color: var(--text-dim);
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.spacious-table.text-center th {
+  text-align: center;
+}
+.spacious-table.text-center td {
+  text-align: center;
+}
+.spacious-table td.text-left {
+  text-align: left;
+}
+
+.spacious-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  vertical-align: middle;
+}
+
+.directory-row {
+  transition: background-color 0.2s;
+}
+
+.directory-row:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.dir-user-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.viki-indicator-badge {
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.viki-indicator-badge.assigned {
+  background: rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.viki-indicator-badge.unassigned {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+}
+
+.system-protected-label {
+  font-size: 0.55rem;
+  font-weight: 900;
+  color: var(--online);
+  border: 1px dashed rgba(0, 255, 157, 0.3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.dir-delete-btn {
+  background: rgba(255, 77, 77, 0.05);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: var(--offline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dir-delete-btn:hover {
+  background: var(--offline);
+  color: #fff;
+  box-shadow: 0 0 6px rgba(255, 77, 77, 0.3);
+}
+
+/* Spacious form to Create User */
+.spacious-create-user-form {
+  margin-top: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-fields-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.spacious-input {
+  flex: 1.5;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 8px 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.75rem;
+  outline: none;
+  transition: border-color 0.3s;
+  min-width: 150px;
+}
+
+.spacious-input:focus {
+  border-color: var(--offline);
+  box-shadow: 0 0 8px rgba(255, 77, 77, 0.15);
+}
+
+.spacious-select {
+  flex: 1.2;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.75rem;
+  padding: 8px;
+  outline: none;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input {
+  cursor: pointer;
+}
+
+.spacious-submit-btn {
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.4);
+  color: var(--offline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+}
+
+.spacious-submit-btn:hover {
+  background: var(--offline);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 77, 77, 0.3);
+}
+
+.timeline-spacious-card {
+  height: 100%;
+  min-height: 0;
+  border-color: rgba(255, 77, 77, 0.2);
+}
+
+.spacious-timeline-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.timeline-item.spacious {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.timeline-item.spacious:first-child {
+  padding-top: 0;
+}
+
+.timeline-item.spacious:last-child {
+  border-bottom: none;
+}
+
+.timeline-item.spacious .timeline-msg {
+  font-size: 0.75rem;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.timeline-item.spacious .timeline-signature-box {
+  font-size: 0.55rem;
+  color: rgba(0, 255, 157, 0.5);
+  background: rgba(0, 255, 157, 0.03);
+  border: 1px solid rgba(0, 255, 157, 0.08);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: text;
+}
+
+.timeline-item.spacious .timeline-signature-box:hover {
+  background: rgba(0, 255, 157, 0.07);
+  color: var(--online);
+}
+
+
 

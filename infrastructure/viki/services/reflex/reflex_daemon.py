@@ -422,6 +422,88 @@ def api_toggle_permission() -> object:
 def api_get_permissions() -> object:
     return jsonify(get_permissions())
 
+@app.route('/api/permissions/user', methods=['POST'])
+def api_create_user() -> object:
+    data = request.get_json()
+    username = data.get("username")
+    role = data.get("role")
+    viki_assigned = data.get("viki_assigned", False)
+    
+    if not username or not role:
+        return jsonify({"error": "Missing username or role"}), 400
+        
+    perms = get_permissions()
+    for u in perms["users"]:
+        if u["username"].lower() == username.lower():
+            return jsonify({"error": f"User '{username}' already exists"}), 400
+            
+    new_user = {
+        "username": username,
+        "role": role,
+        "viki_assigned": viki_assigned,
+        "permissions": {
+            "view_telemetry": True,
+            "execute_playbooks": role == "Cortex-Admins",
+            "run_qc_scans": role != "Cortex-Technicians",
+            "edit_appointments": role != "Cortex-Designers",
+            "edit_user_permissions": role == "Cortex-Admins"
+        }
+    }
+    perms["users"].append(new_user)
+    save_permissions(perms)
+    
+    write_signed_audit_log(
+        "USER_CREATION",
+        f"New user '{username}' created with role '{role}' in operational directory.",
+        {"username": username, "role": role}
+    )
+    
+    broadcast_event({
+        "type": "PERMISSION_CHANGE",
+        "action": "CREATE",
+        "username": username,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    })
+    
+    return jsonify({"status": "ok", "permissions": perms})
+
+@app.route('/api/permissions/user', methods=['DELETE'])
+def api_delete_user() -> object:
+    data = request.get_json()
+    username = data.get("username")
+    
+    if not username:
+        return jsonify({"error": "Missing username"}), 400
+        
+    perms = get_permissions()
+    user_found = False
+    
+    for i, u in enumerate(perms["users"]):
+        if u["username"].lower() == username.lower():
+            user_found = True
+            perms["users"].pop(i)
+            break
+            
+    if not user_found:
+        return jsonify({"error": f"User '{username}' not found"}), 404
+        
+    save_permissions(perms)
+    
+    write_signed_audit_log(
+        "USER_DELETION",
+        f"User '{username}' was deleted from operational directory.",
+        {"username": username}
+    )
+    
+    broadcast_event({
+        "type": "PERMISSION_CHANGE",
+        "action": "DELETE",
+        "username": username,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    })
+    
+    return jsonify({"status": "ok", "permissions": perms})
+
 @app.route('/api/mitigations/history', methods=['GET'])
 def api_mitigations_history() -> object:
     """Reads security audit logging history from the Forensic BTRFS Data Lake."""
