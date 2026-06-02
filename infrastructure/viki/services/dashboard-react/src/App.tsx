@@ -107,7 +107,7 @@ const initialAppointments: CalendarAppointment[] = [
   { id: "a4", subject: "Authelia SSO / LLDAP Permission Scope Mapping", time: "Thursday, 3:00 PM - 4:00 PM", organizer: "Vitto", status: "Free" }
 ];
 
-const servicesData = [
+const staticServicesData = [
   {
     category: "Operational Backbone",
     items: [
@@ -535,6 +535,10 @@ function App() {
   });
   const [permissions, setPermissions] = useState<PermissionsData | null>(null);
   const [selectedDirUsername, setSelectedDirUsername] = useState<string>("Louis");
+  const [currentMode, setCurrentMode] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("mode");
+  });
   const [incidentHistory, setIncidentHistory] = useState<AuditRecord[]>([]);
   const isOffline = false;
 
@@ -590,6 +594,36 @@ function App() {
   const currentSelectedUser = permissions?.users.find((u) => u.username.toLowerCase() === selectedDirUsername.toLowerCase()) || permissions?.users[0] || activeUserRecord;
 
   const isUserAdmin = activeUserRecord.role === "Cortex-Admins";
+
+  const servicesData = [
+    {
+      category: "Operational Backbone",
+      items: [
+        { name: "NetLock RMM", subtitle: "Tactical Control", url: "https://rmm.rmmservice.co.za", icon: "⚡" },
+        { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
+        { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
+        { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
+      ],
+    },
+    {
+      category: "Intelligence & Data",
+      items: [
+        { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
+        { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
+        { name: "Ollama AI", subtitle: "Neural Inference", url: "https://cortex.rmmservice.co.za/api/viki/", icon: "🤖" },
+        { name: "Hermes Agent", subtitle: "Cognitive Dispatcher", url: "https://hermes.rmmservice.co.za", icon: "🕊️" },
+      ],
+    },
+    {
+      category: "Network & Security",
+      items: [
+        { name: "Traefik", subtitle: "Secure Gateway", url: "https://traefik.rmmservice.co.za/dashboard/", icon: "🚦" },
+        { name: "Authelia", subtitle: "Identity Gate", url: "https://auth.rmmservice.co.za", icon: "🔑" },
+        { name: "WireGuard", subtitle: "Secure Tunnel", url: "disabled", icon: "🛡️" },
+        ...(isUserAdmin ? [{ name: "Admin Console", subtitle: "Permissions Control Panel", url: `/?mode=admin&user=${currentUser}`, icon: "🔒" }] : [])
+      ],
+    },
+  ];
 
   const handleSolveTicket = (id: string) => {
     const isAdminUser = activeUserRecord.role === "Cortex-Admins";
@@ -730,11 +764,15 @@ function App() {
   }, [isOffline]);
 
   useEffect(() => {
-    // Check parameters for active user
+    // Check parameters for active user and console modes
     const params = new URLSearchParams(window.location.search);
     const userParam = params.get("user");
     if (userParam) {
       setCurrentUser(userParam);
+    }
+    const modeParam = params.get("mode");
+    if (modeParam) {
+      setCurrentMode(modeParam);
     }
 
 
@@ -1365,10 +1403,21 @@ function App() {
             </div>
           </section>
 
-          {/* Sovereign User Directory & Permissions Console Matrix - Rendered natively on the Homepage for Admins in place of Widgets */}
-          {isUserAdmin && permissions && (
+          {currentMode === "admin" ? (
             <section className="section" style={{ marginBottom: "1.5rem" }}>
-              <h2 className="section-title">🔒 SOVEREIGN USER DIRECTORY & SECURE ACCESS MATRIX</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <h2 className="section-title" style={{ margin: 0 }}>🔒 SOVEREIGN USER DIRECTORY & SECURE ACCESS MATRIX</h2>
+                <button 
+                  className="spacious-submit-btn font-space" 
+                  onClick={() => {
+                    setCurrentMode(null);
+                    window.history.pushState({}, "", "/");
+                  }}
+                  style={{ background: "rgba(0, 255, 157, 0.1)", border: "1px solid rgba(0, 255, 157, 0.4)", color: "var(--online)", display: "flex", gap: "0.4rem", alignItems: "center" }}
+                >
+                  ◀ Exit Admin Console
+                </button>
+              </div>
               
               <div className="widgets-grid-container" style={{ gridTemplateColumns: "1.2fr 1.8fr" }}>
                 
@@ -1380,7 +1429,7 @@ function App() {
                   </div>
                   <div className="user-directory-wrapper" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                     <div className="user-directory-list">
-                      {permissions.users.map(u => {
+                      {permissions?.users?.map(u => {
                         const isSelected = u.username.toLowerCase() === selectedDirUsername.toLowerCase();
                         return (
                           <div 
@@ -1573,7 +1622,7 @@ function App() {
                         <span>🔌</span> Gateway App Visibility Switches
                       </div>
                       <div className="app-visibility-grid">
-                        {servicesData.flatMap(c => c.items).map(appItem => {
+                        {staticServicesData.flatMap(c => c.items).map(appItem => {
                           const isPermitted = currentSelectedUser.apps?.[appItem.name] !== false;
                           return (
                             <div key={appItem.name} className={`app-toggle-card ${isPermitted ? "permitted" : ""}`}>
@@ -1600,31 +1649,215 @@ function App() {
 
               </div>
             </section>
-          )}
+          ) : (
+            <>
+              {/* Dynamic Unified Multi-User Widget Grid - Rendered EXCLUSIVELY for Non-Admins */}
+              {!isUserAdmin && (
+                <section className="section" style={{ marginBottom: "1.5rem" }}>
+                  <h2 className="section-title">ROLE-BASED COGNITIVE WIDGETS ({activeUserRecord.role.toUpperCase()})</h2>
+                  <div className="widgets-grid-container">
+                    
+                    {/* Widget A: Open Tickets */}
+                    <div className="widget-card glassmorphic">
+                      <div className="widget-header">
+                        <div className="widget-title">
+                          <span>🎫</span>
+                          <h4>ASSIGNED OPEN TICKETS</h4>
+                        </div>
+                        {isOffline && <span className="hud-badge cached">CACHED</span>}
+                      </div>
+                      <div className="widget-body scrollable">
+                        <table className="widget-table font-space">
+                          <thead>
+                            <tr>
+                              <th>TICKET</th>
+                              <th>SEVERITY</th>
+                              <th>SUBMITTER</th>
+                              <th>ACTION</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tickets.map(t => (
+                              <tr key={t.id} className={`ticket-row ${t.severity.toLowerCase()}`}>
+                                <td>
+                                  <div className="ticket-title-cell">
+                                    <span className="ticket-id">[{t.id}]</span>
+                                    <span className="ticket-title-text">{t.title}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className={`ticket-sev-badge ${t.severity.toLowerCase()}`}>
+                                    {t.severity}
+                                  </span>
+                                </td>
+                                <td className="text-dim">{t.submitter}</td>
+                                <td>
+                                  <button 
+                                    className="solve-ticket-btn font-space"
+                                    onClick={() => handleSolveTicket(t.id)}
+                                    title="Resolve helpdesk ticket"
+                                  >
+                                    SOLVE
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
 
-          {/* Status HUD grid - Rendered natively for Admin / permitted users */}
-          {isUserAdmin && (
-            <section className="section topology-section-main" style={{ marginTop: "1.5rem" }}>
-              <h2 className="section-title">Global Status Monitor</h2>
-              <div className="status-monitor-grid">
-                <SystemDiagnosticsHUD status={status} />
-                <TelemetryHUD 
-                  events={telemetryEvents}
-                  wsStatus={wsStatus}
-                  isVisible={isHudVisible}
-                  onToggle={() => setIsHudVisible(!isHudVisible)}
-                  mode={securityMode}
-                />
-                <ActiveMitigationConsole 
-                  currentMode={securityMode}
-                  onModeToggle={handleModeToggle}
-                  onExecutePlaybook={handleExecutePlaybook}
-                  incidentHistory={incidentHistory}
-                  isOffline={isOffline}
-                  allowQuarantine={activeUserRecord.permissions.execute_playbooks}
-                />
-              </div>
-            </section>
+                    {/* Widget B: 3-Day To-Do Tracker */}
+                    <div className="widget-card glassmorphic">
+                      <div className="widget-header">
+                        <div className="widget-title">
+                          <span>🗓️</span>
+                          <h4>3-DAY TO-DO LIST (72H)</h4>
+                        </div>
+                      </div>
+                      <div className="widget-body">
+                        <div className="todo-list-wrapper scrollable">
+                          {todo.length === 0 ? (
+                            <div className="todo-empty">All objectives achieved. Grid stabilized.</div>
+                          ) : (
+                            todo.map(t => (
+                              <div key={t.id} className={`todo-item-row ${t.completed ? 'completed' : ''}`}>
+                                <div className="todo-check-group" onClick={() => handleToggleTodo(t.id)}>
+                                  <div className={`todo-checkbox ${t.completed ? 'checked' : ''}`}>
+                                    {t.completed && "✔"}
+                                  </div>
+                                  <div className="todo-text-group">
+                                    <span className="todo-task-text">{t.task}</span>
+                                    <span className="todo-due-badge">{t.due}</span>
+                                  </div>
+                                </div>
+                                <button className="todo-delete-btn" onClick={() => handleDeleteTodo(t.id)}>✖</button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        <form onSubmit={handleAddTodo} className="todo-inline-form">
+                          <input 
+                            type="text" 
+                            placeholder="Add urgent objective..."
+                            className="todo-input"
+                            value={newTodoText}
+                            onChange={(e) => setNewTodoText(e.target.value)}
+                          />
+                          <select 
+                            className="todo-select"
+                            value={newTodoDue}
+                            onChange={(e) => setNewTodoDue(e.target.value)}
+                          >
+                            <option value="In 4 hours">In 4h</option>
+                            <option value="In 24 hours">In 24h</option>
+                            <option value="In 48 hours">In 48h</option>
+                            <option value="In 72 hours">In 72h</option>
+                          </select>
+                          <button type="submit" className="todo-add-btn">+</button>
+                        </form>
+                      </div>
+                    </div>
+
+                    {/* Widget C: 3-Day Outlook Appointments */}
+                    <div className="widget-card glassmorphic">
+                      <div className="widget-header">
+                        <div className="widget-title">
+                          <span>📅</span>
+                          <h4>3-DAY OUTLOOK CALENDAR</h4>
+                        </div>
+                        {isOffline && <span className="hud-badge conflict-warning">DESYNCED</span>}
+                      </div>
+                      <div className="widget-body scrollable">
+                        <div className="appointments-list">
+                          {appointments.map(a => (
+                            <div key={a.id} className={`appointment-card ${a.status.toLowerCase()}`}>
+                              <div className="appt-badge-status-group">
+                                <span className={`appt-status-indicator ${a.status.toLowerCase()}`}></span>
+                                <span className="appt-subject font-space">{a.subject}</span>
+                                {a.status !== "Free" && activeUserRecord.permissions.edit_appointments && (
+                                  <button 
+                                    className="appt-cancel-btn font-space" 
+                                    onClick={() => handleCancelAppointment(a.id)}
+                                    title="Cancel appointment slot"
+                                  >
+                                    ✖
+                                  </button>
+                                )}
+                              </div>
+                              <div className="appt-meta font-space text-dim font-xs">
+                                <div>TIME: {a.time}</div>
+                                <div>HOST: {a.organizer} | ROLE: <span className="status-label">{a.status.toUpperCase()}</span></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </section>
+              )}
+
+              {/* Core gate links list - Rendered natively for all users */}
+              <section className="section">
+                <h2 className="section-title">CORE NETWORK INGRESS GATEWAYS</h2>
+                <div className="grid">
+                  {servicesData.map((section) => 
+                    section.items
+                      .filter((item) => {
+                        const apps = activeUserRecord.apps || {};
+                        return apps[item.name] !== false;
+                      })
+                      .map((item) => {
+                        const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
+                        return (
+                          <a 
+                            key={item.name} 
+                            href={item.url === "disabled" ? undefined : item.url} 
+                            target={item.url === "disabled" ? undefined : "_blank"} 
+                            rel="noopener noreferrer" 
+                            className={`card ${isOnline ? "online-card" : "offline-card"}`}
+                            onClick={(e) => { if (item.url === "disabled") e.preventDefault(); }}
+                          >
+                            <div className="icon">{item.icon}</div>
+                            <div className="info">
+                              <h3>{item.name}</h3>
+                              <p>{item.subtitle}</p>
+                              <span className={`status-dot ${isOnline ? "online" : "offline"}`}></span>
+                            </div>
+                          </a>
+                        );
+                      })
+                  )}
+                </div>
+              </section>
+
+              {/* Status HUD grid - Rendered natively for Admin / permitted users */}
+              {isUserAdmin && (
+                <section className="section topology-section-main" style={{ marginTop: "1.5rem" }}>
+                  <h2 className="section-title">Global Status Monitor</h2>
+                  <div className="status-monitor-grid">
+                    <SystemDiagnosticsHUD status={status} />
+                    <TelemetryHUD 
+                      events={telemetryEvents}
+                      wsStatus={wsStatus}
+                      isVisible={isHudVisible}
+                      onToggle={() => setIsHudVisible(!isHudVisible)}
+                      mode={securityMode}
+                    />
+                    <ActiveMitigationConsole 
+                      currentMode={securityMode}
+                      onModeToggle={handleModeToggle}
+                      onExecutePlaybook={handleExecutePlaybook}
+                      incidentHistory={incidentHistory}
+                      isOffline={isOffline}
+                      allowQuarantine={activeUserRecord.permissions.execute_playbooks}
+                    />
+                  </div>
+                </section>
+              )}
+            </>
           )}
         </main>
 
