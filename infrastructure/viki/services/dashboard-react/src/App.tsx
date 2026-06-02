@@ -664,62 +664,74 @@ function App() {
   // Load permissions and incident history
   const fetchPermissions = () => {
     fetch("/api/permissions")
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Server responded with error status");
+        return res.json();
+      })
       .then((data: PermissionsData) => {
         setPermissions(data);
       })
-      .catch(() => {
-        setPermissions({
-          users: [
-            {
-              username: "Louis",
-              role: "Cortex-Admins",
-              viki_assigned: true,
-              permissions: {
-                view_telemetry: true,
-                execute_playbooks: true,
-                run_qc_scans: true,
-                edit_appointments: true,
-                edit_user_permissions: true
+      .catch((err) => {
+        console.error("[-] Error fetching permissions:", err);
+        // Do NOT wipe the existing user directory if we already have users in state!
+        setPermissions(prev => {
+          if (prev && prev.users && prev.users.length > 0) {
+            console.log("[*] Preserving active user list in state due to fetch failure.");
+            return prev;
+          }
+          // Only initialize defaults on first load if we have no active users
+          return {
+            users: [
+              {
+                username: "Louis",
+                role: "Cortex-Admins",
+                viki_assigned: true,
+                permissions: {
+                  view_telemetry: true,
+                  execute_playbooks: true,
+                  run_qc_scans: true,
+                  edit_appointments: true,
+                  edit_user_permissions: true
+                }
+              },
+              {
+                username: "Felicia",
+                role: "Cortex-Admins",
+                viki_assigned: true,
+                permissions: {
+                  view_telemetry: true,
+                  execute_playbooks: true,
+                  run_qc_scans: true,
+                  edit_appointments: true,
+                  edit_user_permissions: true
+                }
+              },
+              {
+                username: "Vitto",
+                role: "Cortex-Technicians",
+                viki_assigned: false,
+                permissions: {
+                  view_telemetry: true,
+                  execute_playbooks: false,
+                  run_qc_scans: false,
+                  edit_appointments: true,
+                  edit_user_permissions: false
+                }
+              },
+              {
+                username: "Sarah",
+                role: "Cortex-Designers",
+                viki_assigned: false,
+                permissions: {
+                  view_telemetry: true,
+                  execute_playbooks: false,
+                  run_qc_scans: true,
+                  edit_appointments: false,
+                  edit_user_permissions: false
+                }
               }
-            },
-            {
-              username: "Felicia",
-              role: "Cortex-Admins",
-              viki_assigned: true,
-              permissions: {
-                view_telemetry: true,
-                execute_playbooks: true,
-                run_qc_scans: true,
-                edit_appointments: true,
-                edit_user_permissions: true
-              }
-            },
-            {
-              username: "Vitto",
-              role: "Cortex-Technicians",
-              viki_assigned: false,
-              permissions: {
-                view_telemetry: true,
-                execute_playbooks: false,
-                run_qc_scans: false,
-                edit_appointments: true,
-                edit_user_permissions: false
-              }
-            },
-            {
-              username: "Sarah",
-              role: "Cortex-Designers",
-              viki_assigned: false,
-              permissions: {
-                view_telemetry: true,
-                execute_playbooks: false,
-                run_qc_scans: true,
-                edit_appointments: false,
-                edit_user_permissions: false
-              }
-            }
-          ]
+            ]
+          };
         });
       });
   };

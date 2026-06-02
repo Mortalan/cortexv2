@@ -96,9 +96,11 @@ DEFAULT_APPS = {
     "WireGuard": True
 }
 
+_cached_permissions = None
 db_lock = threading.Lock()
 
 def get_permissions() -> dict:
+    global _cached_permissions
     perm_file = get_data_lake_path(PERMISSIONS_PATH)
     perms = None
     
@@ -116,7 +118,10 @@ def get_permissions() -> dict:
                     time.sleep(0.05)
                     
         if not perms:
-            if not os.path.exists(perm_file) or os.path.getsize(perm_file) == 0:
+            if _cached_permissions is not None:
+                print("[*] Database read failed. Falling back to last-known-good memory cache.", flush=True)
+                perms = _cached_permissions
+            elif not os.path.exists(perm_file) or os.path.getsize(perm_file) == 0:
                 perms = {
                     "users": [
                         {
@@ -179,6 +184,8 @@ def get_permissions() -> dict:
                 }
             else:
                 raise RuntimeError("Permissions database exists but is corrupted or locked. Aborting default reset to protect data.")
+        else:
+            _cached_permissions = perms
     
     # Ensure every user has 'apps', 'password' and all defaults exist
     modified = False
