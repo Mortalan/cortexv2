@@ -2480,5 +2480,220 @@ body {
   color: var(--online);
 }
 
+/* ==========================================================================
+   🔒 MASTER-DETAIL USER DIRECTORY & ACCESS MONITOR CONSOLE STYLING
+   ========================================================================== */
+
+.user-directory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+  max-height: 290px;
+  padding-right: 0.5rem;
+}
+
+.directory-user-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.directory-user-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(2px);
+}
+
+.directory-user-card.selected {
+  background: rgba(0, 255, 157, 0.05);
+  border-color: rgba(0, 255, 157, 0.4);
+  box-shadow: 0 0 12px rgba(0, 255, 157, 0.1);
+}
+
+.user-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.user-card-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.directory-user-card.selected .user-card-title {
+  color: var(--online);
+}
+
+.user-card-subtitle {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.viki-indicator-mini {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.viki-indicator-mini.active {
+  background: rgba(0, 255, 157, 0.15);
+  color: var(--online);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+}
+
+.viki-indicator-mini.inactive {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-permissions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.4rem;
+  text-align: left;
+}
+
+.detail-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.permissions-toggles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.permission-toggle-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
+  transition: all 0.2s;
+}
+
+.permission-toggle-box:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.permission-toggle-label {
+  font-size: 0.63rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+}
+
+.app-visibility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.45rem;
+}
+
+.app-toggle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 5px;
+  padding: 0.5rem 0.4rem;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.app-toggle-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.app-toggle-card.permitted {
+  background: rgba(0, 255, 157, 0.01);
+  border-color: rgba(0, 255, 157, 0.15);
+}
+
+.app-toggle-card.permitted:hover {
+  border-color: rgba(0, 255, 157, 0.3);
+}
+
+.app-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.app-toggle-card.permitted .app-toggle-header {
+  color: var(--online);
+}
+
+.app-toggle-icon {
+  font-size: 0.95rem;
+}
+
+.app-toggle-card.permitted .app-toggle-icon {
+  filter: drop-shadow(0 0 4px rgba(0, 255, 157, 0.3));
+}
+
+.detail-row-flex {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 0.5rem 0.8rem;
+  border-radius: 5px;
+}
+
+.detail-field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.detail-field-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+}
+
 
 

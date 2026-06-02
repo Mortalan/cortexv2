@@ -48,6 +48,7 @@ interface PermissionUser {
     edit_appointments: boolean;
     edit_user_permissions: boolean;
   };
+  apps?: Record<string, boolean>;
 }
 
 interface PermissionsData {
@@ -533,6 +534,7 @@ function App() {
     return params.get("user") || "Louis"; // Defaults to Louis (Admin)
   });
   const [permissions, setPermissions] = useState<PermissionsData | null>(null);
+  const [selectedDirUsername, setSelectedDirUsername] = useState<string>("Louis");
   const [incidentHistory, setIncidentHistory] = useState<AuditRecord[]>([]);
   const isOffline = false;
 
@@ -559,7 +561,7 @@ function App() {
   });
 
   // Get active settings for the logged-in user
-  const activeUserRecord = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
+  const activeUserRecord: PermissionUser = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
     username: currentUser,
     role: currentUser === "Louis" || currentUser === "Felicia" ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
     viki_assigned: currentUser === "Louis" || currentUser === "Felicia",
@@ -569,8 +571,23 @@ function App() {
       run_qc_scans: currentUser !== "Vitto",
       edit_appointments: currentUser !== "Sarah",
       edit_user_permissions: currentUser === "Louis" || currentUser === "Felicia"
+    },
+    apps: {
+      "NetLock RMM": true,
+      "GLPI": true,
+      "Velociraptor": true,
+      "Custom Reports": true,
+      "MinIO": true,
+      "n8n": true,
+      "Ollama AI": true,
+      "Hermes Agent": true,
+      "Traefik": true,
+      "Authelia": true,
+      "WireGuard": true
     }
   };
+
+  const currentSelectedUser = permissions?.users.find((u) => u.username.toLowerCase() === selectedDirUsername.toLowerCase()) || permissions?.users[0] || activeUserRecord;
 
   const isUserAdmin = activeUserRecord.role === "Cortex-Admins";
 
@@ -953,8 +970,8 @@ function App() {
     }
   };
 
-  const handlePermissionToggle = async (username: string, permission: string, currentValue: boolean) => {
-    const newValue = !currentValue;
+  const handlePermissionToggle = async (username: string, permission: string, currentValue: boolean | string) => {
+    const newValue = typeof currentValue === "string" ? currentValue : !currentValue;
     
     setPermissions((prev) => {
       if (!prev) return prev;
@@ -962,11 +979,44 @@ function App() {
         users: prev.users.map((u) => {
           if (u.username.toLowerCase() === username.toLowerCase()) {
             if (permission === "viki_assigned") {
-              return { ...u, viki_assigned: newValue };
+              return { ...u, viki_assigned: newValue as boolean };
+            } else if (permission === "role") {
+              const newRole = newValue as string;
+              let newPerms = { ...u.permissions };
+              if (newRole === "Cortex-Admins") {
+                newPerms = {
+                  view_telemetry: true,
+                  execute_playbooks: true,
+                  run_qc_scans: true,
+                  edit_appointments: true,
+                  edit_user_permissions: true
+                };
+              } else if (newRole === "Cortex-Technicians") {
+                newPerms = {
+                  view_telemetry: true,
+                  execute_playbooks: false,
+                  run_qc_scans: false,
+                  edit_appointments: true,
+                  edit_user_permissions: false
+                };
+              } else {
+                newPerms = {
+                  view_telemetry: true,
+                  execute_playbooks: false,
+                  run_qc_scans: true,
+                  edit_appointments: false,
+                  edit_user_permissions: false
+                };
+              }
+              return { ...u, role: newRole, permissions: newPerms };
+            } else if (permission.startsWith("app_")) {
+              const appKey = permission.substring(4);
+              const newApps = { ...u.apps, [appKey]: newValue as boolean };
+              return { ...u, apps: newApps };
             } else {
               return {
                 ...u,
-                permissions: { ...u.permissions, [permission]: newValue }
+                permissions: { ...u.permissions, [permission]: newValue as boolean }
               };
             }
           }
@@ -1286,26 +1336,31 @@ function App() {
             <h2 className="section-title">CORE NETWORK INGRESS GATEWAYS</h2>
             <div className="grid">
               {servicesData.map((section) => 
-                section.items.map((item) => {
-                  const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
-                  return (
-                    <a 
-                      key={item.name} 
-                      href={item.url === "disabled" ? undefined : item.url} 
-                      target={item.url === "disabled" ? undefined : "_blank"} 
-                      rel="noopener noreferrer" 
-                      className={`card ${isOnline ? "online-card" : "offline-card"}`}
-                      onClick={(e) => { if (item.url === "disabled") e.preventDefault(); }}
-                    >
-                      <div className="icon">{item.icon}</div>
-                      <div className="info">
-                        <h3>{item.name}</h3>
-                        <p>{item.subtitle}</p>
-                        <span className={`status-dot ${isOnline ? "online" : "offline"}`}></span>
-                      </div>
-                    </a>
-                  );
-                })
+                section.items
+                  .filter((item) => {
+                    const apps = activeUserRecord.apps || {};
+                    return apps[item.name] !== false;
+                  })
+                  .map((item) => {
+                    const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
+                    return (
+                      <a 
+                        key={item.name} 
+                        href={item.url === "disabled" ? undefined : item.url} 
+                        target={item.url === "disabled" ? undefined : "_blank"} 
+                        rel="noopener noreferrer" 
+                        className={`card ${isOnline ? "online-card" : "offline-card"}`}
+                        onClick={(e) => { if (item.url === "disabled") e.preventDefault(); }}
+                      >
+                        <div className="icon">{item.icon}</div>
+                        <div className="info">
+                          <h3>{item.name}</h3>
+                          <p>{item.subtitle}</p>
+                          <span className={`status-dot ${isOnline ? "online" : "offline"}`}></span>
+                        </div>
+                      </a>
+                    );
+                  })
               )}
             </div>
           </section>
@@ -1315,57 +1370,62 @@ function App() {
             <section className="section" style={{ marginBottom: "1.5rem" }}>
               <h2 className="section-title">🔒 SOVEREIGN USER DIRECTORY & SECURE ACCESS MATRIX</h2>
               
-              <div className="widgets-grid-container" style={{ gridTemplateColumns: "1.3fr 1fr" }}>
+              <div className="widgets-grid-container" style={{ gridTemplateColumns: "1.2fr 1.8fr" }}>
                 
                 {/* Directory Management & Enrollment */}
                 <div className="spacious-security-card glassmorphic">
                   <div className="card-header-underlined">
                     <span>📁</span>
-                    <h4>USER DIRECTORY CREDENTIALS</h4>
+                    <h4>USER DIRECTORY</h4>
                   </div>
-                  <div className="user-directory-wrapper">
-                    <table className="spacious-table font-space">
-                      <thead>
-                        <tr>
-                          <th>USERNAME</th>
-                          <th>ROLE GROUP</th>
-                          <th>VIKI SYSTEM</th>
-                          <th>COMMAND</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {permissions.users.map(u => (
-                          <tr key={u.username} className="directory-row">
-                            <td className="dir-user-name">{u.username}</td>
-                            <td>
-                              <span className={`role-tag ${u.role.toLowerCase()}`}>{u.role}</span>
-                            </td>
-                            <td>
-                              <span className={`viki-indicator-badge ${u.viki_assigned ? 'assigned' : 'unassigned'}`}>
-                                {u.viki_assigned ? "ACTIVE LINK" : "RESTRICTED"}
+                  <div className="user-directory-wrapper" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div className="user-directory-list">
+                      {permissions.users.map(u => {
+                        const isSelected = u.username.toLowerCase() === selectedDirUsername.toLowerCase();
+                        return (
+                          <div 
+                            key={u.username} 
+                            className={`directory-user-card ${isSelected ? "selected" : ""}`}
+                            onClick={() => setSelectedDirUsername(u.username)}
+                          >
+                            <div className="user-card-info">
+                              <span className="user-card-title">
+                                {isSelected ? "🔒" : "👤"} {u.username}
                               </span>
-                            </td>
-                            <td>
+                              <span className="user-card-subtitle">
+                                <span className={`role-tag ${u.role.toLowerCase()}`} style={{ fontSize: "0.55rem", padding: "1px 4px" }}>
+                                  {u.role.replace("Cortex-", "")}
+                                </span>
+                                <span className={`viki-indicator-mini ${u.viki_assigned ? "active" : "inactive"}`}>
+                                  {u.viki_assigned ? "VIKI" : "NO_VIKI"}
+                                </span>
+                              </span>
+                            </div>
+                            <div>
                               {u.username.toLowerCase() === "louis" ? (
-                                <span className="system-protected-label">ROOT SECURE</span>
+                                <span className="system-protected-label" style={{ fontSize: "0.55rem" }}>ROOT SECURE</span>
                               ) : (
                                 <button 
                                   className="dir-delete-btn font-space"
-                                  onClick={() => handleDeleteUser(u.username)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteUser(u.username);
+                                  }}
+                                  style={{ padding: "4px 8px", fontSize: "0.6rem" }}
                                   title="Delete credentials permanently"
                                 >
                                   DELETE
                                 </button>
                               )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
 
                     {/* Inline form to Create User */}
-                    <form onSubmit={handleCreateUser} className="spacious-create-user-form" style={{ marginTop: "1rem" }}>
-                      <div className="form-fields-group">
+                    <form onSubmit={handleCreateUser} className="spacious-create-user-form" style={{ marginTop: "0.5rem" }}>
+                      <div className="form-fields-group" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                         <input 
                           type="text" 
                           placeholder="New Username..."
@@ -1373,17 +1433,19 @@ function App() {
                           value={newUsername}
                           onChange={(e) => setNewUsername(e.target.value)}
                           required
+                          style={{ flex: 1, minWidth: "120px", fontSize: "0.7rem", padding: "6px" }}
                         />
                         <select 
                           className="spacious-select"
                           value={newUserRole}
                           onChange={(e) => setNewUserRole(e.target.value)}
+                          style={{ fontSize: "0.7rem", padding: "6px" }}
                         >
-                          <option value="Cortex-Admins">Cortex-Admins (Admin)</option>
-                          <option value="Cortex-Technicians">Cortex-Technicians (Tech)</option>
-                          <option value="Cortex-Designers">Cortex-Designers (Designer)</option>
+                          <option value="Cortex-Admins">Admin</option>
+                          <option value="Cortex-Technicians">Technician</option>
+                          <option value="Cortex-Designers">Designer</option>
                         </select>
-                        <label className="checkbox-label font-space font-xs text-dim">
+                        <label className="checkbox-label font-space font-xs text-dim" style={{ fontSize: "0.65rem" }}>
                           <input 
                             type="checkbox" 
                             checked={newUserViki}
@@ -1391,7 +1453,7 @@ function App() {
                           />
                           Viki AI
                         </label>
-                        <button type="submit" className="spacious-submit-btn font-space" style={{ padding: "6px 12px" }}>
+                        <button type="submit" className="spacious-submit-btn font-space" style={{ padding: "4px 10px", fontSize: "0.65rem" }}>
                           ENROLL
                         </button>
                       </div>
@@ -1399,71 +1461,140 @@ function App() {
                   </div>
                 </div>
 
-                {/* Permissions matrix switches */}
+                {/* Permissions details pane */}
                 <div className="spacious-security-card glassmorphic">
                   <div className="card-header-underlined">
                     <span>🔒</span>
-                    <h4>GRANULAR ROLE toggles</h4>
+                    <h4>DETAILED ACCESS & APP SCOPE EDITOR</h4>
                   </div>
-                  <div className="permissions-matrix-wrapper">
-                    <table className="spacious-table font-space text-center" style={{ fontSize: "0.7rem" }}>
-                      <thead>
-                        <tr>
-                          <th className="text-left">USER</th>
-                          <th>VIKI</th>
-                          <th>TELEMETRY</th>
-                          <th>PLAYBOOKS</th>
-                          <th>QC SCANS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {permissions.users.map(u => (
-                          <tr key={u.username}>
-                            <td className="dir-user-name text-left">{u.username}</td>
-                            <td>
-                              <label className="toggle-switch">
+                  <div className="detail-permissions-panel">
+                    
+                    {/* User Title & Role Config Row */}
+                    <div className="detail-row-flex">
+                      <div className="detail-field-item">
+                        <span className="detail-field-label">Target Account</span>
+                        <strong style={{ fontSize: "1.1rem", color: "var(--online)", letterSpacing: "0.02em" }}>
+                          {currentSelectedUser.username.toUpperCase()}
+                        </strong>
+                      </div>
+                      <div className="detail-field-item" style={{ flex: 1.5 }}>
+                        <span className="detail-field-label">Assigned Role Group</span>
+                        <select 
+                          className="spacious-select"
+                          value={currentSelectedUser.role}
+                          onChange={(e) => handlePermissionToggle(currentSelectedUser.username, "role", e.target.value)}
+                          style={{ fontSize: "0.75rem", padding: "4px 8px", width: "100%" }}
+                        >
+                          <option value="Cortex-Admins">Cortex-Admins (Full Control)</option>
+                          <option value="Cortex-Technicians">Cortex-Technicians (Field Tech)</option>
+                          <option value="Cortex-Designers">Cortex-Designers (UI/UX Designer)</option>
+                        </select>
+                      </div>
+                      <div className="detail-field-item" style={{ alignItems: "center" }}>
+                        <span className="detail-field-label">Viki AI System</span>
+                        <label className="toggle-switch" style={{ marginTop: "0.2rem" }}>
+                          <input 
+                            type="checkbox" 
+                            checked={currentSelectedUser.viki_assigned}
+                            onChange={() => handlePermissionToggle(currentSelectedUser.username, "viki_assigned", currentSelectedUser.viki_assigned)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Operational Permissions Section */}
+                    <div>
+                      <div className="detail-section-title">
+                        <span>⚙️</span> Operational Permission Flags
+                      </div>
+                      <div className="permissions-toggles-grid">
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Telemetry HUD</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.view_telemetry}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "view_telemetry", currentSelectedUser.permissions.view_telemetry)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Run Playbooks</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.execute_playbooks}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "execute_playbooks", currentSelectedUser.permissions.execute_playbooks)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Run QC Scans</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.run_qc_scans}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "run_qc_scans", currentSelectedUser.permissions.run_qc_scans)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Edit Calendar</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.edit_appointments}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "edit_appointments", currentSelectedUser.permissions.edit_appointments)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Admin Console</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.edit_user_permissions}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "edit_user_permissions", currentSelectedUser.permissions.edit_user_permissions)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* App visibility controls grid */}
+                    <div>
+                      <div className="detail-section-title">
+                        <span>🔌</span> Gateway App Visibility Switches
+                      </div>
+                      <div className="app-visibility-grid">
+                        {servicesData.flatMap(c => c.items).map(appItem => {
+                          const isPermitted = currentSelectedUser.apps?.[appItem.name] !== false;
+                          return (
+                            <div key={appItem.name} className={`app-toggle-card ${isPermitted ? "permitted" : ""}`}>
+                              <div className="app-toggle-header">
+                                <span className="app-toggle-icon">{appItem.icon}</span>
+                                <span>{appItem.name}</span>
+                              </div>
+                              <label className="toggle-switch app-toggle-switch">
                                 <input 
                                   type="checkbox" 
-                                  checked={u.viki_assigned}
-                                  onChange={() => handlePermissionToggle(u.username, "viki_assigned", u.viki_assigned)}
+                                  checked={isPermitted}
+                                  onChange={() => handlePermissionToggle(currentSelectedUser.username, "app_" + appItem.name, isPermitted)}
                                 />
                                 <span className="toggle-slider"></span>
                               </label>
-                            </td>
-                            <td>
-                              <label className="toggle-switch">
-                                <input 
-                                  type="checkbox" 
-                                  checked={u.permissions.view_telemetry}
-                                  onChange={() => handlePermissionToggle(u.username, "view_telemetry", u.permissions.view_telemetry)}
-                                />
-                                <span className="toggle-slider"></span>
-                              </label>
-                            </td>
-                            <td>
-                              <label className="toggle-switch">
-                                <input 
-                                  type="checkbox" 
-                                  checked={u.permissions.execute_playbooks}
-                                  onChange={() => handlePermissionToggle(u.username, "execute_playbooks", u.permissions.execute_playbooks)}
-                                />
-                                <span className="toggle-slider"></span>
-                              </label>
-                            </td>
-                            <td>
-                              <label className="toggle-switch">
-                                <input 
-                                  type="checkbox" 
-                                  checked={u.permissions.run_qc_scans}
-                                  onChange={() => handlePermissionToggle(u.username, "run_qc_scans", u.permissions.run_qc_scans)}
-                                />
-                                <span className="toggle-slider"></span>
-                              </label>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
 
@@ -1472,7 +1603,7 @@ function App() {
           )}
 
           {/* Status HUD grid - Rendered natively for Admin / permitted users */}
-          {activeUserRecord.permissions.view_telemetry && (
+          {isUserAdmin && (
             <section className="section topology-section-main" style={{ marginTop: "1.5rem" }}>
               <h2 className="section-title">Global Status Monitor</h2>
               <div className="status-monitor-grid">

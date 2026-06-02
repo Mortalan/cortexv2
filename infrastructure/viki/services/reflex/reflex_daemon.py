@@ -81,67 +81,103 @@ def init_audit_log_if_empty() -> None:
         write_signed_audit_log("PERMISSION_CHANGE", "VIKI AI Assignment for user Louis granted dynamically by Authelia mapping.", {"username": "Louis", "permission": "viki_assigned", "value": True})
         write_signed_audit_log("PERMISSION_CHANGE", "VIKI AI Assignment for user Felicia granted dynamically by Authelia mapping.", {"username": "Felicia", "permission": "viki_assigned", "value": True})
 
+DEFAULT_APPS = {
+    "NetLock RMM": True,
+    "GLPI": True,
+    "Velociraptor": True,
+    "Custom Reports": True,
+    "MinIO": True,
+    "n8n": True,
+    "Ollama AI": True,
+    "Hermes Agent": True,
+    "Traefik": True,
+    "Authelia": True,
+    "WireGuard": True
+}
+
 def get_permissions() -> dict:
     perm_file = get_data_lake_path(PERMISSIONS_PATH)
+    perms = None
     if os.path.exists(perm_file):
         with open(perm_file, "r") as f:
             try:
-                return json.load(f)
+                perms = json.load(f)
             except:
                 pass
-    # Return defaults
-    return {
-        "users": [
-            {
-                "username": "Louis",
-                "role": "Cortex-Admins",
-                "viki_assigned": True,
-                "permissions": {
-                    "view_telemetry": True,
-                    "execute_playbooks": True,
-                    "run_qc_scans": True,
-                    "edit_appointments": True,
-                    "edit_user_permissions": True
+    if not perms:
+        perms = {
+            "users": [
+                {
+                    "username": "Louis",
+                    "role": "Cortex-Admins",
+                    "viki_assigned": True,
+                    "permissions": {
+                        "view_telemetry": True,
+                        "execute_playbooks": True,
+                        "run_qc_scans": True,
+                        "edit_appointments": True,
+                        "edit_user_permissions": True
+                    },
+                    "apps": DEFAULT_APPS.copy()
+                },
+                {
+                    "username": "Felicia",
+                    "role": "Cortex-Admins",
+                    "viki_assigned": True,
+                    "permissions": {
+                        "view_telemetry": True,
+                        "execute_playbooks": True,
+                        "run_qc_scans": True,
+                        "edit_appointments": True,
+                        "edit_user_permissions": True
+                    },
+                    "apps": DEFAULT_APPS.copy()
+                },
+                {
+                    "username": "Vitto",
+                    "role": "Cortex-Technicians",
+                    "viki_assigned": False,
+                    "permissions": {
+                        "view_telemetry": True,
+                        "execute_playbooks": False,
+                        "run_qc_scans": False,
+                        "edit_appointments": True,
+                        "edit_user_permissions": False
+                    },
+                    "apps": DEFAULT_APPS.copy()
+                },
+                {
+                    "username": "Sarah",
+                    "role": "Cortex-Designers",
+                    "viki_assigned": False,
+                    "permissions": {
+                        "view_telemetry": True,
+                        "execute_playbooks": False,
+                        "run_qc_scans": True,
+                        "edit_appointments": False,
+                        "edit_user_permissions": False
+                    },
+                    "apps": DEFAULT_APPS.copy()
                 }
-            },
-            {
-                "username": "Felicia",
-                "role": "Cortex-Admins",
-                "viki_assigned": True,
-                "permissions": {
-                    "view_telemetry": True,
-                    "execute_playbooks": True,
-                    "run_qc_scans": True,
-                    "edit_appointments": True,
-                    "edit_user_permissions": True
-                }
-            },
-            {
-                "username": "Vitto",
-                "role": "Cortex-Technicians",
-                "viki_assigned": False,
-                "permissions": {
-                    "view_telemetry": True,
-                    "execute_playbooks": False,
-                    "run_qc_scans": False,
-                    "edit_appointments": True,
-                    "edit_user_permissions": False
-                }
-            },
-            {
-                "username": "Sarah",
-                "role": "Cortex-Designers",
-                "viki_assigned": False,
-                "permissions": {
-                    "view_telemetry": True,
-                    "execute_playbooks": False,
-                    "run_qc_scans": True,
-                    "edit_appointments": False,
-                    "edit_user_permissions": False
-                }
-            }
-        ]
-    }
+            ]
+        }
+    
+    # Ensure every user has 'apps' and all defaults exist
+    modified = False
+    for u in perms.get("users", []):
+        if "apps" not in u:
+            u["apps"] = DEFAULT_APPS.copy()
+            modified = True
+        else:
+            for app_name, app_def in DEFAULT_APPS.items():
+                if app_name not in u["apps"]:
+                    u["apps"][app_name] = app_def
+                    modified = True
+                    
+    if modified:
+        save_permissions(perms)
+        
+    return perms
 
 def save_permissions(data: dict) -> None:
     perm_file = get_data_lake_path(PERMISSIONS_PATH)
@@ -374,8 +410,8 @@ def execute_playbook() -> object:
 def api_toggle_permission() -> object:
     data = request.get_json()
     username = data.get("username")
-    permission_name = data.get("permission")  # e.g., "view_telemetry" or "viki_assigned"
-    value = data.get("value")  # True or False
+    permission_name = data.get("permission")  # e.g., "view_telemetry", "viki_assigned", "role", or "app_n8n"
+    value = data.get("value")  # True/False (or string for role)
     
     perms = get_permissions()
     user_found = False
@@ -387,6 +423,42 @@ def api_toggle_permission() -> object:
                 old_val = u.get("viki_assigned", False)
                 u["viki_assigned"] = value
                 msg = f"VIKI AI Assignment for user {username} updated from {old_val} to {value}."
+            elif permission_name == "role":
+                old_val = u.get("role", "Cortex-Technicians")
+                u["role"] = value
+                # Auto-adjust standard permissions templates on role switch
+                if value == "Cortex-Admins":
+                    u["permissions"] = {
+                        "view_telemetry": True,
+                        "execute_playbooks": True,
+                        "run_qc_scans": True,
+                        "edit_appointments": True,
+                        "edit_user_permissions": True
+                    }
+                elif value == "Cortex-Technicians":
+                    u["permissions"] = {
+                        "view_telemetry": True,
+                        "execute_playbooks": False,
+                        "run_qc_scans": False,
+                        "edit_appointments": True,
+                        "edit_user_permissions": False
+                    }
+                else: # Cortex-Designers
+                    u["permissions"] = {
+                        "view_telemetry": True,
+                        "execute_playbooks": False,
+                        "run_qc_scans": True,
+                        "edit_appointments": False,
+                        "edit_user_permissions": False
+                    }
+                msg = f"Role for user {username} updated from {old_val} to {value}."
+            elif permission_name.startswith("app_"):
+                app_key = permission_name[4:]
+                if "apps" not in u:
+                    u["apps"] = DEFAULT_APPS.copy()
+                old_val = u["apps"].get(app_key, True)
+                u["apps"][app_key] = value
+                msg = f"Gateway app visibility '{app_key}' for user {username} updated from {old_val} to {value}."
             else:
                 if "permissions" not in u:
                     u["permissions"] = {}
@@ -447,7 +519,8 @@ def api_create_user() -> object:
             "run_qc_scans": role != "Cortex-Technicians",
             "edit_appointments": role != "Cortex-Designers",
             "edit_user_permissions": role == "Cortex-Admins"
-        }
+        },
+        "apps": DEFAULT_APPS.copy()
     }
     perms["users"].append(new_user)
     save_permissions(perms)
