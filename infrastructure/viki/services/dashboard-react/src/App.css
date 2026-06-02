@@ -1304,3 +1304,819 @@ body {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
+/* ==========================================================================
+   ROLE SIMULATION BAR & IDENTITY CONTROLLER
+   ========================================================================== */
+.role-simulation-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(0, 242, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(10, 15, 25, 0.6);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.05);
+}
+
+.simulation-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sim-pulse {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(0.95); box-shadow: 0 0 4px var(--accent); }
+  50% { transform: scale(1.1); box-shadow: 0 0 12px var(--accent); }
+  100% { transform: scale(0.95); box-shadow: 0 0 4px var(--accent); }
+}
+
+.simulation-actions {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.offline-simulator-toggle, .user-select-group {
+  display: flex;
+  align-items: center;
+}
+
+.sim-offline-btn {
+  background: rgba(0, 255, 157, 0.05);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  color: var(--online);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.sim-offline-btn.active {
+  background: rgba(255, 77, 77, 0.1);
+  border-color: var(--offline);
+  color: var(--offline);
+  box-shadow: 0 0 10px rgba(255, 77, 77, 0.2);
+  animation: border-alert 2s infinite;
+}
+
+@keyframes border-alert {
+  0% { border-color: rgba(255, 77, 77, 0.3); }
+  50% { border-color: rgba(255, 77, 77, 0.8); }
+  100% { border-color: rgba(255, 77, 77, 0.3); }
+}
+
+.user-btns {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sim-user-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sim-user-btn:hover {
+  border-color: var(--accent);
+  color: #fff;
+  background: rgba(0, 242, 255, 0.05);
+}
+
+.sim-user-btn.active {
+  background: rgba(0, 242, 255, 0.15);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* ==========================================================================
+   ROLE-BASED INTEGRATED WIDGET GRID
+   ========================================================================== */
+.widgets-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.widget-card {
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  background: rgba(10, 15, 25, 0.45);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.widget-card:hover {
+  border-color: rgba(0, 242, 255, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 242, 255, 0.03);
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.widget-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.widget-title span {
+  font-size: 1.1rem;
+}
+
+.widget-title h4 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.widget-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.widget-body.scrollable {
+  overflow-y: auto;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 255, 0.2);
+  border-radius: 10px;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Open Tickets Table Styling */
+.widget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.widget-table th {
+  text-align: left;
+  color: var(--text-dim);
+  padding: 6px 8px;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.widget-table td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  vertical-align: middle;
+}
+
+.ticket-row {
+  transition: background-color 0.2s ease;
+}
+
+.ticket-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ticket-title-cell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.ticket-id {
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ticket-title-text {
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.ticket-sev-badge {
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.ticket-sev-badge.high {
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.2);
+  color: var(--offline);
+}
+
+.ticket-sev-badge.medium {
+  background: rgba(255, 179, 0, 0.1);
+  border: 1px solid rgba(255, 179, 0, 0.2);
+  color: #ffb300;
+}
+
+.ticket-sev-badge.low {
+  background: rgba(0, 242, 255, 0.05);
+  border: 1px solid rgba(0, 242, 255, 0.15);
+  color: var(--accent);
+}
+
+/* 3-Day To-Do List Tracker */
+.todo-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.todo-empty {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  padding: 2rem 0;
+  font-style: italic;
+}
+
+.todo-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  padding: 8px 10px;
+  transition: all 0.3s ease;
+}
+
+.todo-item-row:hover {
+  background: rgba(0, 242, 255, 0.02);
+  border-color: rgba(0, 242, 255, 0.1);
+}
+
+.todo-item-row.completed {
+  opacity: 0.45;
+}
+
+.todo-check-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.todo-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.55rem;
+  color: var(--online);
+  margin-top: 1px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.todo-checkbox.checked {
+  border-color: var(--online);
+  background: rgba(0, 255, 157, 0.15);
+}
+
+.todo-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.todo-task-text {
+  font-size: 0.7rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.todo-item-row.completed .todo-task-text {
+  text-decoration: line-through;
+}
+
+.todo-due-badge {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.todo-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--offline);
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.2s;
+  font-size: 0.65rem;
+}
+
+.todo-item-row:hover .todo-delete-btn {
+  opacity: 0.8;
+}
+
+.todo-inline-form {
+  display: flex;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.todo-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  padding: 4px 6px;
+}
+
+.todo-select {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.65rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.todo-add-btn {
+  background: var(--accent);
+  border: none;
+  color: #000;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.todo-add-btn:hover {
+  box-shadow: 0 0 8px var(--accent-glow);
+  transform: scale(1.05);
+}
+
+/* Outlook Calendar Appointments */
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.appointment-card {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-left-width: 3px;
+  transition: all 0.3s;
+}
+
+.appointment-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.appointment-card.busy {
+  border-left-color: var(--offline);
+}
+
+.appointment-card.tentative {
+  border-left-color: #ffb300;
+}
+
+.appointment-card.free {
+  border-left-color: var(--online);
+}
+
+.appt-badge-status-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.appt-status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.appt-status-indicator.busy { background-color: var(--offline); }
+.appt-status-indicator.tentative { background-color: #ffb300; }
+.appt-status-indicator.free { background-color: var(--online); }
+
+.appt-subject {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.appt-meta {
+  line-height: 1.4;
+}
+
+.appt-meta .status-label {
+  font-weight: 900;
+  color: #fff;
+}
+
+.appointment-card.busy .status-label { color: var(--offline); }
+.appointment-card.tentative .status-label { color: #ffb300; }
+.appointment-card.free .status-label { color: var(--online); }
+
+/* ==========================================================================
+   🔒 SECURITY MATRIX / PERMISSIONS CONSOLE
+   ========================================================================== */
+.security-matrix-card {
+  border: 1px solid rgba(255, 77, 77, 0.25);
+  border-radius: 8px;
+  background: rgba(15, 5, 5, 0.4);
+  padding: 1rem;
+  box-shadow: 0 0 25px rgba(255, 77, 77, 0.03);
+}
+
+.matrix-info-alert {
+  background: rgba(255, 77, 77, 0.08);
+  border: 1px solid rgba(255, 77, 77, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: var(--offline);
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+}
+
+.matrix-table-wrapper {
+  overflow-x: auto;
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.matrix-table th {
+  text-align: left;
+  color: var(--text-dim);
+  padding: 8px 12px;
+  border-bottom: 2px solid rgba(255, 77, 77, 0.15);
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.matrix-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  vertical-align: middle;
+}
+
+.matrix-table tr:hover {
+  background: rgba(255, 77, 77, 0.01);
+}
+
+.matrix-table .user-cell {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.role-tag {
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.role-tag.cortex-admins {
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: var(--offline);
+}
+
+.role-tag.cortex-technicians {
+  background: rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  color: var(--accent);
+}
+
+.role-tag.cortex-designers {
+  background: rgba(0, 255, 157, 0.1);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  color: var(--online);
+}
+
+/* Glassmorphic Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: .3s;
+  border-radius: 16px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 10px;
+  width: 10px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-dim);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: rgba(0, 255, 157, 0.15);
+  border-color: var(--online);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(12px);
+  background-color: var(--online);
+  box-shadow: 0 0 5px var(--online);
+}
+
+/* Restricted view block */
+.permissions-restricted-warning {
+  background: rgba(255, 77, 77, 0.05);
+  border: 1px solid rgba(255, 77, 77, 0.15);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--offline);
+  font-size: 0.65rem;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   FORENSIC BTRFS INCIDENT TIMELINE
+   ========================================================================== */
+.timeline-container {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.timeline-container::-webkit-scrollbar {
+  width: 3px;
+}
+
+.timeline-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+}
+
+.timeline-empty {
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  padding: 1.5rem 0;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.timeline-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  padding-bottom: 0.5rem;
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.timeline-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.timeline-badge {
+  font-size: 0.5rem;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.timeline-badge.badge-danger {
+  background: rgba(255, 77, 77, 0.15);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: var(--offline);
+}
+
+.timeline-badge.badge-warning {
+  background: rgba(255, 179, 0, 0.1);
+  border: 1px solid rgba(255, 179, 0, 0.2);
+  color: #ffb300;
+}
+
+.timeline-badge.badge-permissions {
+  background: rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(0, 242, 255, 0.2);
+  color: var(--accent);
+}
+
+.timeline-badge.badge-info {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+}
+
+.timeline-time {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+}
+
+.timeline-msg {
+  font-size: 0.65rem;
+  color: var(--text);
+  line-height: 1.3;
+  margin: 0 0 0.2rem 0;
+}
+
+.timeline-signature-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.5rem;
+  color: rgba(0, 255, 157, 0.4);
+  background: rgba(0, 255, 157, 0.02);
+  border: 1px solid rgba(0, 255, 157, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+  cursor: help;
+}
+
+.timeline-signature-box:hover {
+  color: var(--online);
+  border-color: rgba(0, 255, 157, 0.2);
+  background: rgba(0, 255, 157, 0.05);
+}
+
+.tooltip-indicator {
+  font-weight: 700;
+}
+
+/* Offline badge alerts */
+.hud-badge.cached {
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: var(--offline);
+  animation: alarm-glow 2s infinite;
+}
+
+.hud-badge.conflict-warning {
+  background: rgba(255, 179, 0, 0.1);
+  border: 1px solid rgba(255, 179, 0, 0.3);
+  color: #ffb300;
+}
+
+@keyframes alarm-glow {
+  0% { box-shadow: 0 0 3px rgba(255, 77, 77, 0.1); }
+  50% { box-shadow: 0 0 8px rgba(255, 77, 77, 0.25); }
+  100% { box-shadow: 0 0 3px rgba(255, 77, 77, 0.1); }
+}
+
+/* Utilities */
+.font-space {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-xs {
+  font-size: 0.65rem;
+}
+
+.text-dim {
+  color: var(--text-dim);
+}
+
+.text-spaced {
+  letter-spacing: 1.5px;
+}
+
+.solve-ticket-btn {
+  background: rgba(0, 242, 255, 0.05);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  color: var(--accent);
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.solve-ticket-btn:hover {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.appt-cancel-btn {
+  background: transparent;
+  border: none;
+  color: var(--offline);
+  cursor: pointer;
+  font-size: 0.6rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  margin-left: auto;
+}
+
+.appt-cancel-btn:hover {
+  opacity: 1;
+}
+
+

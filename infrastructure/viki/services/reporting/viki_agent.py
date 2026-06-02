@@ -6,6 +6,8 @@ import time
 import tempfile
 import subprocess
 import requests
+import hmac
+import hashlib
 import speech_recognition as sr
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
@@ -18,10 +20,58 @@ STATE_PATH = "/mnt/data_lake/logs/reflex_state.json"
 ALERTS_PATH = "/mnt/data_lake/logs/alerts.json"
 PLAYBOOKS_DIR = "/opt/cortex/infrastructure/viki/playbooks"
 REPORTS_DIR = "/opt/cortex/reports"
+SECRET_KEY = b"cortex_hyper_secret_2026"
 
 # ----------------------------------------------------
 # SYSTEM TOOLS DEFINITIONS
 # ----------------------------------------------------
+
+def get_data_lake_path(subpath: str) -> str:
+    """Resolves data lake paths, falling back to local workspace paths if needed."""
+    base = "/mnt/data_lake"
+    try:
+        os.makedirs(base, exist_ok=True)
+        # Test writeability
+        test_file = os.path.join(base, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        
+        # Ensure target folder exists
+        os.makedirs(os.path.join(base, os.path.dirname(subpath)), exist_ok=True)
+        return os.path.join(base, subpath)
+    except Exception:
+        # Fall back to sandbox local workspace path
+        local_base = "/home/louis/cortex/mnt/data_lake"
+        os.makedirs(local_base, exist_ok=True)
+        os.makedirs(os.path.join(local_base, os.path.dirname(subpath)), exist_ok=True)
+        return os.path.join(local_base, subpath)
+
+def write_signed_audit_log(event_type: str, message: str, metadata: dict = None) -> None:
+    """Writes a structured, cryptographically signed log entry to BTRFS lake."""
+    if metadata is None:
+        metadata = {}
+    
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    log_entry = {
+        "timestamp": timestamp,
+        "type": event_type,
+        "message": message,
+        "metadata": metadata
+    }
+    
+    # Calculate HMAC-SHA256 signature to guarantee integrity
+    payload_bytes = json.dumps(log_entry, sort_keys=True).encode("utf-8")
+    sig = hmac.new(SECRET_KEY, payload_bytes, hashlib.sha256).hexdigest()
+    log_entry["signature"] = sig
+    
+    audit_file = get_data_lake_path("audit/security_audit.jsonl")
+    try:
+        with open(audit_file, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+        print(f"[+] Stateful BTRFS Audit Log written from VIKI Agent: {event_type} - {message}", flush=True)
+    except Exception as e:
+        print(f"[!] Error writing audit log from VIKI Agent: {e}", flush=True)
 
 def execute_sql(sql: str) -> str:
     """Securely execute a SQL statement inside the glpi-db container."""
@@ -33,6 +83,14 @@ def execute_sql(sql: str) -> str:
         if "WHERE" not in upper_sql:
             return "Error: Destructive operations (DELETE/UPDATE) must contain a WHERE clause for safety."
             
+    is_mutation = any(cmd in upper_sql for cmd in ["INSERT", "UPDATE", "DELETE", "REPLACE"])
+    if is_mutation:
+        write_signed_audit_log(
+            "DB_MUTATION", 
+            f"Autonomous DB mutation query executed on GLPI database by VIKI Agent: {sql}", 
+            {"database": "glpi", "query": sql}
+        )
+
     cmd = f"sudo docker exec -i glpi-db mariadb -u glpi_user -pglpi_password glpi -s -N -e \"{sql}\""
     try:
         res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -52,6 +110,14 @@ def execute_rmm_sql(sql: str) -> str:
         if "WHERE" not in upper_sql:
             return "Error: Destructive operations (DELETE/UPDATE) must contain a WHERE clause for safety."
             
+    is_mutation = any(cmd in upper_sql for cmd in ["INSERT", "UPDATE", "DELETE", "REPLACE"])
+    if is_mutation:
+        write_signed_audit_log(
+            "DB_MUTATION", 
+            f"Autonomous DB mutation query executed on NetLock RMM database by VIKI Agent: {sql}", 
+            {"database": "dogha6", "query": sql}
+        )
+
     cmd = f"sudo docker exec -i mysql-container mysql -u root -plDDZsZbZXbGhBhgp dogha6 -s -N -e \"{sql}\""
     try:
         res = subprocess.run(cmd, shell=True, capture_output=True, text=True)

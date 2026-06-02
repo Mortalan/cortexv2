@@ -1,14 +1,19 @@
 # CORTEX: CHANGELOG
 ## [JUNE 2026]
 
-### 02 JUNE 2026 - PRODUCT STRATEGY SPECIFICATION, GRANULAR PERMISSION MATRICES, DYNAMIC LIGHTHOUSE QC & MS 365 GRAPH API INTEGRATION PLAN (ARCHITECT MODE)
-- **Product Strategy Roadmap Created:** Formulated and deployed the comprehensive [user_roadmap.md](file:///home/louis/cortex/user_roadmap.md) architectural specification tracking core portal expansion vectors.
-- **Granular Permissions & VIKI Assignment:** Specified a glassmorphic Administrative console for explicit RBAC toggling and a secure master toggle to "Assign/Unassign VIKI" (dynamically loading/stripping LLM, STT, TTS, and 3D rendering modules per user profile).
-- **On-Demand Lighthouse QC Scanner:** Engineered the blueprint for a manual, on-demand pre-live website auditor. Integrated broken link crawlers, a localized South African English (en-ZA) spellcheck microservice via LanguageTool, and headless Lighthouse CLI checks for Performance, SEO, and accessibility metrics.
-- **MS 365 / Outlook Graph API Integration:** Mapped the bidirectional synchronization flow with MS 365. Configured conflict avoidance logic using Graph API's `calendarView` to query availability before scheduling GLPI tickets or GoHighLevel CRM appointments.
-- **Overtime System Absorption:** Planned the native FastAPI/React absorption of the standalone C# and PostgreSQL overtime tracker located at `/other_apps/OvertimeSystem/`, eliminating container sprawl and establishing unified dashboard widgets.
-- **Disaster Recovery, API Kill Switches, & Security Audits:** Documented Bareos (Wasabi) and Restic (B2) database backup/restore procedures to ensure up-to-date carbon-copy restoration. Added plans for a Redis-locked Outbound API Kill Switch triggered manually or via Reflex Daemon EDR indicators. Conducted white-box strict typing audits and simulated EDR black-box breach testing (`simulate_breach.sh`).
-- **Master Index Synchronized:** Cataloged the roadmap inside the primary system map at [CORTEX_MAP.md](file:///home/louis/cortex/CORTEX_MAP.md).
+### 02 JUNE 2026 - STATEFUL BTRFS AUDIT LOGGING WITH HMAC SIGNATURES, GLASSMORPHIC INCIDENT HISTORY TIMELINE, SIMULATED Authelia IDENTITY CONTROLLER, AND ROLE-BASED INTEGRATED WIDGET GRID (ARCHITECT MODE)
+- **Phase 18.2 Stateful BTRFS Audit Logging Deployed:** Implemented a secure, cryptographically signed audit log engine inside `reflex_daemon.py` and `viki_agent.py`. Toggling user permissions, executing manual playbooks, or triggering autonomous quarantines now appends chronological entries authenticated via `HMAC-SHA256` signatures to the Forensic Data Lake BTRFS storage engine (`audit/security_audit.jsonl`).
+- **Self-Healing Path Resolvers Configured:** Created dynamic path helpers `get_data_lake_path` that automatically detect writeability of production `/mnt/data_lake` and fall back to local workspace paths (`/home/louis/cortex/mnt/data_lake`) on sandbox testing, preventing volume permission issues.
+- **Glassmorphic Incident History Timeline Built:** Expanded the Active Mitigation Console React component with an interactive chronological Vertical timeline component that queries `/api/mitigations/history` and parses cryptographically signed events, showing signature details in a custom tooltip.
+- **Identity Controller Simulation Selector Added:** Integrated a premium glassmorphic control bridge panel at the top of the dashboard, allowing developers to switch simulated active users and organizational roles (`Cortex-Admins`, `Cortex-Designers`, `Cortex-Technicians`) with a dedicated local network drop desync simulator switch.
+- **Context-Filtered Interactive Widgets Integrated:** Deployed three high-fidelity widgets:
+  - *Assigned Open Tickets Widget:* Table filtered dynamically by role. Technicians/Admins can click "SOLVE" or "CLOSE" to mark tickets resolved, matching custom GLPI workflow rules.
+  - *3-Day To-Do Tracker Widget:* Checklist supporting interactive completion, deletion, and inline urgency task scheduling.
+  - *3-Day Outlook Appointments Widget:* Microsoft Graph visual mock tracking meetings, status states (Busy, Tentative, Free), and calendar releases.
+- **🔒 Security & Access Console Permissions Matrix:** Renders an interactive RBAC matrix for `Cortex-Admins` (Louis, Felicia, Vitto, Sarah). Toggling switches dynamically sends POST updates to `/api/permissions/toggle`, commits signed audit logs, and triggers live WebSocket state broadcasts.
+- **VIKI Assignability Stripping Enforced:** Integrated strict security boundaries. If `viki_assigned` is unassigned, all floating 3D holographic avatar viewports, Speech-to-Text media fallbacks, and chat links are instantly stripped from the user viewport to prevent resource leakage.
+- **Static TypeScript Build verified (0 Errors):** Executed local production compilation (`npm run build`), verifying that all strict TypeScript checks and Vite compilers pass with 100% success.
+- **Master Index Synchronized:** Cataloged progress inside the primary system map at [CORTEX_MAP.md](file:///home/louis/cortex/CORTEX_MAP.md) and [LAB_LOG.md](file:///home/louis/cortex/docs/LAB_LOG.md).
 
 ## [MAY 2026]
 

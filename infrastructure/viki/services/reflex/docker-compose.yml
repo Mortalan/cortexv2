@@ -26,6 +26,7 @@ services:
       - .:/etc/vector
       - /opt/cortex/infrastructure/viki/playbooks:/opt/cortex/infrastructure/viki/playbooks:ro
       - /mnt/data_lake/logs:/mnt/data_lake/logs
+      - /mnt/data_lake/audit:/mnt/data_lake/audit
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - netlock_netlock-network

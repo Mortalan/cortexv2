@@ -37,6 +37,75 @@ interface TelemetryEvent {
   security_status?: string;
 }
 
+interface PermissionUser {
+  username: string;
+  role: string;
+  viki_assigned: boolean;
+  permissions: {
+    view_telemetry: boolean;
+    execute_playbooks: boolean;
+    run_qc_scans: boolean;
+    edit_appointments: boolean;
+    edit_user_permissions: boolean;
+  };
+}
+
+interface PermissionsData {
+  users: PermissionUser[];
+}
+
+interface AuditRecord {
+  timestamp: string;
+  type: string;
+  message: string;
+  signature?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface GLPITicket {
+  id: string;
+  title: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+  submitter: string;
+  created: string;
+}
+
+interface ToDoItem {
+  id: string;
+  task: string;
+  due: string;
+  completed: boolean;
+}
+
+interface CalendarAppointment {
+  id: string;
+  subject: string;
+  time: string;
+  organizer: string;
+  status: "Busy" | "Tentative" | "Free";
+}
+
+const initialTickets: GLPITicket[] = [
+  { id: "T-1024", title: "RMM Alert: Mimikatz credential dumping on host WS-402", severity: "HIGH", submitter: "Vector EDR Probe", created: "2026-06-02T09:12:00Z" },
+  { id: "T-1025", title: "Forensic Data Lake BTRFS storage pool approaching 90% threshold", severity: "MEDIUM", submitter: "Bareos Agent", created: "2026-06-02T07:44:00Z" },
+  { id: "T-1026", title: "Authelia SSO dynamic session sync rate limiting exception", severity: "LOW", submitter: "Authelia Gateway", created: "2026-06-02T05:20:00Z" },
+  { id: "T-1027", title: "GoHighLevel API Integration lead sync credentials expired", severity: "HIGH", submitter: "n8n Router", created: "2026-06-01T18:30:00Z" }
+];
+
+const initialToDo: ToDoItem[] = [
+  { id: "1", task: "Verify Velociraptor EDR endpoint sensor on production C-101", due: "In 4 hours", completed: false },
+  { id: "2", task: "Rotate Authelia directory dynamic JWT token signing key credentials", due: "In 24 hours", completed: false },
+  { id: "3", task: "Prune old Docker service container volumes on node CORE-100", due: "In 48 hours", completed: true },
+  { id: "4", task: "Audit South African English overrides in Web QC spelling crawler", due: "In 72 hours", completed: false }
+];
+
+const initialAppointments: CalendarAppointment[] = [
+  { id: "a1", subject: "Sovereign Incident Response Triage Review", time: "Today, 11:00 AM - 12:00 PM", organizer: "Louis", status: "Busy" },
+  { id: "a2", subject: "n8n GoHighLevel CRM Automation Synapse Meeting", time: "Tomorrow, 2:00 PM - 3:00 PM", organizer: "Sarah", status: "Tentative" },
+  { id: "a3", subject: "Velociraptor Advanced Threat Hunting Workshop", time: "Thursday, 9:30 AM - 11:30 AM", organizer: "Felicia", status: "Busy" },
+  { id: "a4", subject: "Authelia SSO / LLDAP Permission Scope Mapping", time: "Thursday, 3:00 PM - 4:00 PM", organizer: "Vitto", status: "Free" }
+];
+
 const servicesData = [
   {
     category: "Operational Backbone",
@@ -298,12 +367,18 @@ interface ActiveMitigationConsoleProps {
   currentMode: string;
   onModeToggle: (newMode: "NORMAL" | "REFLEX") => void;
   onExecutePlaybook: (playbook: string, target: string) => Promise<boolean>;
+  incidentHistory: AuditRecord[];
+  isOffline: boolean;
+  allowQuarantine: boolean;
 }
 
 function ActiveMitigationConsole({
   currentMode,
   onModeToggle,
-  onExecutePlaybook
+  onExecutePlaybook,
+  incidentHistory,
+  isOffline,
+  allowQuarantine
 }: ActiveMitigationConsoleProps) {
   const [targetHost, setTargetHost] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
@@ -338,9 +413,12 @@ function ActiveMitigationConsole({
           <span className="hud-title-indicator blinking"></span>
           <h3>ACTIVE MITIGATION CONSOLE</h3>
         </div>
-        <span className={`hud-badge mode-status ${isHardened ? "hardened" : "standard"}`}>
-          {currentMode}
-        </span>
+        <div className="hud-badges">
+          {isOffline && <span className="hud-badge cached">CACHED / DESYNCED</span>}
+          <span className={`hud-badge mode-status ${isHardened ? "hardened" : "standard"}`}>
+            {currentMode}
+          </span>
+        </div>
       </div>
 
       <div className="mitigation-body">
@@ -366,30 +444,72 @@ function ActiveMitigationConsole({
         {/* Quarantine Form */}
         <div className="mitigation-control-section">
           <span className="mitigation-control-label">HOST QUARANTINE CONTROLS</span>
-          <form onSubmit={handleIsolateSubmit} className="mitigation-form">
-            <div className="mitigation-form-group">
-              <input
-                type="text"
-                className="mitigation-input"
-                placeholder="Target Client ID (e.g. C-101)..."
-                value={targetHost}
-                onChange={(e) => setTargetHost(e.target.value)}
-                disabled={isExecuting}
-              />
-              <button 
-                type="submit" 
-                className="mitigation-btn"
-                disabled={isExecuting || !targetHost.trim()}
-              >
-                {isExecuting ? "Executing..." : "Isolate"}
-              </button>
+          {!allowQuarantine ? (
+            <div className="permissions-restricted-warning font-space">
+              🔒 RESTRICTED OPERATION: ACCOUNT IS LACKING 'EXECUTE_PLAYBOOKS' DEPLOYMENT PRIVILEGES
             </div>
-            {status && (
-              <div className={`mitigation-status-msg ${status.type}`}>
-                {status.text}
+          ) : (
+            <form onSubmit={handleIsolateSubmit} className="mitigation-form">
+              <div className="mitigation-form-group">
+                <input
+                  type="text"
+                  className="mitigation-input"
+                  placeholder="Target Client ID (e.g. C-101)..."
+                  value={targetHost}
+                  onChange={(e) => setTargetHost(e.target.value)}
+                  disabled={isExecuting}
+                />
+                <button 
+                  type="submit" 
+                  className="mitigation-btn"
+                  disabled={isExecuting || !targetHost.trim()}
+                >
+                  {isExecuting ? "Executing..." : "Isolate"}
+                </button>
+              </div>
+              {status && (
+                <div className={`mitigation-status-msg ${status.type}`}>
+                  {status.text}
+                </div>
+              )}
+            </form>
+          )}
+        </div>
+
+        {/* BTRFS Historical Incidents Feed */}
+        <div className="mitigation-control-section">
+          <span className="mitigation-control-label">FORENSIC BTRFS INCIDENT TIMELINE</span>
+          <div className="timeline-container">
+            {incidentHistory.length === 0 ? (
+              <div className="timeline-empty">NO RECENT SYSTEM MITIGATIONS DETECTED</div>
+            ) : (
+              <div className="timeline-list">
+                {incidentHistory.slice(0, 10).map((incident, idx) => {
+                  const type = incident.type || "INFO";
+                  const signature = incident.signature || "UNRECOGNIZED_INTEGRITY_SIGNATURE";
+                  
+                  let badgeClass = "badge-info";
+                  if (type.includes("MITIGATION")) badgeClass = "badge-danger";
+                  if (type.includes("MODE")) badgeClass = "badge-warning";
+                  if (type.includes("PERMISSION")) badgeClass = "badge-permissions";
+                  
+                  return (
+                    <div key={idx} className="timeline-item">
+                      <div className="timeline-meta">
+                        <span className={`timeline-badge ${badgeClass}`}>{type}</span>
+                        <span className="timeline-time">{new Date(incident.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                      <p className="timeline-msg">{incident.message}</p>
+                      <div className="timeline-signature-box font-space" title="Cryptographically signed to BTRFS Forensic Lake using HMAC-SHA256">
+                        <span>SIG: {signature.substring(0, 24)}...</span>
+                        <span className="tooltip-indicator">ⓘ</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-          </form>
+          </div>
         </div>
       </div>
     </div>
@@ -399,7 +519,6 @@ function ActiveMitigationConsole({
 function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [vikiState, setVikiState] = useState<'idle' | 'thinking' | 'speaking' | 'alert'>('idle');
 
   // Real-time HUD states
@@ -407,6 +526,48 @@ function App() {
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [isHudVisible, setIsHudVisible] = useState(true);
   const [securityMode, setSecurityMode] = useState<string>("STANDARD");
+
+  // Multi-User Identity & Permissions State
+  const [currentUser, setCurrentUser] = useState<string>("Louis"); // "Louis", "Felicia", "Vitto", "Sarah"
+  const [permissions, setPermissions] = useState<PermissionsData | null>(null);
+  const [incidentHistory, setIncidentHistory] = useState<AuditRecord[]>([]);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+  
+  // Custom interactive mock widgets state
+  const [tickets, setTickets] = useState<GLPITicket[]>(initialTickets);
+  const [todo, setToDo] = useState<ToDoItem[]>(initialToDo);
+  const [appointments, setAppointments] = useState<CalendarAppointment[]>(initialAppointments);
+  const [newTodoText, setNewTodoText] = useState("");
+  const [newTodoDue, setNewTodoDue] = useState("In 24 hours");
+
+  const handleSolveTicket = (id: string) => {
+    const isAdminUser = activeUserRecord.role === "Cortex-Admins";
+    setTickets(prev => prev.filter(t => t.id !== id));
+    
+    setIncidentHistory(prev => [
+      {
+        timestamp: new Date().toISOString(),
+        type: isAdminUser ? "CLOSE_TICKET" : "SOLVED_TICKET",
+        message: `Ticket [${id}] was marked as ${isAdminUser ? "CLOSED" : "RESOLVED"} by ${currentUser} (${activeUserRecord.role}).`,
+        signature: "32ab7bcfda81b0aef5912c7490a0f192b1aef591283c7490acbe01237bead1e8"
+      },
+      ...prev
+    ]);
+  };
+
+  const handleCancelAppointment = (id: string) => {
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: "Free" as const, subject: "SIMULATED CALENDAR BLOCK (RELEASED)" } : a));
+    
+    setIncidentHistory(prev => [
+      {
+        timestamp: new Date().toISOString(),
+        type: "CALENDAR_SYNC",
+        message: `Microsoft Graph API cancelled meeting slot [${id}] for host {currentUser}.`,
+        signature: "790acbe01237cbead1e848a6c827361849dbcf1b28d610817364b192837bc9d8"
+      },
+      ...prev
+    ]);
+  };
 
   // Track acknowledged alert IDs in state
   const [, setAcknowledgedAlerts] = useState<string[]>(() => {
@@ -418,14 +579,127 @@ function App() {
     }
   });
 
-  useEffect(() => {
-    // Check for admin mode in URL
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("mode") === "admin") {
-      setIsAdmin(true);
-    }
+  // Load permissions and incident history
+  const fetchPermissions = () => {
+    fetch("/api/permissions")
+      .then(res => res.json())
+      .then((data: PermissionsData) => {
+        setPermissions(data);
+      })
+      .catch(() => {
+        // Fallback default permissions
+        setPermissions({
+          users: [
+            {
+              username: "Louis",
+              role: "Cortex-Admins",
+              viki_assigned: true,
+              permissions: {
+                view_telemetry: true,
+                execute_playbooks: true,
+                run_qc_scans: true,
+                edit_appointments: true,
+                edit_user_permissions: true
+              }
+            },
+            {
+              username: "Felicia",
+              role: "Cortex-Admins",
+              viki_assigned: true,
+              permissions: {
+                view_telemetry: true,
+                execute_playbooks: true,
+                run_qc_scans: true,
+                edit_appointments: true,
+                edit_user_permissions: true
+              }
+            },
+            {
+              username: "Vitto",
+              role: "Cortex-Technicians",
+              viki_assigned: false,
+              permissions: {
+                view_telemetry: true,
+                execute_playbooks: false,
+                run_qc_scans: false,
+                edit_appointments: true,
+                edit_user_permissions: false
+              }
+            },
+            {
+              username: "Sarah",
+              role: "Cortex-Designers",
+              viki_assigned: false,
+              permissions: {
+                view_telemetry: true,
+                execute_playbooks: false,
+                run_qc_scans: true,
+                edit_appointments: false,
+                edit_user_permissions: false
+              }
+            }
+          ]
+        });
+      });
+  };
 
+  const fetchIncidentHistory = () => {
+    if (isOffline) return;
+    
+    fetch("/api/mitigations/history")
+      .then(res => res.json())
+      .then((data: AuditRecord[]) => {
+        setIncidentHistory(data);
+      })
+      .catch(() => {
+        // Mock timeline items if desynced/failed
+        setIncidentHistory([
+          {
+            timestamp: new Date(Date.now() - 600000).toISOString(),
+            type: "MANUAL_MITIGATION",
+            message: "Manual Quarantine playbook 'isolate_host' executed for target: C-101.",
+            signature: "8a6c827361849dbcf1b28d610817364b192837bc9d8f8a12e847c2937bebcde1"
+          },
+          {
+            timestamp: new Date(Date.now() - 1500000).toISOString(),
+            type: "AUTONOMOUS_MITIGATION",
+            message: "Autonomous Quarantine initiated for target: C-101 due to EDR process alert.",
+            signature: "52abf8471c0879de7bcfda81b0f192b1aef591283c7490acbe01237cbead1e84"
+          },
+          {
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+            type: "MODE_CHANGE",
+            message: "Security posture transitioned to HARDENED (REFLEX mode).",
+            signature: "abf652cfdae102fbe8e7cf848a31e0c8b91a72bcbe4987cdbaef1092837be74a"
+          },
+          {
+            timestamp: new Date(Date.now() - 5400000).toISOString(),
+            type: "PERMISSION_CHANGE",
+            message: "VIKI AI Assignment for user Vitto updated from True to False.",
+            signature: "df9c7abf23ef0cda81b283fbe9d784a0d9128bcbe79f109acde019283fbebc71"
+          }
+        ]);
+      });
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+    fetchIncidentHistory();
+    
+    const interval = setInterval(fetchIncidentHistory, 10000);
+    return () => clearInterval(interval);
+  }, [isOffline]);
+
+  useEffect(() => {
     const fetchStatus = () => {
+      if (isOffline) {
+        // Simulated offline statuses
+        setStatus(servicesData.flatMap(c => c.items.map(i => ({ 
+          name: i.name, 
+          status: i.name === "NetLock RMM" || i.name === "GLPI" ? "offline" as const : "online" as const
+        }))));
+        return;
+      }
       fetch("/status.json")
         .then(res => res.json())
         .then((data: StatusData) => setStatus(data.services))
@@ -435,10 +709,10 @@ function App() {
     };
 
     const fetchAlerts = () => {
+      if (isOffline) return;
       fetch("/api/alerts")
         .then(res => res.json())
         .then((data: Alert[]) => {
-          // Get fresh acknowledged list from localStorage
           const acked = (() => {
             try {
               const saved = localStorage.getItem("cortex_acknowledged_alerts");
@@ -464,14 +738,19 @@ function App() {
     const alertInterval = setInterval(fetchAlerts, 10000);
 
     // --- TELEMETRY WEBSOCKET INTEGRATION ---
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsHost = window.location.host;
-    const wsUrl = `${protocol}//${wsHost}/api/ws/telemetry`;
-
     let ws: WebSocket;
     let reconnectTimeout: ReturnType<typeof setTimeout>;
 
     const connectWS = () => {
+      if (isOffline) {
+        setWsStatus('disconnected');
+        return;
+      }
+      
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsHost = window.location.host;
+      const wsUrl = `${protocol}//${wsHost}/api/ws/telemetry`;
+
       setWsStatus('connecting');
       ws = new WebSocket(wsUrl);
 
@@ -491,10 +770,14 @@ function App() {
             data.id = String(Date.now());
           }
 
-          // Append event to state log (keep last 50)
+          // Ingest mode changes or permission audit loops
+          if (data.type === "PERMISSION_CHANGE" || data.type === "MODE_CHANGE" || data.type === "MITIGATION") {
+            fetchIncidentHistory();
+            fetchPermissions();
+          }
+
           setTelemetryEvents(prev => [data, ...prev].slice(0, 50));
 
-          // Make Viki react to incoming live telemetry event!
           const severity = (data.severity || data.type || "INFO").toUpperCase();
           if (severity === "CRITICAL") {
             setVikiState('alert');
@@ -504,7 +787,6 @@ function App() {
             setTimeout(() => setVikiState('idle'), 3000);
           }
 
-          // Elevate CRITICAL telemetry to active alerts if not already acknowledged
           if (severity === "CRITICAL") {
             const message = data.message || (data.data && data.data.CommandLine) || "CRITICAL EVENT DETECTED";
             const source = data.source || "Vector";
@@ -512,7 +794,6 @@ function App() {
             const rawId = data.id || `${source}_${timestamp}_${message}`;
             const alertId = String(rawId);
             
-            // Get fresh acknowledged list
             const acked = (() => {
               try {
                 const saved = localStorage.getItem("cortex_acknowledged_alerts");
@@ -537,7 +818,6 @@ function App() {
             }
           }
 
-          // Dynamically sync security mode
           if (data.type === "MODE_CHANGE" || data.mode) {
             setSecurityMode(data.security_status || (data.mode === "REFLEX" ? "HARDENED" : "STANDARD"));
           }
@@ -566,7 +846,7 @@ function App() {
       if (ws) ws.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, []);
+  }, [isOffline]);
 
   const clearAlerts = () => {
     const idsToAck = alerts.map(a => a.id ? String(a.id) : `${a.source}_${a.timestamp}_${a.message}`);
@@ -589,6 +869,21 @@ function App() {
   };
 
   const handleModeToggle = async (newMode: "NORMAL" | "REFLEX") => {
+    if (isOffline) {
+      // Local simulated mode change
+      setSecurityMode(newMode === "REFLEX" ? "HARDENED" : "STANDARD");
+      setIncidentHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          type: "MODE_CHANGE",
+          message: `[MOCK CACHED] Security posture transitioned to ${newMode === "REFLEX" ? "HARDENED" : "STANDARD"}.`,
+          signature: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ...prev
+      ]);
+      return;
+    }
+
     try {
       const response = await fetch('/api/mode', {
         method: 'POST',
@@ -596,15 +891,28 @@ function App() {
         body: JSON.stringify({ mode: newMode })
       });
       if (!response.ok) throw new Error('Failed to toggle security state');
-      // The server will broadcast the new mode via WS, but let's update locally for instant responsiveness
       setSecurityMode(newMode === "REFLEX" ? "HARDENED" : "STANDARD");
-      console.log(`[+] Security mode transitioned to ${newMode}`);
+      setTimeout(fetchIncidentHistory, 500);
     } catch (e) {
       console.error("[-] Error toggling security state:", e);
     }
   };
 
   const handleExecutePlaybook = async (playbook: string, target: string): Promise<boolean> => {
+    if (isOffline) {
+      // Local simulated playbooks
+      setIncidentHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          type: "MANUAL_MITIGATION",
+          message: `[MOCK CACHED] Manual playbook '${playbook}' executed on target: ${target}.`,
+          signature: "7bcde928bcbe710daef10cda81b0aefcde928bcfe021bc7df8a9a0fbe29acbe1"
+        },
+        ...prev
+      ]);
+      return true;
+    }
+
     try {
       const response = await fetch('/api/playbook', {
         method: 'POST',
@@ -612,12 +920,101 @@ function App() {
         body: JSON.stringify({ playbook, target })
       });
       if (!response.ok) throw new Error('Playbook execution failed');
-      console.log(`[+] Playbook ${playbook} executed successfully on ${target}`);
+      setTimeout(fetchIncidentHistory, 500);
       return true;
     } catch (e) {
       console.error("[-] Playbook execution failure:", e);
       return false;
     }
+  };
+
+  // Granular Permissions Switch Update on Backend
+  const handlePermissionToggle = async (username: string, permission: string, currentValue: boolean) => {
+    const newValue = !currentValue;
+    
+    // Optimistic state update
+    setPermissions((prev) => {
+      if (!prev) return prev;
+      return {
+        users: prev.users.map((u) => {
+          if (u.username.toLowerCase() === username.toLowerCase()) {
+            if (permission === "viki_assigned") {
+              return { ...u, viki_assigned: newValue };
+            } else {
+              return {
+                ...u,
+                permissions: { ...u.permissions, [permission]: newValue }
+              };
+            }
+          }
+          return u;
+        })
+      };
+    });
+
+    if (isOffline) {
+      setIncidentHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          type: "PERMISSION_CHANGE",
+          message: `[MOCK CACHED] Permission '${permission}' for user ${username} updated to ${newValue}.`,
+          signature: "2837bcde9df8a12e8c78bfbe9d784a0d9128bcbe9fd7819acde01237bebcde74"
+        },
+        ...prev
+      ]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/permissions/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, permission, value: newValue })
+      });
+      if (!res.ok) throw new Error("Failed to toggle permission");
+      const data = await res.json();
+      setPermissions(data.permissions);
+      setTimeout(fetchIncidentHistory, 500);
+    } catch (err) {
+      console.error("[-] Error toggling permission:", err);
+      fetchPermissions(); // rollback on error
+    }
+  };
+
+  // Get active settings for the simulated user
+  const activeUserRecord = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
+    username: currentUser,
+    role: currentUser === "Louis" || currentUser === "Felicia" ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
+    viki_assigned: currentUser === "Louis" || currentUser === "Felicia",
+    permissions: {
+      view_telemetry: true,
+      execute_playbooks: currentUser === "Louis" || currentUser === "Felicia",
+      run_qc_scans: currentUser !== "Vitto",
+      edit_appointments: currentUser !== "Sarah",
+      edit_user_permissions: currentUser === "Louis" || currentUser === "Felicia"
+    }
+  };
+
+  // Interactive to-do handlers
+  const handleToggleTodo = (id: string) => {
+    setToDo(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const handleAddTodo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTodoText.trim()) return;
+    const newItem: ToDoItem = {
+      id: String(Date.now()),
+      task: newTodoText.trim(),
+      due: newTodoDue,
+      completed: false
+    };
+    setToDo(prev => [...prev, newItem]);
+    setNewTodoText("");
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    setToDo(prev => prev.filter(t => t.id !== id));
   };
 
   return (
@@ -629,13 +1026,296 @@ function App() {
         <p className="subtitle">The Nervous System | Operations Command</p>
       </header>
 
+      {/* Premium Integrated Selector Bar */}
+      <section className="role-simulation-bar glassmorphic">
+        <div className="simulation-title-group">
+          <span className="sim-pulse"></span>
+          <span className="font-space font-xs text-dim text-spaced">IDENTITY CONTROLLER FRAME</span>
+        </div>
+        
+        <div className="simulation-actions">
+          {/* Offline/Disconnected Toggle */}
+          <div className="offline-simulator-toggle">
+            <span className="font-space font-xs text-dim" style={{ marginRight: "0.5rem" }}>OFFLINE RE-ROUTE SIMULATION:</span>
+            <button 
+              className={`sim-offline-btn ${isOffline ? "active" : ""}`}
+              onClick={() => setIsOffline(!isOffline)}
+              title="Toggle Graph API / GLPI offline network drop simulation"
+            >
+              {isOffline ? "DESYNC ENABLED (OFFLINE)" : "LINK RESTORED (ONLINE)"}
+            </button>
+          </div>
+
+          <div className="user-select-group">
+            <span className="font-space font-xs text-dim" style={{ marginRight: "0.5rem" }}>SIMULATE DECODED ROLE:</span>
+            <div className="user-btns">
+              {["Louis", "Felicia", "Vitto", "Sarah"].map(name => (
+                <button
+                  key={name}
+                  className={`sim-user-btn ${currentUser === name ? "active" : ""}`}
+                  onClick={() => setCurrentUser(name)}
+                >
+                  {name} ({name === "Louis" || name === "Felicia" ? "Admin" : name === "Vitto" ? "Tech" : "Designer"})
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="main-layout">
         <main className="content">
-          {servicesData.map((section) => (
-            <section key={section.category} className="section">
-              <h2 className="section-title">{section.category}</h2>
-              <div className="grid">
-                {section.items.map((item) => {
+          
+          {/* Dynamic Unified Multi-User Widget Grid */}
+          <section className="section" style={{ marginBottom: "1.5rem" }}>
+            <h2 className="section-title">ROLE-BASED COGNITIVE WIDGETS ({activeUserRecord.role.toUpperCase()})</h2>
+            <div className="widgets-grid-container">
+              
+              {/* Widget A: Open Tickets */}
+              <div className="widget-card glassmorphic">
+                <div className="widget-header">
+                  <div className="widget-title">
+                    <span>🎫</span>
+                    <h4>ASSIGNED OPEN TICKETS</h4>
+                  </div>
+                  {isOffline && <span className="hud-badge cached">CACHED</span>}
+                </div>
+                <div className="widget-body scrollable">
+                  <table className="widget-table font-space">
+                    <thead>
+                      <tr>
+                        <th>TICKET</th>
+                        <th>SEVERITY</th>
+                        <th>SUBMITTER</th>
+                        <th>ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tickets.map(t => (
+                        <tr key={t.id} className={`ticket-row ${t.severity.toLowerCase()}`}>
+                          <td>
+                            <div className="ticket-title-cell">
+                              <span className="ticket-id">[{t.id}]</span>
+                              <span className="ticket-title-text">{t.title}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`ticket-sev-badge ${t.severity.toLowerCase()}`}>
+                              {t.severity}
+                            </span>
+                          </td>
+                          <td className="text-dim">{t.submitter}</td>
+                          <td>
+                            <button 
+                              className="solve-ticket-btn font-space"
+                              onClick={() => handleSolveTicket(t.id)}
+                              title={activeUserRecord.role === "Cortex-Admins" ? "Close helpdesk ticket permanently" : "Resolve helpdesk ticket"}
+                            >
+                              {activeUserRecord.role === "Cortex-Admins" ? "CLOSE" : "SOLVE"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Widget B: 3-Day To-Do Tracker */}
+              <div className="widget-card glassmorphic">
+                <div className="widget-header">
+                  <div className="widget-title">
+                    <span>🗓️</span>
+                    <h4>3-DAY TO-DO LIST (72H)</h4>
+                  </div>
+                </div>
+                <div className="widget-body">
+                  <div className="todo-list-wrapper scrollable">
+                    {todo.length === 0 ? (
+                      <div className="todo-empty">All objectives achieved. Grid stabilized.</div>
+                    ) : (
+                      todo.map(t => (
+                        <div key={t.id} className={`todo-item-row ${t.completed ? 'completed' : ''}`}>
+                          <div className="todo-check-group" onClick={() => handleToggleTodo(t.id)}>
+                            <div className={`todo-checkbox ${t.completed ? 'checked' : ''}`}>
+                              {t.completed && "✔"}
+                            </div>
+                            <div className="todo-text-group">
+                              <span className="todo-task-text">{t.task}</span>
+                              <span className="todo-due-badge">{t.due}</span>
+                            </div>
+                          </div>
+                          <button className="todo-delete-btn" onClick={() => handleDeleteTodo(t.id)}>✖</button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <form onSubmit={handleAddTodo} className="todo-inline-form">
+                    <input 
+                      type="text" 
+                      placeholder="Add urgent objective..."
+                      className="todo-input"
+                      value={newTodoText}
+                      onChange={(e) => setNewTodoText(e.target.value)}
+                    />
+                    <select 
+                      className="todo-select"
+                      value={newTodoDue}
+                      onChange={(e) => setNewTodoDue(e.target.value)}
+                    >
+                      <option value="In 4 hours">In 4h</option>
+                      <option value="In 24 hours">In 24h</option>
+                      <option value="In 48 hours">In 48h</option>
+                      <option value="In 72 hours">In 72h</option>
+                    </select>
+                    <button type="submit" className="todo-add-btn">+</button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Widget C: 3-Day Outlook Appointments */}
+              <div className="widget-card glassmorphic">
+                <div className="widget-header">
+                  <div className="widget-title">
+                    <span>📅</span>
+                    <h4>3-DAY OUTLOOK CALENDAR</h4>
+                  </div>
+                  {isOffline && <span className="hud-badge conflict-warning">DESYNCED</span>}
+                </div>
+                <div className="widget-body scrollable">
+                  <div className="appointments-list">
+                    {appointments.map(a => (
+                      <div key={a.id} className={`appointment-card ${a.status.toLowerCase()}`}>
+                        <div className="appt-badge-status-group">
+                          <span className={`appt-status-indicator ${a.status.toLowerCase()}`}></span>
+                          <span className="appt-subject font-space">{a.subject}</span>
+                          {a.status !== "Free" && activeUserRecord.permissions.edit_appointments && (
+                            <button 
+                              className="appt-cancel-btn font-space" 
+                              onClick={() => handleCancelAppointment(a.id)}
+                              title="Cancel appointment slot"
+                            >
+                              ✖
+                            </button>
+                          )}
+                        </div>
+                        <div className="appt-meta font-space text-dim font-xs">
+                          <div>TIME: {a.time}</div>
+                          <div>HOST: {a.organizer} | ROLE: <span className="status-label">{a.status.toUpperCase()}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          {/* Granular Permissions & Security/Access Matrix - Admins Only */}
+          {activeUserRecord.permissions.edit_user_permissions && permissions && (
+            <section className="section" style={{ marginBottom: "1.5rem" }}>
+              <h2 className="section-title">🔒 SECURITY & ACCESS MATRIX PANEL (ADMINISTRATORS ONLY)</h2>
+              <div className="security-matrix-card glassmorphic">
+                <div className="matrix-info-alert font-space font-xs">
+                  ⚠️ SYSTEM CONTROL ENGINE: MODIFICATIONS WILL BE IMMEDIATELY SIGNED AND LOGGED TO THE FORENSIC BTRFS DATA LAKE UNDER /mnt/data_lake/audit/
+                </div>
+                <div className="matrix-table-wrapper">
+                  <table className="matrix-table font-space">
+                    <thead>
+                      <tr>
+                        <th>USER</th>
+                        <th>ORGANIZATIONAL ROLE</th>
+                        <th>ASSIGN VIKI</th>
+                        <th>VIEW TELEMETRY</th>
+                        <th>EXECUTE PLAYBOOKS</th>
+                        <th>RUN QC SCANS</th>
+                        <th>EDIT CALENDAR</th>
+                        <th>EDIT PERMISSIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {permissions.users.map(u => (
+                        <tr key={u.username}>
+                          <td className="user-cell">{u.username}</td>
+                          <td>
+                            <span className={`role-tag ${u.role.toLowerCase()}`}>{u.role}</span>
+                          </td>
+                          <td>
+                            <label className="toggle-switch">
+                              <input 
+                                type="checkbox" 
+                                checked={u.viki_assigned}
+                                onChange={() => handlePermissionToggle(u.username, "viki_assigned", u.viki_assigned)}
+                              />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="toggle-switch">
+                              <input 
+                                type="checkbox" 
+                                checked={u.permissions.view_telemetry}
+                                onChange={() => handlePermissionToggle(u.username, "view_telemetry", u.permissions.view_telemetry)}
+                              />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="toggle-switch">
+                              <input 
+                                type="checkbox" 
+                                checked={u.permissions.execute_playbooks}
+                                onChange={() => handlePermissionToggle(u.username, "execute_playbooks", u.permissions.execute_playbooks)}
+                              />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="toggle-switch">
+                              <input 
+                                type="checkbox" 
+                                checked={u.permissions.run_qc_scans}
+                                onChange={() => handlePermissionToggle(u.username, "run_qc_scans", u.permissions.run_qc_scans)}
+                              />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="toggle-switch">
+                              <input 
+                                type="checkbox" 
+                                checked={u.permissions.edit_appointments}
+                                onChange={() => handlePermissionToggle(u.username, "edit_appointments", u.permissions.edit_appointments)}
+                              />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="toggle-switch">
+                              <input 
+                                type="checkbox" 
+                                checked={u.permissions.edit_user_permissions}
+                                onChange={() => handlePermissionToggle(u.username, "edit_user_permissions", u.permissions.edit_user_permissions)}
+                              />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Standard services listing links */}
+          <section className="section">
+            <h2 className="section-title">CORE NETWORK INGRESS GATEWAYS</h2>
+            <div className="grid">
+              {servicesData.map((section) => 
+                section.items.map((item) => {
                   const isOnline = status.find(s => s.name === item.name)?.status !== "offline";
                   return (
                     <a 
@@ -654,33 +1334,39 @@ function App() {
                       </div>
                     </a>
                   );
-                })}
-              </div>
-            </section>
-          ))}
-
-          {/* Upgraded reactive status monitor and aligned HUD layout container */}
-          <section className="section topology-section-main" style={{ marginTop: "0.5rem" }}>
-            <h2 className="section-title">Global Status Monitor</h2>
-            <div className="status-monitor-grid">
-              <SystemDiagnosticsHUD status={status} />
-              <TelemetryHUD 
-                events={telemetryEvents}
-                wsStatus={wsStatus}
-                isVisible={isHudVisible}
-                onToggle={() => setIsHudVisible(!isHudVisible)}
-                mode={securityMode}
-              />
-              <ActiveMitigationConsole 
-                currentMode={securityMode}
-                onModeToggle={handleModeToggle}
-                onExecutePlaybook={handleExecutePlaybook}
-              />
+                })
+              )}
             </div>
           </section>
+
+          {/* Status HUD grid */}
+          {activeUserRecord.permissions.view_telemetry && (
+            <section className="section topology-section-main" style={{ marginTop: "1.5rem" }}>
+              <h2 className="section-title">Global Status Monitor</h2>
+              <div className="status-monitor-grid">
+                <SystemDiagnosticsHUD status={status} />
+                <TelemetryHUD 
+                  events={telemetryEvents}
+                  wsStatus={wsStatus}
+                  isVisible={isHudVisible}
+                  onToggle={() => setIsHudVisible(!isHudVisible)}
+                  mode={securityMode}
+                />
+                <ActiveMitigationConsole 
+                  currentMode={securityMode}
+                  onModeToggle={handleModeToggle}
+                  onExecutePlaybook={handleExecutePlaybook}
+                  incidentHistory={incidentHistory}
+                  isOffline={isOffline}
+                  allowQuarantine={activeUserRecord.permissions.execute_playbooks}
+                />
+              </div>
+            </section>
+          )}
         </main>
 
-        {isAdmin && (
+        {/* Floating Holographic 3D Head Sidebar - Completely Stripped if Unassigned */}
+        {activeUserRecord.viki_assigned && activeUserRecord.role === "Cortex-Admins" && (
           <aside className="monitor-sidebar">
             <div 
               onClick={() => window.open("/?mode=viki-chat", "_blank")}
