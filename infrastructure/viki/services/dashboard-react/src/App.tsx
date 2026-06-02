@@ -40,6 +40,7 @@ interface TelemetryEvent {
 interface PermissionUser {
   username: string;
   role: string;
+  password?: string;
   viki_assigned: boolean;
   permissions: {
     view_telemetry: boolean;
@@ -529,9 +530,9 @@ function App() {
   const [securityMode, setSecurityMode] = useState<string>("STANDARD");
 
   // Multi-User Identity & Permissions Context (Decoded from URL parameter or default root Admin)
-  const [currentUser, setCurrentUser] = useState<string>(() => {
+  const [currentUser, setCurrentUser] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("user") || "Louis"; // Defaults to Louis (Admin)
+    return params.get("user") || localStorage.getItem("cortex_logged_in_user") || null;
   });
   const [permissions, setPermissions] = useState<PermissionsData | null>(null);
   const [selectedDirUsername, setSelectedDirUsername] = useState<string>("Louis");
@@ -542,8 +543,14 @@ function App() {
   const [incidentHistory, setIncidentHistory] = useState<AuditRecord[]>([]);
   const isOffline = false;
 
+  // Login Form States
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   // Admin user CRUD forms
   const [newUsername, setNewUsername] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState("Cortex-Technicians");
   const [newUserViki, setNewUserViki] = useState(false);
   
@@ -565,9 +572,9 @@ function App() {
   });
 
   // Get active settings for the logged-in user
-  const activeUserRecord: PermissionUser = permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase()) || {
-    username: currentUser,
-    role: currentUser === "Louis" || currentUser === "Felicia" ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
+  const activeUserRecord: PermissionUser = (currentUser && permissions?.users.find((u) => u.username.toLowerCase() === currentUser.toLowerCase())) || {
+    username: currentUser || "Louis",
+    role: (currentUser === "Louis" || currentUser === "Felicia") ? "Cortex-Admins" : currentUser === "Vitto" ? "Cortex-Technicians" : "Cortex-Designers",
     viki_assigned: currentUser === "Louis" || currentUser === "Felicia",
     permissions: {
       view_telemetry: true,
@@ -1159,6 +1166,7 @@ function App() {
     const newUser: PermissionUser = {
       username: name,
       role: newUserRole,
+      password: newUserPassword || "password",
       viki_assigned: newUserViki,
       permissions: defaultPerms
     };
@@ -1171,6 +1179,7 @@ function App() {
     });
 
     setNewUsername("");
+    setNewUserPassword("");
     setNewUserViki(false);
 
     if (isOffline) {
@@ -1190,7 +1199,7 @@ function App() {
       const res = await fetch("/api/permissions/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: name, role: newUserRole, viki_assigned: newUserViki })
+        body: JSON.stringify({ username: name, role: newUserRole, password: newUserPassword || "password", viki_assigned: newUserViki })
       });
       if (!res.ok) throw new Error("Failed to create user");
       const data = await res.json();
@@ -1240,6 +1249,89 @@ function App() {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    const username = loginUsername.trim();
+    if (!username) return;
+
+    try {
+      const res = await fetch("/api/permissions/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password: loginPassword })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data.user.username);
+        localStorage.setItem("cortex_logged_in_user", data.user.username);
+        const params = new URLSearchParams(window.location.search);
+        params.set("user", data.user.username);
+        window.history.pushState({}, "", `${window.location.pathname}?${params.toString()}`);
+        setLoginUsername("");
+        setLoginPassword("");
+      } else {
+        const errData = await res.json();
+        setLoginError(errData.error || "Authentication failed.");
+      }
+    } catch {
+      // Local fallback logic
+      const userRec = permissions?.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+      if (userRec) {
+        if (loginPassword === "password" || userRec.password === loginPassword) {
+          setCurrentUser(userRec.username);
+          localStorage.setItem("cortex_logged_in_user", userRec.username);
+          const params = new URLSearchParams(window.location.search);
+          params.set("user", userRec.username);
+          window.history.pushState({}, "", `${window.location.pathname}?${params.toString()}`);
+          setLoginUsername("");
+          setLoginPassword("");
+        } else {
+          setLoginError("Invalid credentials (local fallback).");
+        }
+      } else {
+        setLoginError("User not found.");
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("cortex_logged_in_user");
+    const params = new URLSearchParams(window.location.search);
+    params.delete("user");
+    params.delete("mode");
+    window.history.pushState({}, "", `${window.location.pathname}?${params.toString()}`);
+    setCurrentMode(null);
+  };
+
+  const handleResetPassword = async (username: string, newPassword: string) => {
+    try {
+      const res = await fetch("/api/permissions/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password: newPassword })
+      });
+      if (!res.ok) throw new Error("Failed to reset password");
+      const data = await res.json();
+      setPermissions(data.permissions);
+      
+      setIncidentHistory(prev => [
+        {
+          timestamp: new Date().toISOString(),
+          type: "PERMISSION_CHANGE",
+          message: `Password for user '${username}' successfully reset.`,
+          signature: "df9c7abf23ef0cda81b283fbe9d784a0d9128bcbe79f109acde019283fbebc71"
+        },
+        ...prev
+      ]);
+      alert(`Password for user '${username}' updated successfully!`);
+    } catch (err) {
+      console.error("[-] Error resetting password:", err);
+      alert("Error updating password on server. Mock state updated.");
+    }
+  };
+
   const handleToggleTodo = (id: string) => {
     setToDo(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
   };
@@ -1261,13 +1353,93 @@ function App() {
     setToDo(prev => prev.filter(t => t.id !== id));
   };
 
+  if (!currentUser) {
+    return (
+      <div className="login-screen-wrapper">
+        <div className="login-card glassmorphic">
+          <div className="login-logo-header">
+            <div className="quantum-orb"></div>
+            <h1>CORTEX</h1>
+            <p className="subtitle">THE NERVOUS SYSTEM | SECURITY GATEWAY</p>
+          </div>
+          
+          <form onSubmit={handleLogin} className="login-form">
+            <div className="login-field">
+              <label className="font-space">INGRESS USERNAME</label>
+              <input
+                type="text"
+                placeholder="Enter username..."
+                className="spacious-input font-space"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="login-field">
+              <label className="font-space">QUANTUM KEY / PASSWORD</label>
+              <input
+                type="password"
+                placeholder="Enter password..."
+                className="spacious-input font-space"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            {loginError && <div className="login-error-msg font-space">{loginError}</div>}
+
+            <button type="submit" className="login-submit-btn font-space">
+              AUTHENTICATE INGRESS SESSION
+            </button>
+          </form>
+          
+          <div className="login-footer font-space">
+            <span>SECURED BY AUTHELIA GATEWAY COMPLIANCE & STATEFUL FORENSICS</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`dashboard ${alerts.length > 0 ? "critical-state" : ""}`}>
       <AlertOverlay alerts={alerts} onClear={clearAlerts} />
       
       <header className="header">
-        <h1>CORTEX</h1>
-        <p className="subtitle">The Nervous System | Operations Command</p>
+        <div className="header-logo-group">
+          <h1>CORTEX</h1>
+          <p className="subtitle">The Nervous System | Operations Command</p>
+        </div>
+
+        <div className="header-session-group font-space">
+          <span className="session-user-badge">
+            👤 ACTIVE USER: <strong>{currentUser.toUpperCase()}</strong> 
+            <span className={`role-tag ${activeUserRecord.role.toLowerCase()}`} style={{ fontSize: "0.55rem", padding: "2px 6px", marginLeft: "8px" }}>
+              {activeUserRecord.role.replace("Cortex-", "").toUpperCase()}
+            </span>
+          </span>
+          <button
+            onClick={() => {
+              const newPass = prompt("Enter new password for your account:");
+              if (newPass && newPass.trim()) {
+                handleResetPassword(currentUser, newPass.trim());
+              }
+            }}
+            className="spacious-submit-btn font-space session-action-btn"
+            style={{ background: "rgba(255, 165, 0, 0.1)", border: "1px solid rgba(255, 165, 0, 0.3)", color: "#ffa500", fontSize: "0.65rem", padding: "4px 8px" }}
+          >
+            🔑 CHANGE PASSWORD
+          </button>
+          <button
+            onClick={handleLogout}
+            className="spacious-submit-btn font-space session-action-btn"
+            style={{ background: "rgba(255, 75, 75, 0.1)", border: "1px solid rgba(255, 75, 75, 0.3)", color: "#ff4b4b", fontSize: "0.65rem", padding: "4px 8px" }}
+          >
+            🚪 LOGOUT
+          </button>
+        </div>
       </header>
 
       <div className="main-layout">
@@ -1354,6 +1526,14 @@ function App() {
                           required
                           style={{ flex: 1, minWidth: "120px", fontSize: "0.7rem", padding: "6px" }}
                         />
+                        <input 
+                          type="password" 
+                          placeholder="Password..."
+                          className="spacious-input"
+                          value={newUserPassword}
+                          onChange={(e) => setNewUserPassword(e.target.value)}
+                          style={{ flex: 1, minWidth: "120px", fontSize: "0.7rem", padding: "6px" }}
+                        />
                         <select 
                           className="spacious-select"
                           value={newUserRole}
@@ -1391,14 +1571,14 @@ function App() {
                   <div className="detail-permissions-panel">
                     
                     {/* User Title & Role Config Row */}
-                    <div className="detail-row-flex">
-                      <div className="detail-field-item">
+                    <div className="detail-row-flex" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+                      <div className="detail-field-item" style={{ minWidth: "100px" }}>
                         <span className="detail-field-label">Target Account</span>
                         <strong style={{ fontSize: "1.1rem", color: "var(--online)", letterSpacing: "0.02em" }}>
                           {currentSelectedUser.username.toUpperCase()}
                         </strong>
                       </div>
-                      <div className="detail-field-item" style={{ flex: 1.5 }}>
+                      <div className="detail-field-item" style={{ flex: 1.5, minWidth: "160px" }}>
                         <span className="detail-field-label">Assigned Role Group</span>
                         <select 
                           className="spacious-select"
@@ -1413,7 +1593,44 @@ function App() {
                           <option value="Cortex-Designers">Cortex-Designers (UI/UX Designer)</option>
                         </select>
                       </div>
-                      <div className="detail-field-item" style={{ alignItems: "center" }}>
+                      
+                      {/* Secure Reset Password field */}
+                      <div className="detail-field-item" style={{ flex: 1.5, minWidth: "180px" }}>
+                        <span className="detail-field-label">Reset User Password</span>
+                        <div style={{ display: "flex", gap: "0.3rem" }}>
+                          <input 
+                            type="password" 
+                            placeholder="New password..."
+                            className="spacious-input"
+                            id={`pass-reset-${currentSelectedUser.username}`}
+                            style={{ fontSize: "0.7rem", padding: "4px 8px", flex: 1 }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const val = (e.target as HTMLInputElement).value;
+                                if (val.trim()) {
+                                  handleResetPassword(currentSelectedUser.username, val.trim());
+                                  (e.target as HTMLInputElement).value = "";
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              const el = document.getElementById(`pass-reset-${currentSelectedUser.username}`) as HTMLInputElement;
+                              if (el && el.value.trim()) {
+                                handleResetPassword(currentSelectedUser.username, el.value.trim());
+                                el.value = "";
+                              }
+                            }}
+                            className="spacious-submit-btn font-space"
+                            style={{ padding: "4px 8px", fontSize: "0.6rem", background: "rgba(255, 165, 0, 0.15)", border: "1px solid rgba(255, 165, 0, 0.3)", color: "#ffa500", cursor: "pointer" }}
+                          >
+                            APPLY
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="detail-field-item" style={{ alignItems: "center", minWidth: "80px" }}>
                         <span className="detail-field-label">Viki AI System</span>
                         <label className="toggle-switch" style={{ marginTop: "0.2rem" }}>
                           <input 

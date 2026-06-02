@@ -162,7 +162,7 @@ def get_permissions() -> dict:
             ]
         }
     
-    # Ensure every user has 'apps' and all defaults exist
+    # Ensure every user has 'apps', 'password' and all defaults exist
     modified = False
     for u in perms.get("users", []):
         if "apps" not in u:
@@ -173,6 +173,9 @@ def get_permissions() -> dict:
                 if app_name not in u["apps"]:
                     u["apps"][app_name] = app_def
                     modified = True
+        if "password" not in u:
+            u["password"] = "password"
+            modified = True
                     
     if modified:
         save_permissions(perms)
@@ -514,6 +517,7 @@ def api_create_user() -> object:
     data = request.get_json()
     username = data.get("username")
     role = data.get("role")
+    password = data.get("password", "password")
     viki_assigned = data.get("viki_assigned", False)
     
     if not username or not role:
@@ -569,6 +573,7 @@ def api_create_user() -> object:
     new_user = {
         "username": username,
         "role": role,
+        "password": password,
         "viki_assigned": viki_assigned,
         "permissions": default_perms,
         "apps": DEFAULT_APPS.copy()
@@ -644,6 +649,61 @@ def api_mitigations_history() -> object:
             
     # Return newest incidents first
     return jsonify(history[::-1])
+
+@app.route('/api/permissions/password', methods=['POST'])
+def api_set_password() -> object:
+    data = request.get_json() or {}
+    username = data.get("username")
+    new_password = data.get("password")
+    
+    if not username or not new_password:
+        return jsonify({"error": "Missing username or password"}), 400
+        
+    perms = get_permissions()
+    user_found = False
+    
+    for u in perms["users"]:
+        if u["username"].lower() == username.lower():
+            u["password"] = new_password
+            user_found = True
+            break
+            
+    if not user_found:
+        return jsonify({"error": f"User '{username}' not found"}), 404
+        
+    save_permissions(perms)
+    write_signed_audit_log("PASSWORD_RESET", f"Password for user '{username}' was updated.", {"username": username})
+    
+    broadcast_event({
+        "type": "PERMISSION_CHANGE",
+        "action": "UPDATE_PASSWORD",
+        "username": username,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    })
+    
+    return jsonify({"status": "ok", "permissions": perms})
+
+@app.route('/api/permissions/login', methods=['POST'])
+def api_login() -> object:
+    data = request.get_json() or {}
+    username = data.get("username")
+    password = data.get("password")
+    
+    if not username or not password:
+        return jsonify({"error": "Missing username or password"}), 400
+        
+    perms = get_permissions()
+    for u in perms["users"]:
+        if u["username"].lower() == username.lower():
+            if u.get("password", "password") == password:
+                write_signed_audit_log("USER_LOGIN", f"User '{username}' logged in successfully.", {"username": username})
+                return jsonify({"status": "ok", "user": u})
+            else:
+                write_signed_audit_log("FAILED_LOGIN", f"Failed login attempt for user '{username}' (incorrect password).", {"username": username})
+                return jsonify({"error": "Invalid credentials"}), 401
+                
+    write_signed_audit_log("FAILED_LOGIN", f"Failed login attempt for non-existent user '{username}'.", {"username": username})
+    return jsonify({"error": "User not found"}), 404
 
 # Initialize baseline logs if needed
 init_audit_log_if_empty()
