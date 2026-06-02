@@ -531,6 +531,7 @@ function QCScanningConsole() {
     pdfBlob: Blob;
     filename: string;
   } | null>(null);
+  const [activeAudit, setActiveAudit] = useState<any>(null);
   const [qcError, setQcError] = useState<string | null>(null);
   const [emailRecipient, setEmailRecipient] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -550,6 +551,7 @@ function QCScanningConsole() {
     setProgress(0);
     setLogs([]);
     setReportData(null);
+    setActiveAudit(null);
     setQcError(null);
     setEmailSuccess(null);
 
@@ -567,21 +569,107 @@ function QCScanningConsole() {
       `[AUDIT] Validating viewport responsive boundaries & layout CSS stylesheets...`,
       `[INTEGRATION] Verifying NetLock reverse proxy routing layer connectivity to ${domain}...`,
       `[ANALYSIS] Processing quality assurance logs & telemetric compliance score...`,
-      `[SYSTEM] QC Pipeline stabilized for ${domain}. 0 critical bugs, 100% design compliance.`
+      `[SYSTEM] Connecting to remote CORTEX report compiler on Core server...`
     ];
 
     let currentLogIndex = 0;
+    let apiCompleted = false;
+    let apiData: any = null;
+    let apiError: any = null;
+
+    // Trigger report compile concurrently
+    fetch("/api/generate-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_name: `QC Web Audit: ${domain}`,
+        date_range: new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" }),
+        sections: ["RMM", "EDR", "Tickets", "Backups"],
+        options: {
+          RMM: ["availability", "performance"],
+          EDR: ["alerts"],
+          Tickets: ["stats", "work"],
+          Backups: ["compliance"],
+        },
+      }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          throw new Error(`Report compiler failed: ${res.statusText}`);
+        }
+        const data = await res.json();
+        if (data.status !== "success") {
+          throw new Error(data.message || "Report compilation failed");
+        }
+        return data;
+      })
+      .then(data => {
+        apiData = data;
+        apiCompleted = true;
+      })
+      .catch(err => {
+        apiError = err;
+        apiCompleted = true;
+      });
+
     const interval = setInterval(() => {
+      const timestamp = new Date().toLocaleTimeString();
+
       if (currentLogIndex < scanLogsList.length) {
-        const timestamp = new Date().toLocaleTimeString();
         setLogs(prev => [...prev, `[${timestamp}] ${scanLogsList[currentLogIndex]}`]);
-        setProgress(Math.min(100, Math.floor(((currentLogIndex + 1) / scanLogsList.length) * 100)));
+        setProgress(Math.min(90, Math.floor(((currentLogIndex + 1) / (scanLogsList.length + 1)) * 100)));
         currentLogIndex++;
       } else {
-        clearInterval(interval);
-        setScanState('completed');
+        // We are on the last step, waiting for the API to finish compiling
+        if (apiCompleted) {
+          clearInterval(interval);
+          if (apiError) {
+            setLogs(prev => [...prev, `[${timestamp}] [ERROR] Backend audit failed: ${apiError.message || apiError}`]);
+            setQcError(apiError.message || String(apiError));
+            setScanState('error');
+          } else if (apiData) {
+            const audit = apiData.audit_results;
+            setLogs(prev => [
+              ...prev,
+              `[${timestamp}] [SUCCESS] Active scraper completed. Score: ${audit.score}/100, Spelling Errors: ${audit.spelling_errors}, Load Speed: ${audit.performance_ms}ms`,
+              `[${timestamp}] [SYSTEM] QC Pipeline stabilized for ${domain}. Generating report files.`
+            ]);
+            setProgress(100);
+            setActiveAudit(audit);
+
+            // Parse base64 documents
+            try {
+              const docxBytes = Uint8Array.from(atob(apiData.docx_base64), c => c.charCodeAt(0));
+              const docxBlob = new Blob([docxBytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+
+              const pdfBytes = Uint8Array.from(atob(apiData.pdf_base64), c => c.charCodeAt(0));
+              const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+
+              const pdfUrl = URL.createObjectURL(pdfBlob);
+
+              setReportData({
+                pdfUrl,
+                docxBlob,
+                pdfBlob,
+                filename: apiData.filename || "qc_design_audit_report",
+              });
+              setScanState('completed');
+            } catch (err: any) {
+              setQcError("Failed to parse base64 documents returned by reporting backend.");
+              setScanState('error');
+            }
+          }
+        } else {
+          // Keep ticking up slightly to indicate active waiting
+          setProgress(prev => Math.min(99, prev + 1));
+          if (logs[logs.length - 1] !== `[${timestamp}] Waiting for remote LibreOffice compilation to finalize...`) {
+            setLogs(prev => [...prev, `[${timestamp}] Waiting for remote LibreOffice compilation to finalize...`]);
+          }
+        }
       }
-    }, 800);
+    }, 850);
   };
 
   const handleCompileReport = async () => {
@@ -794,7 +882,11 @@ function QCScanningConsole() {
             <span className="result-icon">✓</span>
             <div className="result-meta font-space">
               <h4>QC SYSTEM DIAGNOSTIC COMPLETED</h4>
-              <p>State: SECURE & COMPLIANT // NO FAULTS DETECTED</p>
+              <p>
+                {activeAudit && activeAudit.score < 85
+                  ? `State: WARNING // OPTIMISATION REQUIRED (Rating: ${activeAudit.score}%)`
+                  : `State: SECURE & COMPLIANT // NO FAULTS DETECTED (Rating: ${activeAudit ? activeAudit.score : 98}%)`}
+              </p>
             </div>
             <button className="spacious-submit-btn font-space qc-reset-btn" onClick={() => setScanState('idle')}>
               🔄 RESET SCANNER
@@ -804,19 +896,33 @@ function QCScanningConsole() {
           <div className="qc-metrics-grid">
             <div className="qc-metric-card glassmorphic">
               <span className="metric-label font-space">OVERALL GRADE</span>
-              <span className="metric-value font-space secure-glow">A+</span>
+              <span className="metric-value font-space secure-glow">
+                {activeAudit ? (
+                  activeAudit.score >= 95 ? "A+" :
+                  activeAudit.score >= 90 ? "A" :
+                  activeAudit.score >= 85 ? "B" :
+                  activeAudit.score >= 75 ? "C" :
+                  activeAudit.score >= 60 ? "D" : "F"
+                ) : "A+"}
+              </span>
             </div>
             <div className="qc-metric-card glassmorphic">
               <span className="metric-label font-space">CONTRAST COMPLIANCE</span>
-              <span className="metric-value font-space text-online">98%</span>
+              <span className="metric-value font-space text-online">
+                {activeAudit ? `${activeAudit.contrast_score}%` : "98%"}
+              </span>
             </div>
             <div className="qc-metric-card glassmorphic">
               <span className="metric-label font-space">SPELLING ERRORS</span>
-              <span className="metric-value font-space text-online">0</span>
+              <span className="metric-value font-space text-online">
+                {activeAudit ? activeAudit.spelling_errors : "0"}
+              </span>
             </div>
             <div className="qc-metric-card glassmorphic">
-              <span className="metric-label font-space">LAYOUT FLUIDITY</span>
-              <span className="metric-value font-space text-online">PASS</span>
+              <span className="metric-label font-space">AUDIT SCORE</span>
+              <span className="metric-value font-space text-online">
+                {activeAudit ? `${activeAudit.score}/100` : "98/100"}
+              </span>
             </div>
           </div>
 
