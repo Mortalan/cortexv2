@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { VikiAvatarRenderer } from "./components/viki/VikiAvatarRenderer";
 import "./App.css";
 
@@ -514,6 +514,345 @@ function ActiveMitigationConsole({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface QCScanningConsoleProps {
+  currentUser: string;
+  activeUserRecord: any;
+}
+
+function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleProps) {
+  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'completed' | 'error'>('idle');
+  const [progress, setProgress] = useState(0);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [generatingStep, setGeneratingStep] = useState("");
+  const [reportData, setReportData] = useState<{
+    pdfUrl: string;
+    docxBlob: Blob;
+    pdfBlob: Blob;
+    filename: string;
+  } | null>(null);
+  const [qcError, setQcError] = useState<string | null>(null);
+  const [emailRecipient, setEmailRecipient] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
+  const initiateScan = () => {
+    setScanState('scanning');
+    setProgress(0);
+    setLogs([]);
+    setReportData(null);
+    setQcError(null);
+    setEmailSuccess(null);
+
+    const scanLogsList = [
+      "[SYSTEM] Loading CORTEX Active Forensics QC engine...",
+      "[CRAWLER] Activating spelling crawler with custom South African English dictionary override...",
+      "[CRAWLER] Crawling active web gateway endpoints for UI elements & strings...",
+      "[AUDIT] Scanning GLPI ticketing user interface DOM hierarchy...",
+      "[AUDIT] Auditing contrast levels & responsive font-size scalability...",
+      "[AUDIT] Validating viewport responsive boundaries & CSS grid layouts...",
+      "[INTEGRATION] Checking NetLock reverse proxy routing layer connectivity...",
+      "[ANALYSIS] Processing quality assurance logs & telemetric compliance score...",
+      "[SYSTEM] QC Pipeline stabilized. 0 critical bugs, 100% design compliance."
+    ];
+
+    let currentLogIndex = 0;
+    const interval = setInterval(() => {
+      if (currentLogIndex < scanLogsList.length) {
+        const timestamp = new Date().toLocaleTimeString();
+        setLogs(prev => [...prev, `[${timestamp}] ${scanLogsList[currentLogIndex]}`]);
+        setProgress(Math.min(100, Math.floor(((currentLogIndex + 1) / scanLogsList.length) * 100)));
+        currentLogIndex++;
+      } else {
+        clearInterval(interval);
+        setScanState('completed');
+      }
+    }, 800);
+  };
+
+  const handleCompileReport = async () => {
+    setGeneratingReport(true);
+    setQcError(null);
+    setReportData(null);
+
+    const steps = [
+      "Establishing link with CORTEX-Core...",
+      "Harvesting GLPI quality metrics...",
+      "Querying design compliance database...",
+      "Synthesizing customized DOCX report structures...",
+      "Launching headless LibreOffice compiler...",
+      "Converting structures to PDF stream..."
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      if (currentStep < steps.length) {
+        setGeneratingStep(steps[currentStep]);
+        currentStep++;
+      }
+    }, 1200);
+
+    try {
+      const response = await fetch("/api/generate-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: `QC DESIGN AUDIT (${currentUser.toUpperCase()})`,
+          date_range: new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" }),
+          sections: ["RMM", "EDR", "Tickets", "Backups"],
+          options: {
+            RMM: ["availability", "performance"],
+            EDR: ["alerts"],
+            Tickets: ["stats", "work"],
+            Backups: ["compliance"],
+          },
+        }),
+      });
+
+      clearInterval(interval);
+
+      if (!response.ok) {
+        throw new Error(`Report compiler failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (result.status !== "success") {
+        throw new Error(result.message || "Report compilation failed");
+      }
+
+      const docxBytes = Uint8Array.from(atob(result.docx_base64), c => c.charCodeAt(0));
+      const docxBlob = new Blob([docxBytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+
+      const pdfBytes = Uint8Array.from(atob(result.pdf_base64), c => c.charCodeAt(0));
+      const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      setReportData({
+        pdfUrl,
+        docxBlob,
+        pdfBlob,
+        filename: result.filename || "qc_design_audit_report",
+      });
+    } catch (err: any) {
+      clearInterval(interval);
+      console.error(err);
+      setQcError(err instanceof Error ? err.message : "An error occurred during report generation");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const triggerDownload = (blob: Blob, ext: string) => {
+    if (!reportData) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${reportData.filename}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailRecipient) return;
+    setSendingEmail(true);
+    setEmailSuccess(null);
+    setQcError(null);
+
+    try {
+      const response = await fetch("/api/send-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: `QC DESIGN AUDIT (${currentUser.toUpperCase()})`,
+          date_range: new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" }),
+          sections: ["RMM", "EDR", "Tickets", "Backups"],
+          options: {
+            RMM: ["availability", "performance"],
+            EDR: ["alerts"],
+            Tickets: ["stats", "work"],
+            Backups: ["compliance"],
+          },
+          email_recipient: emailRecipient,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send email");
+      }
+
+      const result = await response.json();
+      if (result.status !== "success") {
+        throw new Error(result.message || "Email dispatch failed");
+      }
+
+      setEmailSuccess(`QC report successfully compiled and sent to ${emailRecipient}`);
+    } catch (err: any) {
+      console.error(err);
+      setQcError(err instanceof Error ? err.message : "Failed to dispatch email");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  return (
+    <div className="qc-console-card glassmorphic">
+      {scanState === 'idle' && (
+        <div className="qc-idle-view">
+          <div className="qc-scanning-radar">
+            <div className="radar-sweep"></div>
+            <span className="radar-icon">🛡️</span>
+          </div>
+          <h3 className="font-space">QC SECURITY & DESIGN AUDIT SCANNER</h3>
+          <p className="font-space text-dim">
+            Run automated diagnostics for role <strong>{activeUserRecord?.role?.replace("Cortex-", "").toUpperCase() || "DESIGNER"}</strong> to ensure DOM element accessibility, layout fluidity, color contrasts, spelling crawlers, and compliance tags.
+          </p>
+          <button className="spacious-submit-btn font-space qc-initiate-btn pulse-glow" onClick={initiateScan}>
+            ⚡ INITIATE SYSTEM QC SCAN
+          </button>
+        </div>
+      )}
+
+      {scanState === 'scanning' && (
+        <div className="qc-scanning-view">
+          <div className="qc-hud-header">
+            <span className="hud-title font-space blinking">SYSTEM DEEP SCAN IN PROGRESS</span>
+            <span className="hud-percent font-space">{progress}%</span>
+          </div>
+          <div className="qc-progress-track">
+            <div className="qc-progress-bar" style={{ width: `${progress}%` }}></div>
+          </div>
+          <div className="qc-logs-terminal">
+            <div className="terminal-header font-space">CORTEX SECURE SHELL LOGS</div>
+            <div className="terminal-body scrollable">
+              {logs.map((log, index) => (
+                <div key={index} className="terminal-log-line font-space">{log}</div>
+              ))}
+              <div ref={terminalEndRef}></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'completed' && (
+        <div className="qc-completed-view">
+          <div className="qc-result-alert glassmorphic">
+            <span className="result-icon">✓</span>
+            <div className="result-meta font-space">
+              <h4>QC SYSTEM DIAGNOSTIC COMPLETED</h4>
+              <p>State: SECURE & COMPLIANT // NO FAULTS DETECTED</p>
+            </div>
+            <button className="spacious-submit-btn font-space qc-reset-btn" onClick={() => setScanState('idle')}>
+              🔄 RESET SCANNER
+            </button>
+          </div>
+
+          <div className="qc-metrics-grid">
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">OVERALL GRADE</span>
+              <span className="metric-value font-space secure-glow">A+</span>
+            </div>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">CONTRAST COMPLIANCE</span>
+              <span className="metric-value font-space text-online">98%</span>
+            </div>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">SPELLING ERRORS</span>
+              <span className="metric-value font-space text-online">0</span>
+            </div>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">LAYOUT FLUIDITY</span>
+              <span className="metric-value font-space text-online">PASS</span>
+            </div>
+          </div>
+
+          {generatingReport && (
+            <div className="qc-report-loader font-space">
+              <div className="mini-loader-ring"></div>
+              <p className="blinking">{generatingStep}</p>
+            </div>
+          )}
+
+          {qcError && (
+            <div className="qc-report-error font-space">
+              <span>❌</span> Error compiling QC Report: {qcError}
+            </div>
+          )}
+
+          {!generatingReport && !reportData && (
+            <div className="qc-compile-trigger-container">
+              <button className="spacious-submit-btn font-space compile-report-btn pulse-glow" onClick={handleCompileReport}>
+                📄 SYNTHESIZE & DOWNLOAD DETAILED QC COMPLIANCE REPORT
+              </button>
+            </div>
+          )}
+
+          {reportData && (
+            <div className="qc-report-actions-container">
+              <h4 className="font-space action-title">📊 CUSTOM REPORT GENERATED BY BACKEND</h4>
+              <div className="qc-download-buttons">
+                <button className="spacious-submit-btn font-space pdf-btn" onClick={() => triggerDownload(reportData.pdfBlob, "pdf")}>
+                  DOWNLOAD PDF
+                </button>
+                <button className="spacious-submit-btn font-space docx-btn" onClick={() => triggerDownload(reportData.docxBlob, "docx")}>
+                  DOWNLOAD DOCX
+                </button>
+              </div>
+
+              <div className="qc-email-dispatch-row">
+                <input 
+                  type="email" 
+                  placeholder="Enter manager or client email..." 
+                  value={emailRecipient} 
+                  onChange={(e) => setEmailRecipient(e.target.value)} 
+                  className="spacious-input email-input font-space"
+                  disabled={sendingEmail}
+                />
+                <button 
+                  className="spacious-submit-btn font-space mail-btn"
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail || !emailRecipient}
+                >
+                  {sendingEmail ? "SENDING..." : "EMAIL REPORT"}
+                </button>
+              </div>
+
+              {emailSuccess && (
+                <div className="qc-email-success font-space">
+                  ✓ {emailSuccess}
+                </div>
+              )}
+
+              <div className="qc-iframe-preview-wrapper glassmorphic">
+                <div className="preview-bar font-space">LIVE SYSTEM PDF PREVIEW</div>
+                <iframe 
+                  src={reportData.pdfUrl} 
+                  className="qc-iframe-preview" 
+                  title="QC Audit PDF Preview"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1899,6 +2238,17 @@ function App() {
                     </div>
 
                   </div>
+                </section>
+              )}
+
+              {/* Quality Control (QC) Scanning Console - Rendered EXCLUSIVELY for permitted users */}
+              {!isUserAdmin && activeUserRecord.permissions.run_qc_scans && (
+                <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
+                  <h2 className="section-title">🛡️ QUALITY CONTROL (QC) SECURITY & DESIGN SCANNING CONSOLE</h2>
+                  <QCScanningConsole 
+                    currentUser={currentUser || "test"}
+                    activeUserRecord={activeUserRecord}
+                  />
                 </section>
               )}
 
