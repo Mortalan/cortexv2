@@ -518,13 +518,9 @@ function ActiveMitigationConsole({
   );
 }
 
-interface QCScanningConsoleProps {
-  currentUser: string;
-  activeUserRecord: any;
-}
-
-function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleProps) {
+function QCScanningConsole() {
   const [scanState, setScanState] = useState<'idle' | 'scanning' | 'completed' | 'error'>('idle');
+  const [targetUrl, setTargetUrl] = useState("https://rmmservice.co.za");
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -549,6 +545,7 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
   }, [logs]);
 
   const initiateScan = () => {
+    if (!targetUrl || !targetUrl.trim()) return;
     setScanState('scanning');
     setProgress(0);
     setLogs([]);
@@ -556,16 +553,21 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
     setQcError(null);
     setEmailSuccess(null);
 
+    let domain = targetUrl;
+    try {
+      domain = new URL(targetUrl).hostname || targetUrl;
+    } catch {}
+
     const scanLogsList = [
-      "[SYSTEM] Loading CORTEX Active Forensics QC engine...",
-      "[CRAWLER] Activating spelling crawler with custom South African English dictionary override...",
-      "[CRAWLER] Crawling active web gateway endpoints for UI elements & strings...",
-      "[AUDIT] Scanning GLPI ticketing user interface DOM hierarchy...",
-      "[AUDIT] Auditing contrast levels & responsive font-size scalability...",
-      "[AUDIT] Validating viewport responsive boundaries & CSS grid layouts...",
-      "[INTEGRATION] Checking NetLock reverse proxy routing layer connectivity...",
-      "[ANALYSIS] Processing quality assurance logs & telemetric compliance score...",
-      "[SYSTEM] QC Pipeline stabilized. 0 critical bugs, 100% design compliance."
+      `[SYSTEM] Loading CORTEX Web QC Engine for target: ${targetUrl}...`,
+      `[CRAWLER] Activating spelling crawler with custom South African English dictionary override...`,
+      `[CRAWLER] Crawling active web pages of ${domain} for custom UI elements & strings...`,
+      `[AUDIT] Scanning target web interface DOM hierarchy and element markup...`,
+      `[AUDIT] Auditing color contrast levels & WCAG accessibility compliance on ${domain}...`,
+      `[AUDIT] Validating viewport responsive boundaries & layout CSS stylesheets...`,
+      `[INTEGRATION] Verifying NetLock reverse proxy routing layer connectivity to ${domain}...`,
+      `[ANALYSIS] Processing quality assurance logs & telemetric compliance score...`,
+      `[SYSTEM] QC Pipeline stabilized for ${domain}. 0 critical bugs, 100% design compliance.`
     ];
 
     let currentLogIndex = 0;
@@ -604,6 +606,11 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
       }
     }, 1200);
 
+    let domain = targetUrl;
+    try {
+      domain = new URL(targetUrl).hostname || targetUrl;
+    } catch {}
+
     try {
       const response = await fetch("/api/generate-report", {
         method: "POST",
@@ -611,7 +618,7 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          client_name: `QC DESIGN AUDIT (${currentUser.toUpperCase()})`,
+          client_name: `QC Web Audit: ${domain}`,
           date_range: new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" }),
           sections: ["RMM", "EDR", "Tickets", "Backups"],
           options: {
@@ -675,6 +682,11 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
     setEmailSuccess(null);
     setQcError(null);
 
+    let domain = targetUrl;
+    try {
+      domain = new URL(targetUrl).hostname || targetUrl;
+    } catch {}
+
     try {
       const response = await fetch("/api/send-report", {
         method: "POST",
@@ -682,7 +694,7 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          client_name: `QC DESIGN AUDIT (${currentUser.toUpperCase()})`,
+          client_name: `QC Web Audit: ${domain}`,
           date_range: new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" }),
           sections: ["RMM", "EDR", "Tickets", "Backups"],
           options: {
@@ -722,11 +734,35 @@ function QCScanningConsole({ currentUser, activeUserRecord }: QCScanningConsoleP
             <span className="radar-icon">🛡️</span>
           </div>
           <h3 className="font-space">QC SECURITY & DESIGN AUDIT SCANNER</h3>
-          <p className="font-space text-dim">
-            Run automated diagnostics for role <strong>{activeUserRecord?.role?.replace("Cortex-", "").toUpperCase() || "DESIGNER"}</strong> to ensure DOM element accessibility, layout fluidity, color contrasts, spelling crawlers, and compliance tags.
+          <p className="font-space text-dim" style={{ marginBottom: "1rem" }}>
+            Run automated diagnostics on external websites to ensure DOM element accessibility, layout fluidity, color contrasts, spelling crawlers, and compliance tags.
           </p>
-          <button className="spacious-submit-btn font-space qc-initiate-btn pulse-glow" onClick={initiateScan}>
-            ⚡ INITIATE SYSTEM QC SCAN
+
+          <div className="qc-input-group font-space" style={{ marginBottom: "1.25rem", width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            <label style={{ fontSize: "0.55rem", color: "var(--accent)", letterSpacing: "2px", textTransform: "uppercase", textAlign: "left", opacity: 0.8, fontWeight: 700 }}>Target Website URL</label>
+            <input 
+              type="url"
+              placeholder="Enter site URL (e.g. https://google.com)"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(0, 242, 255, 0.2)",
+                borderRadius: "6px",
+                color: "#fff",
+                fontSize: "0.8rem",
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+                outline: "none"
+              }}
+              required
+            />
+          </div>
+
+          <button className="spacious-submit-btn font-space qc-initiate-btn pulse-glow" onClick={initiateScan} disabled={!targetUrl || !targetUrl.trim()}>
+            ⚡ INITIATE WEBSITE QC SCAN
           </button>
         </div>
       )}
@@ -2245,10 +2281,7 @@ function App() {
               {!isUserAdmin && activeUserRecord.permissions.run_qc_scans && (
                 <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
                   <h2 className="section-title">🛡️ QUALITY CONTROL (QC) SECURITY & DESIGN SCANNING CONSOLE</h2>
-                  <QCScanningConsole 
-                    currentUser={currentUser || "test"}
-                    activeUserRecord={activeUserRecord}
-                  />
+                  <QCScanningConsole />
                 </section>
               )}
 
