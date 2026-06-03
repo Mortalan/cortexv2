@@ -33,6 +33,7 @@ services:
       - /mnt/data_lake/glpi/files:/var/glpi/files
       - /mnt/data_lake/glpi/marketplace:/var/glpi/marketplace
       - /mnt/data_lake/glpi/logs:/var/glpi/logs
+      - ./reverse-proxy.conf:/etc/apache2/conf-enabled/reverse-proxy.conf:ro
     ports:
       - "80:80"
     labels:
