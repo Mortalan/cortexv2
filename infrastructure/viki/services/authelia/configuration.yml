@@ -48,7 +48,7 @@ session:
     - domain: rmmservice.co.za
       # Reverting to HTTPS for Authelia's internal logic
       authelia_url: https://auth.rmmservice.co.za
-      default_redirection_url: https://glpi.rmmservice.co.za
+      default_redirection_url: https://cortex.rmmservice.co.za
 
 storage:
   encryption_key: cortex_secure_storage_encryption_key_change_me
