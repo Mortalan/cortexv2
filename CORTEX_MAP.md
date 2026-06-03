@@ -1,45 +1,40 @@
 # CORTEX: SYSTEM MAP & INDEX
-## [VERSION 2.4 - JUNE 2026] - COGNITIVE INTEGRATION & STABILIZATION
+## [VERSION 2.5 - JUNE 2026] - COGNITIVE INTEGRATION & STABILIZATION
 
-
-### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
-> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and user_roadmap.md to begin implementing Section 4 (Microsoft Graph Calendar Sync Integration) or the new Outlook Appointments widget. Do not read unrelated files."
+> [!IMPORTANT]
+> **Backup Reference:** A full archive copy of the unified documentation baseline is stored at:
+> [/home/louis/cortex/archive/backup_20260603/](file:///home/louis/cortex/archive/backup_20260603/)
 
 ---
 
 ## 1. SYSTEM STATUS SUMMARY
-- **Primary Node (VIKI):** 192.168.50.240 (Proxmox 9.x) - **ACTIVE**
-- **Gateway (HAProxy):** 192.168.50.239 - **ACTIVE**
-- **Core (NetLock/Identity):** 192.168.50.241 - **ACTIVE/STABLE** (NetLock stack completely reinstalled from scratch, integrated behind Traefik reverse proxy using dynamic shared networks, and running perfectly)
-- **AI (Intelligence):** 192.168.50.242 - **ACTIVE**
-- **Lake (Forensics):** 192.168.50.243 - **ACTIVE**
-- **Interface (VIKI Chat):** Integrated with Ollama & 3D Avatar - **ACTIVE**
-- **Tooling:** Transitioning to **Antigravity CLI (agy)** - **IN PROGRESS**
+- **Gateway (HAProxy):** 192.168.50.239 - **ACTIVE** (SSL Termination for all 16 domains)
+- **LXC Ingress & Identity (201):** 192.168.50.251 - **ACTIVE** (Traefik, Authelia, LLDAP)
+- **LXC Core Command (202):** 192.168.50.252 - **ACTIVE** (React Dashboard, Reflex, Hermes, Vector, Velociraptor)
+- **LXC GLPI Ticketing (203):** 192.168.50.253 - **ACTIVE** (MariaDB, GLPI)
+- **LXC Automation (204):** 192.168.50.254 - **ACTIVE** (Redis, n8n)
+- **Primary VM 100:** 192.168.50.241 - **ACTIVE** (NetLock RMM Stack)
+- **Forensics VM LAKE-102:** 192.168.50.243 - **ACTIVE** (4TB BTRFS Forensic Data Lake)
 
 ---
 
-## 2. DOCUMENTATION INDEX (SURGICAL ACCESS)
+## 2. MODULAR DOCUMENTATION INDEX
+
 | Domain | File Path | Scope |
 | :--- | :--- | :--- |
-| **Infrastructure** | `docs/INFRA.md` | NetLock, HAProxy, Core-100, Network Topology. |
-| **Intelligence** | `docs/INTEL.md` | VIKI, Ollama, n8n, 3D Avatar Spec. |
-| **Security Ops** | `docs/SEC_OPS.md` | Reflex Daemon, Velociraptor, Forensics, NIST 2.0. |
-| **Execution Lab** | `docs/LAB_LOG.md` | Current Phase, Atomic Steps, and Progress Tracker. |
-| **Change History** | `docs/CHANGELOG.md` | Version history and session summaries. |
-| **Migration** | `docs/MIGRATION_AGY.md` | Notes on Gemini CLI -> Antigravity migration. |
-| **Product Strategy** | `user_roadmap.md` | Multi-user widgets, Permission matrix, Web QC scan, Outlook Calendar, Overtime System. |
+| **System Map** | [CORTEX_MAP.md](file:///home/louis/cortex/CORTEX_MAP.md) | High-level system index and cluster node registry. |
+| **Active Lab Log** | [docs/LAB_LOG.md](file:///home/louis/cortex/docs/LAB_LOG.md) | Active execution phases, milestones, and status checklist. |
+| **Infrastructure** | [docs/INFRA.md](file:///home/louis/cortex/docs/INFRA.md) | Networking, SSO configuration, routing rules, and kernel tuning. |
+| **Change History** | [docs/CHANGELOG.md](file:///home/louis/cortex/docs/CHANGELOG.md) | Chronological development logs (June 2026). |
+| **Roadmap Dashboard**| [user_roadmap.md](file:///home/louis/cortex/user_roadmap.md) | Reference dashboard index for planned features. |
+| **Roadmap Specs** | [docs/roadmap/](file:///home/louis/cortex/docs/roadmap/) | Modular specification files per feature (1 to 7). |
 
 ---
 
-## 3. NEXT PHASE: SOVEREIGN CRM SYNC & ENTERPRISE TELEMETRY EXPANSION
-- **Goal:** Unify sovereign SOC diagnostics with real-time enterprise client relationship management and distributed threat telemetry.
-- **Next Step:** 
-  1. Map dynamic lead conversion tracking and live opportunity value metrics from GoHighLevel CRM (Completed).
-  2. Implement local stateful logging of active mitigations inside the Forensic Data Lake BTRFS storage engine.
-  3. Expand the Active Mitigation Console React UI with a glassmorphic Incident History timeline.
+## 3. NEXT PHASE: CALENDAR SYNC & GATEWAY HARDENING
+- **Phase 20:** Implement [M365 Graph Calendar Integration](file:///home/louis/cortex/docs/roadmap/4_outlook_integration.md) (Double-Booking Conflict Engine & 3-Day Dashboard Widget).
+- **Phase 21:** Port legacy Next.js/.NET Core [Overtime Tracker](file:///home/louis/cortex/docs/roadmap/6_overtime_system.md) into core FastAPI stack and GLPI ticket follow-up hook.
+- **Phase 22:** Deploy [Emergency API Kill Switch](file:///home/louis/cortex/docs/roadmap/7_security_protocols.md) at middleware level wired to EDR triggers.
 
 ---
-*Last Updated: Tuesday, 02 June 2026 (Manual RMM uninstallation, custom installer adaptation, Traefik integration, DNS stabilization, Custom DOCX/PDF Reporting Engine, Cognitive Stateful Hermes Agent, Active Sovereign Viki Agent, Firefox Speech Recognition STT /api/transcribe fallback, WebGL Linux Render Hardening, Production GLPI Database Sync, Viki SQL Schema Diagnostics, ReAct loop re-prompter recovery, Dynamic 3D Canvas Threat HUD Reactivity, GoHighLevel CRM API Integration, Stateful BTRFS Security Logging, Glassmorphic Mitigation Incident History Timeline, Multi-User Context-Filtered Widgets, Granular Security Permissions Matrix, and Dynamic Website Quality Control & Scraper Reporter Integration)*
-
-
-
+*Last Updated: Wednesday, 03 June 2026*

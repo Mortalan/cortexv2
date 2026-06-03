@@ -1,10 +1,6 @@
 # CORTEX: INFRASTRUCTURE & NETWORK
 ## [VERSION 2.0]
 
-> [!NOTE]
-> Backup of the original unified infrastructure documentation:
-> [/home/louis/cortex/archive/backup_20260603/docs/INFRA.md](file:///home/louis/cortex/archive/backup_20260603/docs/INFRA.md)
-
 ### 1. CORE NODES (VM TRIAD)
 - **CORE-100 (192.168.50.241):** 
     - Ingress: Traefik
