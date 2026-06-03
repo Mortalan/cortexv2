@@ -721,6 +721,30 @@ def api_set_password() -> object:
     
     return jsonify({"status": "ok", "permissions": perms})
 
+@app.route('/api/permissions/me', methods=['GET'])
+def api_get_current_user() -> object:
+    username = request.headers.get("x-forwarded-user") or request.headers.get("remote-user") or request.headers.get("x-remote-user")
+    if username:
+        perms = get_permissions()
+        for u in perms["users"]:
+            if u["username"].lower() == username.lower():
+                return jsonify({"status": "ok", "user": u})
+        # If user is in Authelia but not in the permissions database, yield a default Cortex-Technicians schema
+        default_user = {
+            "username": username,
+            "role": "Cortex-Technicians",
+            "viki_assigned": False,
+            "permissions": {
+                "view_telemetry": True,
+                "execute_playbooks": False,
+                "run_qc_scans": False,
+                "edit_appointments": True,
+                "edit_user_permissions": False
+            }
+        }
+        return jsonify({"status": "ok", "user": default_user})
+    return jsonify({"error": "No active SSO session"}), 401
+
 @app.route('/api/permissions/login', methods=['POST'])
 def api_login() -> object:
     data = request.get_json() or {}

@@ -1269,6 +1269,26 @@ function App() {
     const userParam = params.get("user");
     if (userParam) {
       setCurrentUser(userParam);
+      localStorage.removeItem("cortex_logged_out");
+    } else {
+      // Auto-login from Authelia SSO if no developer override param is present and user has not logged out
+      const loggedOut = localStorage.getItem("cortex_logged_out");
+      if (loggedOut !== "true") {
+        fetch("/api/permissions/me")
+          .then(res => {
+            if (res.ok) return res.json();
+            throw new Error("No SSO session");
+          })
+          .then(data => {
+            if (data.status === "ok" && data.user) {
+              setCurrentUser(data.user.username);
+              localStorage.setItem("cortex_logged_in_user", data.user.username);
+            }
+          })
+          .catch(() => {
+            // No active SSO session, leave currentUser as initialized
+          });
+      }
     }
     const modeParam = params.get("mode");
     if (modeParam) {
@@ -1758,6 +1778,7 @@ function App() {
         const data = await res.json();
         setCurrentUser(data.user.username);
         localStorage.setItem("cortex_logged_in_user", data.user.username);
+        localStorage.removeItem("cortex_logged_out");
         const params = new URLSearchParams(window.location.search);
         params.set("user", data.user.username);
         window.history.pushState({}, "", `${window.location.pathname}?${params.toString()}`);
@@ -1774,6 +1795,7 @@ function App() {
         if (loginPassword === "password" || userRec.password === loginPassword) {
           setCurrentUser(userRec.username);
           localStorage.setItem("cortex_logged_in_user", userRec.username);
+          localStorage.removeItem("cortex_logged_out");
           const params = new URLSearchParams(window.location.search);
           params.set("user", userRec.username);
           window.history.pushState({}, "", `${window.location.pathname}?${params.toString()}`);
@@ -1791,6 +1813,7 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem("cortex_logged_in_user");
+    localStorage.setItem("cortex_logged_out", "true");
     const params = new URLSearchParams(window.location.search);
     params.delete("user");
     params.delete("mode");
