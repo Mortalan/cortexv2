@@ -36,3 +36,8 @@
 ## 3. EXTERNAL NODES
 - **GLPI Server:** 192.168.50.232 (Legacy / Maintenance)
 - **Reverse Proxy:** 192.168.50.239 (HAProxy)
+
+## 4. KERNEL TUNING & STABILITY SETTINGS
+- **Memory Compaction Workaround:** Applied to Proxmox host and all guest VMs (`100`, `101`, `102`) to resolve `kcompactd0` soft lockup kernel hangs under memory pressure:
+  * `vm.compaction_proactiveness=0` in `/etc/sysctl.d/60-kcompactd-lockup-fix.conf`
+
