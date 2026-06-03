@@ -1,5 +1,5 @@
 # CORTEX: USER ROADMAP & ARCHITECTURAL BLUEPRINT
-## [VERSION 1.4] - STRUCTURAL EXPANSION SPECIFICATION
+## [VERSION 1.5] - STRUCTURAL EXPANSION SPECIFICATION
 
 This document outlines the finalized architectural specification for the core user experience, permission management interfaces, web design quality assurance, calendar synchronization, integrated overtime systems, and security/infrastructure recovery safeguards for the CORTEX platform.
 
@@ -239,5 +239,36 @@ graph TD
 
 ---
 
-*Document Finalized: Tuesday, 02 June 2026*
+## 8. DECENTRALIZED LXC CONTAINER TRANSITION PLAN
+### Architectural Specification: **PARALLEL PROXMOX LXC MIGRATION & BLUE-GREEN SWITCHOVER**
+
+To eliminate VM-level single points of failure (SPOF) and achieve true application modularity, CORTEX will transition from the consolidated single virtual machine (`CORTEX-Core`, VM 100) to domain-partitioned LXC containers.
+
+```mermaid
+graph LR
+    VM100[Old CORTEX-Core VM] -.->|Rsync Deltas & Frozen DBs| LXC_Hosts{Grouped LXC Containers}
+    LXC_Hosts --> LXC201[LXC 201: Identity/Ingress]
+    LXC_Hosts --> LXC202[LXC 202: Core Command]
+    LXC_Hosts --> LXC203[LXC 203: GLPI Ticketing]
+    LXC_Hosts --> LXC204[LXC 204: n8n Automation]
+    
+    Gateway[HAProxy Gateway 192.168.50.239] -->|Pivot Ingress Server IP| LXC201
+```
+
+### Functional Design & Switchover Playbook
+*   **Parallel Deployment Strategy:** 
+    *   Provision 4 lightweight Proxmox LXC containers (`192.168.50.251` through `192.168.50.254`) on the hypervisor host (`192.168.50.240`).
+    *   LXC containers share the Proxmox host kernel (offering native performance and near-zero memory footprint) but provide separate user spaces and interfaces.
+    *   Mount the data lake NFS share (`/mnt/data_lake`) natively across the containers.
+*   **Blue-Green Maintenance Window:**
+    *   **Freeze state:** Stop all Docker containers on the old VM 100 to freeze database writes.
+    *   **Rsync sync:** Run a final delta sync of database and config volumes from VM 100 to the target LXCs.
+    *   **Pivot Routing:** Update backend definitions in the HAProxy gateway (`192.168.50.239`) to point to the new Ingress LXC (`192.168.50.251`) and reload HAProxy.
+*   **Fail-Safe Rollback Protocol:**
+    *   If any issues occur, we revert the HAProxy backend mapping back to `192.168.50.241` and spin VM 100 containers back up.
+    *   This restores service to the baseline `LOCH` tag state in under **10 seconds**.
+
+---
+
+*Document Finalized: Wednesday, 03 June 2026*
 *Author: Antigravity Architect Mode*
