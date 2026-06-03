@@ -41,8 +41,8 @@ session:
   name: authelia_session
   same_site: lax
   secret: cortex_secure_session_secret_change_me
-  expiration: 1h
-  inactivity: 5m
+  expiration: 24h
+  inactivity: 12h
   remember_me: 1M
   cookies:
     - domain: rmmservice.co.za
