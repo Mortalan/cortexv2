@@ -8,6 +8,7 @@ http:
       middlewares:
         - authelia@docker
         - strip-viki-prefix
+      priority: 110
 
   middlewares:
     strip-viki-prefix:

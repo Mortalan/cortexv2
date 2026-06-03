@@ -14,6 +14,7 @@ http:
       middlewares:
         - authelia@docker
         - strip-viki
+      priority: 110
 
   services:
     viki-ollama-service:
