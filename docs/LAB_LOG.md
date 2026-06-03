@@ -20,8 +20,25 @@
 - [x] **Proxmox Cluster Compaction & kcompactd0 soft lockup recovery (Mole Run) Completed.**
 - [x] **16-Domain SSL Termination Expansion (Mole Run) Completed.**
 - [x] **Authelia Timeout Extension & SSO Double-Login Patch (Mole Run) Completed.**
+- [x] **LXC Container Parallel Migration (Phase 19) - COMPLETED**
 
-### CURRENT PHASE: SOVEREIGN CRM SYNC & ENTERPRISE TELEMETRY EXPANSION
+### CURRENT PHASE: SYSTEM DECENTRALIZATION COMPLETED
+**Phase 19.1: LXC Node Provisioning & Data Lake Bind Mounting**
+1. [x] Script `deploy_lxcs.sh` drafted, executable, and saved in `infrastructure/viki/`.
+2. [x] Execute `deploy_lxcs.sh` on Proxmox hypervisor (`192.168.50.240`).
+3. [x] Verify container creation, IP assignments (192.168.50.251-254), and stateful BTRFS Data Lake bind mounts.
+4. [x] Establish root password/SSH keys and install baseline packages (docker-compose, git, etc.) on each container.
+
+**Phase 19.2: Decentralized Service Deployment & Route Ingestion**
+1. [x] Deploy Traefik/Authelia/LLDAP stack on LXC 201 (`cortex-ingress`).
+2. [x] Deploy React Dashboard/Reflex Daemon/Hermes/MinIO/Vector/Velociraptor on LXC 202 (`cortex-command`) and bind host ports.
+3. [x] Deploy MariaDB and GLPI on LXC 203 (`cortex-glpi`) and sync database.
+4. [x] Deploy Redis and n8n on LXC 204 (`cortex-automation`).
+5. [x] Restore NetLock RMM stack on VM 100 with exposed web console port (8082).
+6. [x] Update Traefik dynamic file provider (`cortex-services.yml`, `reporter.yml`, `viki-agent.yml`) to route cross-node services.
+7. [x] Upgrade `status_check.sh` to support multi-node TCP/HTTP/Docker checks and configure crontab on LXC 202.
+8. [x] Pivot HAProxy gateway (`192.168.50.239`) to target LXC 201 and verify all ingress subdomains.
+
 **Phase 18.3: Website Quality Control & Dynamic Scraper Integration**
 1. [x] Develop active URL scraper `perform_active_site_audit` inside `cortex_reporter.py` parsing text nodes, image alt attributes, headings, meta tags, and PageSpeed ms.
 2. [x] Implement deterministic, domain-hash-seeded fallback engine ensuring unique and realistic audit findings per domain.

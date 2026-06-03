@@ -1,0 +1,145 @@
+http:
+  routers:
+    # 1. React Dashboard (Main UI)
+    dashboard-react:
+      rule: "Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: dashboard-react-service
+      middlewares:
+        - authelia@docker
+      priority: 1
+
+    # 2. Reflex Daemon API
+    reflex-api:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api`)"
+      entryPoints:
+        - web
+      service: reflex-api-service
+      priority: 100
+
+    # 3. Hermès API Gateway
+    hermes-api:
+      rule: "Host(`hermes.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: hermes-api-service
+      middlewares:
+        - authelia@docker
+      priority: 10
+
+    # 4. Hermès Webhook bypass (HMAC verified at application layer)
+    hermes-webhook:
+      rule: "Host(`hermes.rmmservice.co.za`) && PathPrefix(`/api/hermes/triage`)"
+      entryPoints:
+        - web
+      service: hermes-api-service
+      priority: 100
+
+    # 5. MinIO S3 API
+    minio-s3:
+      rule: "Host(`s3.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: minio-s3-service
+      priority: 10
+
+    # 6. MinIO Console
+    minio-console:
+      rule: "Host(`s3-console.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: minio-console-service
+      middlewares:
+        - authelia@docker
+      priority: 10
+
+    # 7. Velociraptor EDR (Double-auth wrapping bypassed for native login stability)
+    velociraptor-console:
+      rule: "Host(`edr.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: velociraptor-service
+      priority: 10
+
+    # 8. GLPI Ticketing
+    glpi:
+      rule: "Host(`glpi.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: glpi-service
+      middlewares:
+        - authelia@docker
+      priority: 10
+
+    # 9. n8n Automation (Main UI protected by Authelia)
+    n8n:
+      rule: "Host(`automation.rmmservice.co.za`) && !PathPrefix(`/webhook`)"
+      entryPoints:
+        - web
+      service: n8n-service
+      middlewares:
+        - authelia@docker
+      priority: 10
+
+    # 10. n8n Automation Webhooks (Public access for webhooks)
+    n8n-webhook:
+      rule: "Host(`automation.rmmservice.co.za`) && PathPrefix(`/webhook`)"
+      entryPoints:
+        - web
+      service: n8n-service
+      priority: 100
+
+    # 11. NetLock RMM Web Console (on VM 100)
+    netlock-console:
+      rule: "Host(`rmm.rmmservice.co.za`) || Host(`nl-webconsole.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: netlock-console-service
+      priority: 10
+
+  services:
+    dashboard-react-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:80"
+
+    reflex-api-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:9090"
+
+    hermes-api-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:8005"
+
+    minio-s3-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:9000"
+
+    minio-console-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:9001"
+
+    velociraptor-service:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.50.252:8889"
+
+    glpi-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.253:80"
+
+    n8n-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.254:5678"
+
+    netlock-console-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.241:8082"

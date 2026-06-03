@@ -3,6 +3,8 @@ services:
     build: .
     container_name: viki-dashboard-react
     restart: always
+    ports:
+      - "80:80"
     volumes:
       - /opt/cortex/status.json:/usr/share/nginx/html/status.json
     labels:

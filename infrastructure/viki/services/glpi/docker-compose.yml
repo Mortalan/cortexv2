@@ -33,6 +33,8 @@ services:
       - /mnt/data_lake/glpi/files:/var/glpi/files
       - /mnt/data_lake/glpi/marketplace:/var/glpi/marketplace
       - /mnt/data_lake/glpi/logs:/var/glpi/logs
+    ports:
+      - "80:80"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.glpi.rule=Host(`glpi.rmmservice.co.za`)"
