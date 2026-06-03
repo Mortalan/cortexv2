@@ -7,7 +7,10 @@
 - **Cluster-Wide Kernel Tuning Workaround:** Permanently disabled proactive memory compaction (`vm.compaction_proactiveness=0`) via `/etc/sysctl.d/60-kcompactd-lockup-fix.conf` on the Proxmox host (`192.168.50.240`), CORTEX-Core (`192.168.50.241`), CORTEX-AI (`192.168.50.242`), and CORTEX-Lake (`192.168.50.243`) to prevent CPU hang lockups.
 - **Proxmox Status Monitor daemon restored:** Restarted and verified the Proxmox status manager (`pvestatd.service`), stabilizing datacenter health monitoring.
 - **Authelia and Ingress Gateway Verified:** Verified HAProxy gateway connection routing, successfully forwarding requests to Traefik and landing on the authenticated Authelia login screen.
+- **VM Kernel & Driver Upgrades Executed:** Upgraded all guest VMs (Core, AI, Lake) to kernel `6.8.0-124-generic` (rebooted and verified stable, including rebuilding NVIDIA kernel modules for CUDA on AI).
+- **Proxmox VE 9.2.0 Platform Upgrade:** Cleanly shut down all VMs, resolved APT dependency breaks on the host using cache-bypassing parameters (`No-Cache=true`) and dependency fixes, and successfully executed `apt-get dist-upgrade` to upgrade the hypervisor host from Proxmox VE 9.1.0 to 9.2.0 (kernel `7.0.6-2-pve` / QEMU 11 / ZFS 2.4.2). Rebooted physical host, verified all VMs auto-started, and deleted temporary safety snapshots.
 - **Documentation Parity Synchronized:** Documented the compaction workaround inside both `topology.md` and `docs/INFRA.md`.
+
 
 ### 02 JUNE 2026 - WEBSITE QUALITY CONTROL & DYNAMIC COMPLIANCE SCANNING PIECE, ACTIVE CRAWLER AND CORTEX-REPORTER INTEGRATION (MOLE RUN MODE)
 - **Active Scraper & Crawler Engine (`cortex_reporter.py`):** Replaced the static, hardcoded website QC template metrics with a fully active, real-time website scraper that fetches DOM nodes, parses missing image alt attributes, reviews heading hierarchies, audits WCAG contrast ratios, checks meta descriptions, and benchmarks page speeds.
