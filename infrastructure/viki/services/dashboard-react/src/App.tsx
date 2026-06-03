@@ -123,7 +123,7 @@ const staticServicesData = [
     items: [
       { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
       { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
-      { name: "Ollama AI", subtitle: "Neural Inference", url: "https://cortex.rmmservice.co.za/api/viki/", icon: "🤖" },
+      { name: "Ollama AI", subtitle: "Neural Inference", url: "https://rmmservice.co.za/api/viki/", icon: "🤖" },
       { name: "Hermes Agent", subtitle: "Cognitive Dispatcher", url: "https://hermes.rmmservice.co.za", icon: "🕊️" },
     ],
   },
@@ -1098,7 +1098,7 @@ function App() {
       items: [
         { name: "MinIO", subtitle: "S3 Vault", url: "https://s3-console.rmmservice.co.za", icon: "🗄️" },
         { name: "n8n", subtitle: "Neural Synapse", url: "https://automation.rmmservice.co.za", icon: "🧠" },
-        { name: "Ollama AI", subtitle: "Neural Inference", url: "https://cortex.rmmservice.co.za/api/viki/", icon: "🤖" },
+        { name: "Ollama AI", subtitle: "Neural Inference", url: "https://rmmservice.co.za/api/viki/", icon: "🤖" },
         { name: "Hermes Agent", subtitle: "Cognitive Dispatcher", url: "https://hermes.rmmservice.co.za", icon: "🕊️" },
       ],
     },
