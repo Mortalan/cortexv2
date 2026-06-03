@@ -1,0 +1,25 @@
+services:
+  seo-scanner:
+    build: .
+    container_name: cortex-seo-scanner
+    restart: always
+    ports:
+      - "8090:8000"
+    volumes:
+      - ./seo_scanner.py:/app/seo_scanner.py:ro
+      - /mnt/data_lake/audit:/mnt/data_lake/audit
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+    networks:
+      - netlock_netlock-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.seo-scanner.rule=(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/seo`)"
+      - "traefik.http.routers.seo-scanner.entrypoints=web"
+      - "traefik.http.routers.seo-scanner.middlewares=authelia@docker,seo-scanner-stripprefix"
+      - "traefik.http.routers.seo-scanner.priority=100"
+      - "traefik.http.middlewares.seo-scanner-stripprefix.stripprefix.prefixes=/api/seo"
+      - "traefik.http.services.seo-scanner-service.loadbalancer.server.port=8000"
+
+networks:
+  netlock_netlock-network:
+    external: true

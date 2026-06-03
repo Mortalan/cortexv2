@@ -1,0 +1,25 @@
+services:
+  web-auditor:
+    build: .
+    container_name: cortex-web-auditor
+    restart: always
+    ports:
+      - "8091:8000"
+    volumes:
+      - ./web_auditor.py:/app/web_auditor.py:ro
+      - /mnt/data_lake/audit:/mnt/data_lake/audit
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+    networks:
+      - netlock_netlock-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web-auditor.rule=(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/audit`)"
+      - "traefik.http.routers.web-auditor.entrypoints=web"
+      - "traefik.http.routers.web-auditor.middlewares=authelia@docker,web-auditor-stripprefix"
+      - "traefik.http.routers.web-auditor.priority=100"
+      - "traefik.http.middlewares.web-auditor-stripprefix.stripprefix.prefixes=/api/audit"
+      - "traefik.http.services.web-auditor-service.loadbalancer.server.port=8000"
+
+networks:
+  netlock_netlock-network:
+    external: true

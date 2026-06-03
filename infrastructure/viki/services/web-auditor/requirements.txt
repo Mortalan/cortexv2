@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+httpx
+beautifulsoup4
+pydantic
+paramiko
+cryptography
+python-multipart
+duckdb

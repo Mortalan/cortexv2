@@ -35,6 +35,9 @@
 - **Phase 20:** Implement [M365 Graph Calendar Integration](file:///home/louis/cortex/docs/roadmap/4_outlook_integration.md) (Double-Booking Conflict Engine & 3-Day Dashboard Widget).
 - **Phase 21:** Port legacy Next.js/.NET Core [Overtime Tracker](file:///home/louis/cortex/docs/roadmap/6_overtime_system.md) into core FastAPI stack and GLPI ticket follow-up hook.
 - **Phase 22:** Deploy [Emergency API Kill Switch](file:///home/louis/cortex/docs/roadmap/7_security_protocols.md) at middleware level wired to EDR triggers.
+- **Phase 23:** Build and deploy [In-Depth SEO Diagnostic Scanner](file:///home/louis/cortex/seoscan.md) (`cortex-seo-scanner`) for crawl discovery, technical auditing, and auto-optimization hooks.
+- **Phase 24:** Build and deploy [Comprehensive Website Health & Security Auditor](file:///home/louis/cortex/webaudit.md) (`cortex-web-auditor`) for file integrity, malware scans, PHP configurations, compatibility analysis, and redirect audits.
+
 
 ---
 *Last Updated: Wednesday, 03 June 2026*

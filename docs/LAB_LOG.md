@@ -10,6 +10,9 @@
 - [x] **Phase 19: LXC Container Parallel Migration - COMPLETED**
 - [x] **SSO Home Redirection, Dashboard Telemetry Cache-Busting & GLPI SSL Pass-Through Hardening (Mole Run) - COMPLETED**
 - [ ] **Phase 20: Microsoft 365 Graph Calendar Integration - PLANNING**
+- [ ] **Phase 23: In-Depth SEO Diagnostic Scanner (cortex-seo-scanner) - IN PROGRESS**
+- [ ] **Phase 24: Comprehensive Website Health & Security Auditor (cortex-web-auditor) - IN PROGRESS**
+
 
 ---
 
