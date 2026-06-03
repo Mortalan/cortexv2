@@ -35,6 +35,31 @@ To prevent infrastructure degradation (404s/502s/401s), the following rules must
 ### 5. SSL & DOMAIN WORKFLOW (MULTI-DOMAIN SAN)
 To maintain 100% automated, zero-maintenance SSL renewals, CORTEX uses a **Multi-Domain SAN SSL certificate** terminated at the HAProxy gateway (`192.168.50.239`). Wildcard certificates are bypassed to avoid manual DNS challenge dependencies.
 
+#### **Active SAN Domains List**
+The unified certificate covers the following 16 active cluster domains:
+1. `rmmservice.co.za` (Main Dashboard Ingress)
+2. `cortex.rmmservice.co.za` (Dashboard Alias)
+3. `auth.rmmservice.co.za` (Authelia SSO Ingress)
+4. `auth-admin.rmmservice.co.za` (LLDAP Admin Console)
+5. `automation.rmmservice.co.za` (n8n Webhook / Canvas)
+6. `backup.rmmservice.co.za` (Bareos Admin)
+7. `glpi.rmmservice.co.za` (GLPI Ingress)
+8. `hermes.rmmservice.co.za` (Hermes API Gateway)
+9. `s3.rmmservice.co.za` (MinIO S3 API Endpoint)
+10. `s3-console.rmmservice.co.za` (MinIO Console Console)
+11. `rmm.rmmservice.co.za` (Netlock Web Gateway)
+12. `nl-webconsole.rmmservice.co.za` (Netlock Web Client)
+13. `nl-backend.rmmservice.co.za` (Netlock Daemon API)
+14. `nl-relay.rmmservice.co.za` (Netlock Client Relay)
+15. `traefik.rmmservice.co.za` (Traefik Admin Dashboard)
+16. `edr.rmmservice.co.za` (Velociraptor Admin Console)
+
+#### **SSO Session Timing & Auto-Login Ingress**
+- **Authelia Session Configurations:** Authelia's cookie session parameters are tuned in [configuration.yml](file:///home/louis/cortex/infrastructure/viki/services/authelia/configuration.yml) to prevent false logouts during background SPA (Single Page Application) polling:
+  * `expiration: 24h` (maximum login token life)
+  * `inactivity: 12h` (prevents timeouts when client-side AJAX requests to `/api` bypass the Authelia middleware proxy)
+- **SSO Auto-Login Endpoint:** The backend [reflex_daemon.py](file:///home/louis/cortex/infrastructure/viki/services/reflex/reflex_daemon.py) hosts a `/api/permissions/me` route that parses Authelia injected headers. The frontend checks this on mount and logs users in automatically, bypassing the double-login gateway overlay while preserving local fallbacks.
+
 #### **Protocol for Adding New Features / Subdomains**
 When adding a new component that requires a public subdomain (e.g., `newservice.rmmservice.co.za`):
 1. **User Notification (DNS Step):** The AI Agent **MUST** explicitly instruct the Service Manager to point the new subdomain via A record to the public gateway IP:
@@ -42,8 +67,7 @@ When adding a new component that requires a public subdomain (e.g., `newservice.
 2. **DNS Propagation Check:** Wait for the DNS record to propagate before proceeding with certificate re-issuance.
 3. **HAProxy Configuration:** Add the new subdomain to `/etc/haproxy/haproxy.cfg` under `frontend fe_https` (SNI matching rule and routing backend).
 4. **Certbot Re-issuance:** Run the Certbot standalone command on the HAProxy server, appending the new domain with `-d newservice.rmmservice.co.za`.
-5. **Unified PEM Generation:** Concatenate the private key and full chain, and overwrite `/etc/haproxy/rmmservice.co.za.pem`.
-6. **Reload Gateway:** Reload HAProxy via `systemctl reload haproxy`.
+5. **Automated Deploy Hook:** Rebuilding the unified PEM bundle and reloading HAProxy is fully automated via the Let's Encrypt deploy hook located at `/etc/letsencrypt/renewal-hooks/deploy/haproxy-reload.sh` on the HAProxy host. Ensure the new domain is appended to the `for DOM in ...` loop within the script.
 
 ### 6. SYSTEM STABILITY & KERNEL TUNING
 - **Problem:** Virtual machines (specifically `CORTEX-CORE` VM 100) running on Proxmox 9.x (kernel 6.8.x) can experience userspace hangs (e.g., SSH login hangs, Traefik connection timeouts), caused by `kcompactd0` memory compaction lockups in the guest kernel under memory pressure. This subsequently crashes the Proxmox status daemon (`pvestatd`) with a segmentation fault (`SEGV`).

@@ -18,6 +18,8 @@
 - [x] **Stateful BTRFS Forensic Logging & Multi-User Dashboards (Phase 18.2) Completed.**
 - [x] **Website Quality Control & Dynamic Scraper Integration (Phase 18.3) Completed.**
 - [x] **Proxmox Cluster Compaction & kcompactd0 soft lockup recovery (Mole Run) Completed.**
+- [x] **16-Domain SSL Termination Expansion (Mole Run) Completed.**
+- [x] **Authelia Timeout Extension & SSO Double-Login Patch (Mole Run) Completed.**
 
 ### CURRENT PHASE: SOVEREIGN CRM SYNC & ENTERPRISE TELEMETRY EXPANSION
 **Phase 18.3: Website Quality Control & Dynamic Scraper Integration**
