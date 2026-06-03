@@ -1,6 +1,15 @@
 # CORTEX: CHANGELOG
 ## [JUNE 2026]
 
+### 03 JUNE 2026 - AUTHELIA HOME REDIRECT, OLLAMA ENDPOINT ALIGNMENT & GLPI SECURE CONTEXT HARDENING (MOLE RUN MODE)
+- **Authelia Default Redirection Alignment:** Changed `default_redirection_url` from `https://cortex.rmmservice.co.za` to the primary domain `https://rmmservice.co.za` in `infrastructure/viki/services/authelia/configuration.yml` and deployed it to LXC 201's mounted Data Lake config directory.
+- **Ollama AI Endpoint Realignment:** Updated the React frontend [App.tsx](file:///home/louis/cortex/infrastructure/viki/services/dashboard-react/src/App.tsx) Ollama AI link targets to resolve directly to the main domain `https://rmmservice.co.za/api/viki/`, fully deprecating the `cortex.` subdomain.
+- **SSO Cache-Busting Implementation:** Resolved the stale cache issue on the dashboard where services (like Authelia) would falsely show as offline. Added a cache-busting timestamp to the `/status.json?t=` fetch request in [App.tsx](file:///home/louis/cortex/infrastructure/viki/services/dashboard-react/src/App.tsx), rebuilt the React app, and restarted the dashboard container.
+- **GLPI Secure Context / SSL Warnings Resolved:**
+  - Patched the GLPI database config on LXC 203 to change the legacy base URL `https://fitsdev.co.za` to `https://glpi.rmmservice.co.za`, updating related SMTP server and sender configurations consistently.
+  - Created a custom Apache config [reverse-proxy.conf](file:///home/louis/cortex/infrastructure/viki/services/glpi/reverse-proxy.conf) mapping the `X-Forwarded-Proto` header to PHP's `HTTPS=on` environment variable.
+  - Mounted the configuration into `/etc/apache2/conf-enabled/reverse-proxy.conf` inside the GLPI container via [docker-compose.yml](file:///home/louis/cortex/infrastructure/viki/services/glpi/docker-compose.yml) and recreated the service container to enforce secure cookies and prevent insecure asset URL generation.
+
 ### 03 JUNE 2026 - AUTHELIA HOME REDIRECT PATCH & MULTI-DOMAIN SSL TERMINATION RESTORATION (MOLE RUN MODE)
 - **Authelia Default Redirection Patch:** Fixed the post-login redirection hijacking the user to GLPI by changing `default_redirection_url` from `https://glpi.rmmservice.co.za` to `https://cortex.rmmservice.co.za` in `infrastructure/viki/services/authelia/configuration.yml`. Copied the configuration to the CORTEX-Core server (`192.168.50.241`) and restarted the Authelia docker container to apply.
 - **Let's Encrypt Account Restoration:** Resolved the critical Certbot JWS verification failure (`Account not found` on Let's Encrypt API) by renaming the stale local ACME account registry on the HAProxy server (`192.168.50.239`). This forced registration of a fresh, valid production Let's Encrypt account.

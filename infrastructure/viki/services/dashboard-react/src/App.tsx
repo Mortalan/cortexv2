@@ -1304,7 +1304,7 @@ function App() {
         }))));
         return;
       }
-      fetch("/status.json")
+      fetch("/status.json?t=" + Date.now())
         .then(res => res.json())
         .then((data: StatusData) => setStatus(data.services))
         .catch(() => {

@@ -21,6 +21,7 @@
 - [x] **16-Domain SSL Termination Expansion (Mole Run) Completed.**
 - [x] **Authelia Timeout Extension & SSO Double-Login Patch (Mole Run) Completed.**
 - [x] **LXC Container Parallel Migration (Phase 19) - COMPLETED**
+- [x] **SSO Home Redirection, Dashboard Telemetry Cache-Busting & GLPI SSL Pass-Through Hardening (Mole Run) - COMPLETED**
 
 ### CURRENT PHASE: SYSTEM DECENTRALIZATION COMPLETED
 **Phase 19.1: LXC Node Provisioning & Data Lake Bind Mounting**
@@ -38,6 +39,14 @@
 6. [x] Update Traefik dynamic file provider (`cortex-services.yml`, `reporter.yml`, `viki-agent.yml`) to route cross-node services and secure `/api` via Authelia SSO headers (fixing double-login).
 7. [x] Upgrade `status_check.sh` to support multi-node TCP/HTTP/Docker checks and configure crontab on LXC 202.
 8. [x] Pivot HAProxy gateway (`192.168.50.239`) to target LXC 201 and verify all ingress subdomains.
+
+**SSO Ingress, Status Caching & GLPI SSL Hardening (Mole Run - June 3, 2026)**
+1. [x] Realigned Authelia `default_redirection_url` to target the primary domain `https://rmmservice.co.za` instead of the `cortex.` subdomain.
+2. [x] Patched the React dashboard service URLs in `App.tsx` to route Ollama AI calls via the primary domain `https://rmmservice.co.za/api/viki/`.
+3. [x] Resolved stale offline telemetry indicator loops by injecting a timestamp cache-busting query parameter into the dashboard's `/status.json?t=` fetch request.
+4. [x] Rebuilt the production React dashboard, synced assets, and restarted the Nginx-dashboard container on LXC 202.
+5. [x] Resolved GLPI "unsecure" SSL warning: Changed legacy `url_base` to `https://glpi.rmmservice.co.za` and updated mail server configs in MariaDB on LXC 203.
+6. [x] Created Apache `reverse-proxy.conf` environment injection (`SetEnvIf X-Forwarded-Proto "^https$" HTTPS=on`) inside the GLPI container via Docker Compose volume mapping, forcing secure cookie generation and secure resource URL creation.
 
 **Phase 18.3: Website Quality Control & Dynamic Scraper Integration**
 1. [x] Develop active URL scraper `perform_active_site_audit` inside `cortex_reporter.py` parsing text nodes, image alt attributes, headings, meta tags, and PageSpeed ms.
