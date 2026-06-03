@@ -1,6 +1,15 @@
 # CORTEX: CHANGELOG
 ## [JUNE 2026]
 
+### 03 JUNE 2026 - LOGIN RESTORATION, DB SYNC, AND LLDAP BOOTSTRAPPING (MOLE RUN MODE)
+- **Authelia 401 Login Restored:** Diagnosed Authelia 401 authentication errors caused by missing user directory profiles in LLDAP following the stack reinstallation/VM reboot.
+- **LLDAP User Bootstrapping:** Engineered and executed a programmatic Python bootstrap script (`scratch/bootstrap_lldap_users.py`) leveraging the LLDAP GraphQL API to generate and register identity records (`Louis`, `Felicia`, `Vitto`, `Sarah`, `test`) matching the permissions database.
+- **LLDAP Group Mapping:** Restored organizational role groups (`Cortex-Admins`, `Cortex-Designers`, `Cortex-Technicians`) inside LLDAP and mapped users to their respective groups.
+- **Authelia Integration Verified:** Verified Authelia first-factor login functionality programmatically, returning HTTP 200 and establishing valid session credentials.
+- **GLPI Database Recovery:** Diagnosed an empty `glpi` database inside the container. Restored and synchronized a complete 1.3 GB production MariaDB dump directly from `yetiserv` (`192.168.50.232`) over SSH, populating 506 tables and stabilizing ticketing system metrics.
+- **N8N Directory Write Permissions Resolved:** Patched UID/GID write permissions on the local host path `/opt/cortex/data/automation/n8n` to grant node user ownership (1000:1000), clearing EACCES container write exceptions.
+- **Storage-Dependent Container Mount Resets:** Reset and restarted microservice container stacks (Authelia, GLPI, n8n-automation, netlock-rmm-server, Reflex Daemon, Hermes Agent, MinIO, Vector) to refresh their bind mounts to the active data lake NFS mount point.
+
 ### 03 JUNE 2026 - PROXMOX RECOVERY & SYSTEM-WIDE KERNEL COMPACTION LOCKUP WORKAROUND DEPLOYED (MOLE RUN MODE)
 - **CORTEX-Core Hard VM Reboot:** Recovered `CORTEX-Core` (VM 100) from a unresponsive userspace state by executing `qm stop 100 && qm start 100` from the hypervisor host command line.
 - **kcompactd0 watchdog soft lockup diagnosed:** Identified kernel compaction spinlock infinite loops under memory pressure (`kcompactd0` soft lockup) as the root cause of guest environment lockups and subsequent hypervisor `pvestatd` segmentation fault crashes.
