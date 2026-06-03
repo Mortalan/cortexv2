@@ -1,6 +1,14 @@
 # CORTEX: CHANGELOG
 ## [JUNE 2026]
 
+### 03 JUNE 2026 - PROXMOX RECOVERY & SYSTEM-WIDE KERNEL COMPACTION LOCKUP WORKAROUND DEPLOYED (MOLE RUN MODE)
+- **CORTEX-Core Hard VM Reboot:** Recovered `CORTEX-Core` (VM 100) from a unresponsive userspace state by executing `qm stop 100 && qm start 100` from the hypervisor host command line.
+- **kcompactd0 watchdog soft lockup diagnosed:** Identified kernel compaction spinlock infinite loops under memory pressure (`kcompactd0` soft lockup) as the root cause of guest environment lockups and subsequent hypervisor `pvestatd` segmentation fault crashes.
+- **Cluster-Wide Kernel Tuning Workaround:** Permanently disabled proactive memory compaction (`vm.compaction_proactiveness=0`) via `/etc/sysctl.d/60-kcompactd-lockup-fix.conf` on the Proxmox host (`192.168.50.240`), CORTEX-Core (`192.168.50.241`), CORTEX-AI (`192.168.50.242`), and CORTEX-Lake (`192.168.50.243`) to prevent CPU hang lockups.
+- **Proxmox Status Monitor daemon restored:** Restarted and verified the Proxmox status manager (`pvestatd.service`), stabilizing datacenter health monitoring.
+- **Authelia and Ingress Gateway Verified:** Verified HAProxy gateway connection routing, successfully forwarding requests to Traefik and landing on the authenticated Authelia login screen.
+- **Documentation Parity Synchronized:** Documented the compaction workaround inside both `topology.md` and `docs/INFRA.md`.
+
 ### 02 JUNE 2026 - WEBSITE QUALITY CONTROL & DYNAMIC COMPLIANCE SCANNING PIECE, ACTIVE CRAWLER AND CORTEX-REPORTER INTEGRATION (MOLE RUN MODE)
 - **Active Scraper & Crawler Engine (`cortex_reporter.py`):** Replaced the static, hardcoded website QC template metrics with a fully active, real-time website scraper that fetches DOM nodes, parses missing image alt attributes, reviews heading hierarchies, audits WCAG contrast ratios, checks meta descriptions, and benchmarks page speeds.
 - **Deterministic Domain-Hash Seed Fallback:** Engineered a robust, deterministic seed engine utilizing an MD5 hash of the target domain name to generate consistent, unique, and realistic mock telemetry for protected, internal, or offline endpoints, completely eliminating repeating scores.

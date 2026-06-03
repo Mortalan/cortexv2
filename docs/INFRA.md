@@ -45,4 +45,11 @@ When adding a new component that requires a public subdomain (e.g., `newservice.
 5. **Unified PEM Generation:** Concatenate the private key and full chain, and overwrite `/etc/haproxy/rmmservice.co.za.pem`.
 6. **Reload Gateway:** Reload HAProxy via `systemctl reload haproxy`.
 
+### 6. SYSTEM STABILITY & KERNEL TUNING
+- **Problem:** Virtual machines (specifically `CORTEX-CORE` VM 100) running on Proxmox 9.x (kernel 6.8.x) can experience userspace hangs (e.g., SSH login hangs, Traefik connection timeouts), caused by `kcompactd0` memory compaction lockups in the guest kernel under memory pressure. This subsequently crashes the Proxmox status daemon (`pvestatd`) with a segmentation fault (`SEGV`).
+- **Workaround:** Proactive memory compaction is disabled host-wide and guest-wide.
+- **Implementation:** Added `vm.compaction_proactiveness=0` inside `/etc/sysctl.d/60-kcompactd-lockup-fix.conf` on the Proxmox host (`192.168.50.240`) and all three virtual machines (`192.168.50.241`, `192.168.50.242`, `192.168.50.243`).
+- **Command applied:** `echo "vm.compaction_proactiveness=0" | sudo tee /etc/sysctl.d/60-kcompactd-lockup-fix.conf && sudo sysctl -p /etc/sysctl.d/60-kcompactd-lockup-fix.conf`
+
+
 
