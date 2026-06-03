@@ -35,7 +35,7 @@
 3. [x] Deploy MariaDB and GLPI on LXC 203 (`cortex-glpi`) and sync database.
 4. [x] Deploy Redis and n8n on LXC 204 (`cortex-automation`).
 5. [x] Restore NetLock RMM stack on VM 100 with exposed web console port (8082).
-6. [x] Update Traefik dynamic file provider (`cortex-services.yml`, `reporter.yml`, `viki-agent.yml`) to route cross-node services.
+6. [x] Update Traefik dynamic file provider (`cortex-services.yml`, `reporter.yml`, `viki-agent.yml`) to route cross-node services and secure `/api` via Authelia SSO headers (fixing double-login).
 7. [x] Upgrade `status_check.sh` to support multi-node TCP/HTTP/Docker checks and configure crontab on LXC 202.
 8. [x] Pivot HAProxy gateway (`192.168.50.239`) to target LXC 201 and verify all ingress subdomains.
 
