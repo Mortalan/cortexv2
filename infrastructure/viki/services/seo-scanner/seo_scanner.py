@@ -513,4 +513,5 @@ async def get_crawl_history() -> JSONResponse:
     return JSONResponse(content={"history": history})
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

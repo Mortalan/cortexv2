@@ -1,12 +1,12 @@
-FROM mcr.microsoft.com/playwright/python:v1.44.0-noble
+FROM python:3.12-slim
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure playwright browsers are installed and verified (especially chromium)
-RUN playwright install chromium
+# Install chromium and system libraries
+RUN playwright install --with-deps chromium
 
 COPY . .
 

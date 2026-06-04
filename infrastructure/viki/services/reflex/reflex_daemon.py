@@ -93,7 +93,9 @@ DEFAULT_APPS = {
     "Hermes Agent": True,
     "Traefik": True,
     "Authelia": True,
-    "WireGuard": True
+    "WireGuard": True,
+    "SEO Scanner": True,
+    "Website Auditor": True
 }
 
 _cached_permissions = None
@@ -132,6 +134,8 @@ def get_permissions() -> dict:
                                 "view_telemetry": True,
                                 "execute_playbooks": True,
                                 "run_qc_scans": True,
+                                "run_seo_scans": True,
+                                "run_web_audits": True,
                                 "edit_appointments": True,
                                 "edit_user_permissions": True
                             },
@@ -146,6 +150,8 @@ def get_permissions() -> dict:
                                 "view_telemetry": True,
                                 "execute_playbooks": True,
                                 "run_qc_scans": True,
+                                "run_seo_scans": True,
+                                "run_web_audits": True,
                                 "edit_appointments": True,
                                 "edit_user_permissions": True
                             },
@@ -160,6 +166,8 @@ def get_permissions() -> dict:
                                 "view_telemetry": True,
                                 "execute_playbooks": False,
                                 "run_qc_scans": False,
+                                "run_seo_scans": False,
+                                "run_web_audits": False,
                                 "edit_appointments": True,
                                 "edit_user_permissions": False
                             },
@@ -174,6 +182,8 @@ def get_permissions() -> dict:
                                 "view_telemetry": True,
                                 "execute_playbooks": False,
                                 "run_qc_scans": True,
+                                "run_seo_scans": True,
+                                "run_web_audits": True,
                                 "edit_appointments": False,
                                 "edit_user_permissions": False
                             },
@@ -198,6 +208,15 @@ def get_permissions() -> dict:
                 if app_name not in u["apps"]:
                     u["apps"][app_name] = app_def
                     modified = True
+        if "permissions" not in u:
+            u["permissions"] = {}
+            modified = True
+        if "run_seo_scans" not in u["permissions"]:
+            u["permissions"]["run_seo_scans"] = u["permissions"].get("run_qc_scans", False)
+            modified = True
+        if "run_web_audits" not in u["permissions"]:
+            u["permissions"]["run_web_audits"] = u["permissions"].get("run_qc_scans", False)
+            modified = True
         if "password" not in u:
             u["password"] = "password"
             modified = True
@@ -472,6 +491,8 @@ def api_toggle_permission() -> object:
                         "view_telemetry": True,
                         "execute_playbooks": True,
                         "run_qc_scans": True,
+                        "run_seo_scans": True,
+                        "run_web_audits": True,
                         "edit_appointments": True,
                         "edit_user_permissions": True
                     }
@@ -480,6 +501,8 @@ def api_toggle_permission() -> object:
                         "view_telemetry": True,
                         "execute_playbooks": False,
                         "run_qc_scans": False,
+                        "run_seo_scans": False,
+                        "run_web_audits": False,
                         "edit_appointments": True,
                         "edit_user_permissions": False
                     }
@@ -488,6 +511,8 @@ def api_toggle_permission() -> object:
                         "view_telemetry": True,
                         "execute_playbooks": False,
                         "run_qc_scans": True,
+                        "run_seo_scans": True,
+                        "run_web_audits": True,
                         "edit_appointments": True,
                         "edit_user_permissions": False
                     }
@@ -496,6 +521,8 @@ def api_toggle_permission() -> object:
                         "view_telemetry": False,
                         "execute_playbooks": False,
                         "run_qc_scans": False,
+                        "run_seo_scans": False,
+                        "run_web_audits": False,
                         "edit_appointments": True,
                         "edit_user_permissions": False
                     }
@@ -504,6 +531,8 @@ def api_toggle_permission() -> object:
                         "view_telemetry": True,
                         "execute_playbooks": False,
                         "run_qc_scans": True,
+                        "run_seo_scans": True,
+                        "run_web_audits": True,
                         "edit_appointments": False,
                         "edit_user_permissions": False
                     }
@@ -572,6 +601,8 @@ def api_create_user() -> object:
             "view_telemetry": True,
             "execute_playbooks": True,
             "run_qc_scans": True,
+            "run_seo_scans": True,
+            "run_web_audits": True,
             "edit_appointments": True,
             "edit_user_permissions": True
         }
@@ -580,6 +611,8 @@ def api_create_user() -> object:
             "view_telemetry": True,
             "execute_playbooks": False,
             "run_qc_scans": False,
+            "run_seo_scans": False,
+            "run_web_audits": False,
             "edit_appointments": True,
             "edit_user_permissions": False
         }
@@ -588,6 +621,8 @@ def api_create_user() -> object:
             "view_telemetry": True,
             "execute_playbooks": False,
             "run_qc_scans": True,
+            "run_seo_scans": True,
+            "run_web_audits": True,
             "edit_appointments": True,
             "edit_user_permissions": False
         }
@@ -596,6 +631,8 @@ def api_create_user() -> object:
             "view_telemetry": False,
             "execute_playbooks": False,
             "run_qc_scans": False,
+            "run_seo_scans": False,
+            "run_web_audits": False,
             "edit_appointments": True,
             "edit_user_permissions": False
         }
@@ -604,6 +641,8 @@ def api_create_user() -> object:
             "view_telemetry": True,
             "execute_playbooks": False,
             "run_qc_scans": True,
+            "run_seo_scans": True,
+            "run_web_audits": True,
             "edit_appointments": False,
             "edit_user_permissions": False
         }
@@ -738,6 +777,8 @@ def api_get_current_user() -> object:
                 "view_telemetry": True,
                 "execute_playbooks": False,
                 "run_qc_scans": False,
+                "run_seo_scans": False,
+                "run_web_audits": False,
                 "edit_appointments": True,
                 "edit_user_permissions": False
             }

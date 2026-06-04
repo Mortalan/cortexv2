@@ -46,6 +46,8 @@ interface PermissionUser {
     view_telemetry: boolean;
     execute_playbooks: boolean;
     run_qc_scans: boolean;
+    run_seo_scans: boolean;
+    run_web_audits: boolean;
     edit_appointments: boolean;
     edit_user_permissions: boolean;
   };
@@ -116,6 +118,8 @@ const staticServicesData = [
       { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
       { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
       { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
+      { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "https://cortex.rmmservice.co.za/api/seo", icon: "🔍" },
+      { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "https://cortex.rmmservice.co.za/api/audit", icon: "🩺" }
     ],
   },
   {
@@ -1061,6 +1065,8 @@ function App() {
       view_telemetry: true,
       execute_playbooks: currentUser === "Louis" || currentUser === "Felicia",
       run_qc_scans: currentUser !== "Vitto",
+      run_seo_scans: currentUser !== "Vitto",
+      run_web_audits: currentUser !== "Vitto",
       edit_appointments: currentUser !== "Sarah",
       edit_user_permissions: currentUser === "Louis" || currentUser === "Felicia"
     },
@@ -1075,7 +1081,9 @@ function App() {
       "Hermes Agent": true,
       "Traefik": true,
       "Authelia": true,
-      "WireGuard": true
+      "WireGuard": true,
+      "SEO Scanner": true,
+      "Website Auditor": true
     }
   };
 
@@ -1091,6 +1099,8 @@ function App() {
         { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
         { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
         { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
+        { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "https://cortex.rmmservice.co.za/api/seo", icon: "🔍" },
+        { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "https://cortex.rmmservice.co.za/api/audit", icon: "🩺" }
       ],
     },
     {
@@ -1171,6 +1181,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: true,
                   run_qc_scans: true,
+                  run_seo_scans: true,
+                  run_web_audits: true,
                   edit_appointments: true,
                   edit_user_permissions: true
                 }
@@ -1183,6 +1195,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: true,
                   run_qc_scans: true,
+                  run_seo_scans: true,
+                  run_web_audits: true,
                   edit_appointments: true,
                   edit_user_permissions: true
                 }
@@ -1195,6 +1209,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: false,
                   run_qc_scans: false,
+                  run_seo_scans: false,
+                  run_web_audits: false,
                   edit_appointments: true,
                   edit_user_permissions: false
                 }
@@ -1207,6 +1223,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: false,
                   run_qc_scans: true,
+                  run_seo_scans: true,
+                  run_web_audits: true,
                   edit_appointments: false,
                   edit_user_permissions: false
                 }
@@ -1546,6 +1564,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: true,
                   run_qc_scans: true,
+                  run_seo_scans: true,
+                  run_web_audits: true,
                   edit_appointments: true,
                   edit_user_permissions: true
                 };
@@ -1554,6 +1574,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: false,
                   run_qc_scans: false,
+                  run_seo_scans: false,
+                  run_web_audits: false,
                   edit_appointments: true,
                   edit_user_permissions: false
                 };
@@ -1562,6 +1584,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: false,
                   run_qc_scans: true,
+                  run_seo_scans: true,
+                  run_web_audits: true,
                   edit_appointments: true,
                   edit_user_permissions: false
                 };
@@ -1570,6 +1594,8 @@ function App() {
                   view_telemetry: false,
                   execute_playbooks: false,
                   run_qc_scans: false,
+                  run_seo_scans: false,
+                  run_web_audits: false,
                   edit_appointments: true,
                   edit_user_permissions: false
                 };
@@ -1578,6 +1604,8 @@ function App() {
                   view_telemetry: true,
                   execute_playbooks: false,
                   run_qc_scans: true,
+                  run_seo_scans: true,
+                  run_web_audits: true,
                   edit_appointments: false,
                   edit_user_permissions: false
                 };
@@ -1638,6 +1666,8 @@ function App() {
       view_telemetry: true,
       execute_playbooks: false,
       run_qc_scans: true,
+      run_seo_scans: true,
+      run_web_audits: true,
       edit_appointments: false,
       edit_user_permissions: false
     };
@@ -1647,6 +1677,8 @@ function App() {
         view_telemetry: true,
         execute_playbooks: true,
         run_qc_scans: true,
+        run_seo_scans: true,
+        run_web_audits: true,
         edit_appointments: true,
         edit_user_permissions: true
       };
@@ -1655,6 +1687,8 @@ function App() {
         view_telemetry: true,
         execute_playbooks: false,
         run_qc_scans: false,
+        run_seo_scans: false,
+        run_web_audits: false,
         edit_appointments: true,
         edit_user_permissions: false
       };
@@ -1663,6 +1697,8 @@ function App() {
         view_telemetry: true,
         execute_playbooks: false,
         run_qc_scans: true,
+        run_seo_scans: true,
+        run_web_audits: true,
         edit_appointments: true,
         edit_user_permissions: false
       };
@@ -1671,6 +1707,8 @@ function App() {
         view_telemetry: false,
         execute_playbooks: false,
         run_qc_scans: false,
+        run_seo_scans: false,
+        run_web_audits: false,
         edit_appointments: true,
         edit_user_permissions: false
       };
@@ -2194,6 +2232,28 @@ function App() {
                               type="checkbox" 
                               checked={currentSelectedUser.permissions.run_qc_scans}
                               onChange={() => handlePermissionToggle(currentSelectedUser.username, "run_qc_scans", currentSelectedUser.permissions.run_qc_scans)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Run SEO Scans</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.run_seo_scans}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "run_seo_scans", currentSelectedUser.permissions.run_seo_scans)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                        <div className="permission-toggle-box">
+                          <span className="permission-toggle-label">Run Web Audits</span>
+                          <label className="toggle-switch">
+                            <input 
+                              type="checkbox" 
+                              checked={currentSelectedUser.permissions.run_web_audits}
+                              onChange={() => handlePermissionToggle(currentSelectedUser.username, "run_web_audits", currentSelectedUser.permissions.run_web_audits)}
                             />
                             <span className="toggle-slider"></span>
                           </label>
