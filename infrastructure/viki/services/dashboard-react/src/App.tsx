@@ -1003,6 +1003,724 @@ function QCScanningConsole() {
   );
 }
 
+function SEOScanningConsole() {
+  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'completed' | 'error'>('idle');
+  const [targetUrl, setTargetUrl] = useState("https://rmmservice.co.za");
+  const [maxPages, setMaxPages] = useState(30);
+  const [renderJs, setRenderJs] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [pages, setPages] = useState<any[]>([]);
+  const [remediations, setRemediations] = useState<any[]>([]);
+  const [sitemapXml, setSitemapXml] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<'all' | 'errors' | 'remediation'>('all');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
+  const startScan = async () => {
+    if (!targetUrl || !targetUrl.trim()) return;
+    setScanState('scanning');
+    setProgress(0);
+    setLogs([`[SYSTEM] Connecting to cortex-seo-scanner API daemon...`]);
+    setErrorMsg(null);
+    setPages([]);
+    setRemediations([]);
+
+    try {
+      const res = await fetch("/api/seo/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: targetUrl,
+          max_pages: maxPages,
+          render_js: renderJs
+        })
+      });
+      if (!res.ok) throw new Error(`SEO Daemon API failed: ${res.statusText}`);
+      const data = await res.json();
+      setJobId(data.job_id);
+      setLogs(prev => [
+        ...prev,
+        `[SYSTEM] Crawl job registered: ${data.job_id}`,
+        `[CRAWLER] Obeying robots.txt disallow directives...`,
+        `[CRAWLER] Initiating asyncio crawler thread pool...`
+      ]);
+
+      pollJob(data.job_id);
+    } catch (e: any) {
+      setLogs(prev => [...prev, `[ERROR] Crawl initialization failed: ${e.message}`]);
+      setErrorMsg(e.message);
+      setScanState('error');
+    }
+  };
+
+  const pollJob = (id: string) => {
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/seo/crawl/${id}`);
+        if (!res.ok) throw new Error("Status query failed");
+        const data = await res.json();
+
+        const timestamp = new Date().toLocaleTimeString();
+        setProgress(Math.floor((data.pages_crawled / data.max_pages) * 100));
+
+        setLogs(prev => {
+          const last = prev[prev.length - 1];
+          const logLine = `[CRAWLER] Crawling in progress... Pages visited: ${data.pages_crawled}/${data.max_pages}`;
+          if (last && last.includes("Crawling in progress")) {
+            return [...prev.slice(0, -1), `[${timestamp}] ${logLine}`];
+          }
+          return [...prev, `[${timestamp}] ${logLine}`];
+        });
+
+        if (data.status === 'completed') {
+          clearInterval(timer);
+          setLogs(prev => [...prev, `[SYSTEM] Crawl completed. Fetching technical diagnostics & schemas...`]);
+          await fetchResults(id);
+        } else if (data.status === 'error') {
+          clearInterval(timer);
+          setScanState('error');
+        }
+      } catch (e: any) {
+        clearInterval(timer);
+        setErrorMsg(e.message);
+        setScanState('error');
+      }
+    }, 1500);
+  };
+
+  const fetchResults = async (id: string) => {
+    try {
+      const resPages = await fetch(`/api/seo/crawl/${id}/results`);
+      const dataPages = await resPages.json();
+      setPages(dataPages.pages || []);
+
+      const resRem = await fetch(`/api/seo/crawl/${id}/remediate`);
+      const dataRem = await resRem.json();
+      setRemediations(dataRem.remediations || []);
+      setSitemapXml(dataRem.sitemap_xml_blueprint || "");
+
+      setScanState('completed');
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setScanState('error');
+    }
+  };
+
+  const downloadSitemap = () => {
+    if (!sitemapXml) return;
+    const blob = new Blob([sitemapXml], { type: "text/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sitemap.xml";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const avgSeoScore = pages.length ? Math.round(pages.reduce((acc, p) => acc + p.seo_score, 0) / pages.length) : 100;
+  const avgLoadTime = pages.length ? Math.round(pages.reduce((acc, p) => acc + p.load_time_ms, 0) / pages.length) : 0;
+  const totalIssues = remediations.reduce((acc, r) => acc + r.issues.length, 0);
+
+  return (
+    <div className="qc-console-card glassmorphic">
+      {scanState === 'idle' && (
+        <div className="qc-idle-view">
+          <div className="qc-scanning-radar">
+            <div className="radar-sweep" style={{ borderLeftColor: "var(--accent)" }}></div>
+            <span className="radar-icon">🔍</span>
+          </div>
+          <h3 className="font-space">IN-DEPTH TECHNICAL & COPY SEO SPIDER</h3>
+          <p className="font-space text-dim" style={{ marginBottom: "1rem" }}>
+            Execute deep crawlers to audit metadata length, heading tags nesting compliance, image alt flags, broken anchor paths, and Schema.org structured JSON-LD structures.
+          </p>
+
+          <div style={{ display: "flex", gap: "1rem", width: "100%", maxWidth: "560px", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+            <div className="qc-input-group font-space" style={{ flex: 2, display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              <label style={{ fontSize: "0.55rem", color: "var(--accent)", letterSpacing: "2px", textTransform: "uppercase", textAlign: "left", opacity: 0.8, fontWeight: 700 }}>Seed URL</label>
+              <input 
+                type="url"
+                placeholder="Enter URL (e.g. https://rmmservice.co.za)"
+                value={targetUrl}
+                onChange={(e) => setTargetUrl(e.target.value)}
+                style={{
+                  width: "100%", padding: "8px 12px", background: "rgba(0, 0, 0, 0.4)",
+                  border: "1px solid rgba(0, 242, 255, 0.2)", borderRadius: "6px",
+                  color: "#fff", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box"
+                }}
+                required
+              />
+            </div>
+            <div className="qc-input-group font-space" style={{ flex: 1, minWidth: "120px", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              <label style={{ fontSize: "0.55rem", color: "var(--accent)", letterSpacing: "2px", textTransform: "uppercase", textAlign: "left", opacity: 0.8, fontWeight: 700 }}>Max Pages</label>
+              <input 
+                type="number"
+                value={maxPages}
+                onChange={(e) => setMaxPages(parseInt(e.target.value) || 10)}
+                style={{
+                  width: "100%", padding: "8px 12px", background: "rgba(0, 0, 0, 0.4)",
+                  border: "1px solid rgba(0, 242, 255, 0.2)", borderRadius: "6px",
+                  color: "#fff", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box"
+                }}
+                min="5"
+                max="300"
+              />
+            </div>
+          </div>
+
+          <div className="font-space" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
+            <input 
+              type="checkbox" 
+              id="render-js-chk" 
+              checked={renderJs} 
+              onChange={(e) => setRenderJs(e.target.checked)} 
+              style={{ cursor: "pointer" }}
+            />
+            <label htmlFor="render-js-chk" style={{ fontSize: "0.75rem", cursor: "pointer", color: "#ddd" }}>
+              Render Javascript dynamically (Headless Playwright browser engine)
+            </label>
+          </div>
+
+          <button className="spacious-submit-btn font-space qc-initiate-btn pulse-glow" onClick={startScan} disabled={!targetUrl || !targetUrl.trim()}>
+            ⚡ RUN SEO DIAGNOSTIC SCAN
+          </button>
+        </div>
+      )}
+
+      {scanState === 'scanning' && (
+        <div className="qc-scanning-view">
+          <div className="qc-hud-header">
+            <span className="hud-title font-space blinking" style={{ color: "var(--accent)" }}>CRAWL JOB IN PROGRESS</span>
+            <span className="hud-percent font-space" style={{ color: "var(--accent)" }}>{progress}%</span>
+          </div>
+          <div className="qc-progress-track">
+            <div className="qc-progress-bar" style={{ width: `${progress}%`, backgroundColor: "var(--accent)" }}></div>
+          </div>
+          <div className="qc-logs-terminal">
+            <div className="terminal-header font-space">SEO SCANNER ACTIVE SHELL</div>
+            <div className="terminal-body scrollable">
+              {logs.map((log, index) => (
+                <div key={index} className="terminal-log-line font-space">{log}</div>
+              ))}
+              <div ref={terminalEndRef}></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'completed' && (
+        <div className="qc-completed-view">
+          <div className="qc-result-alert glassmorphic" style={{ borderLeftColor: "var(--accent)" }}>
+            <span className="result-icon" style={{ backgroundColor: "rgba(0, 242, 255, 0.2)", color: "var(--accent)" }}>✓</span>
+            <div className="result-meta font-space">
+              <h4>SEO DIAGNOSTIC COMPLETED</h4>
+              <p style={{ color: avgSeoScore < 80 ? "red" : "#aaa" }}>
+                {avgSeoScore < 85
+                  ? `State: OPTIMIZATION CRITICAL (Average SEO Rating: ${avgSeoScore}%)`
+                  : `State: SECURE & INDEXABLE (Average SEO Rating: ${avgSeoScore}%)`}
+              </p>
+            </div>
+            <button className="spacious-submit-btn font-space qc-reset-btn" onClick={() => setScanState('idle')}>
+              🔄 NEW SCAN
+            </button>
+          </div>
+
+          <div className="qc-metrics-grid">
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">AVG SEO SCORE</span>
+              <span className="metric-value font-space secure-glow" style={{ textShadow: "0 0 10px rgba(0, 242, 255, 0.5)", color: "var(--accent)" }}>
+                {avgSeoScore}%
+              </span>
+            </div>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">PAGES CRAWLED</span>
+              <span className="metric-value font-space text-online">
+                {pages.length}
+              </span>
+            </div>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">TOTAL ISSUES</span>
+              <span className="metric-value font-space" style={{ color: totalIssues > 0 ? "orange" : "green" }}>
+                {totalIssues}
+              </span>
+            </div>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">AVG SPEED</span>
+              <span className="metric-value font-space text-online">
+                {avgLoadTime}ms
+              </span>
+            </div>
+          </div>
+
+          <div className="font-space" style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "0.5rem" }}>
+            <button className={`spacious-submit-btn`} style={{ padding: "6px 12px", background: activeTab === 'all' ? 'rgba(0, 242, 255, 0.2)' : 'transparent', border: "1px solid rgba(0, 242, 255, 0.2)", fontSize: "0.7rem" }} onClick={() => setActiveTab('all')}>All Pages</button>
+            <button className={`spacious-submit-btn`} style={{ padding: "6px 12px", background: activeTab === 'errors' ? 'rgba(0, 242, 255, 0.2)' : 'transparent', border: "1px solid rgba(0, 242, 255, 0.2)", fontSize: "0.7rem" }} onClick={() => setActiveTab('errors')}>Suboptimal Pages</button>
+            <button className={`spacious-submit-btn`} style={{ padding: "6px 12px", background: activeTab === 'remediation' ? 'rgba(0, 242, 255, 0.2)' : 'transparent', border: "1px solid rgba(0, 242, 255, 0.2)", fontSize: "0.7rem" }} onClick={() => setActiveTab('remediation')}>Remediation Checklist ({totalIssues})</button>
+          </div>
+
+          <div style={{ maxHeight: "300px", overflowY: "auto", background: "rgba(0,0,0,0.3)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.05)" }}>
+            {activeTab === 'all' && (
+              <table style={{ width: "100%", fontSize: "0.7rem", color: "#ddd", borderCollapse: "collapse", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                    <th style={{ padding: "6px 10px" }}>URL</th>
+                    <th style={{ padding: "6px 10px" }}>SEO Rating</th>
+                    <th style={{ padding: "6px 10px" }}>Word Count</th>
+                    <th style={{ padding: "6px 10px" }}>Canonical</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pages.map((p, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.02)" }}>
+                      <td style={{ padding: "6px 10px", wordBreak: "break-all" }}>{p.url}</td>
+                      <td style={{ padding: "6px 10px", color: p.seo_score >= 85 ? "green" : p.seo_score >= 60 ? "orange" : "red" }}>{p.seo_score}%</td>
+                      <td style={{ padding: "6px 10px" }}>{p.word_count}</td>
+                      <td style={{ padding: "6px 10px" }}>{p.canonical_status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {activeTab === 'errors' && (
+              <table style={{ width: "100%", fontSize: "0.7rem", color: "#ddd", borderCollapse: "collapse", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                    <th style={{ padding: "6px 10px" }}>URL</th>
+                    <th style={{ padding: "6px 10px" }}>SEO</th>
+                    <th style={{ padding: "6px 10px" }}>Title Tag</th>
+                    <th style={{ padding: "6px 10px" }}>Meta Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pages.filter(p => p.seo_score < 95).map((p, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.02)" }}>
+                      <td style={{ padding: "6px 10px", wordBreak: "break-all" }}>{p.url}</td>
+                      <td style={{ padding: "6px 10px", color: "orange" }}>{p.seo_score}%</td>
+                      <td style={{ padding: "6px 10px", fontStyle: p.title ? "normal" : "italic" }}>{p.title || "Missing"}</td>
+                      <td style={{ padding: "6px 10px" }}>{p.meta_description || "Missing"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {activeTab === 'remediation' && (
+              <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "0.75rem", fontFamily: "monospace" }}>
+                {remediations.map((rem, idx) => (
+                  <div key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "0.5rem" }}>
+                    <div style={{ color: "var(--accent)", fontSize: "0.7rem", wordBreak: "break-all", marginBottom: "0.25rem" }}>URL: {rem.url}</div>
+                    {rem.issues.map((i: any, iidx: number) => (
+                      <div key={iidx} style={{ marginLeft: "10px", fontSize: "0.65rem", display: "flex", flexDirection: "column", gap: "0.1rem", marginBottom: "0.3rem" }}>
+                        <div style={{ display: "flex", gap: "0.3rem" }}>
+                          <span style={{ color: i.severity === 'high' ? 'red' : 'yellow' }}>[{i.severity.toUpperCase()}]</span>
+                          <span style={{ color: "#eee" }}>{i.message}</span>
+                        </div>
+                        <div style={{ color: "#888" }}>Proposed Fix: <code style={{ color: "#a5d6ff", padding: "1px 4px", background: "rgba(255,255,255,0.05)", borderRadius: "3px" }}>{i.fix}</code></div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: "1rem", marginTop: "1.25rem", flexWrap: "wrap" }}>
+            <button className="spacious-submit-btn font-space compile-report-btn" style={{ flex: 1, minWidth: "150px" }} onClick={downloadSitemap} disabled={!sitemapXml}>
+              📄 DOWNLOAD SITEMAP.XML
+            </button>
+            <a href={`/api/seo/crawl/${jobId}/export`} target="_blank" rel="noopener noreferrer" className="spacious-submit-btn font-space" style={{ flex: 1, minWidth: "150px", textAlign: "center", textDecoration: "none", lineHeight: "1.6rem" }}>
+              📊 EXPORT CRAWL CSV
+            </a>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'error' && (
+        <div className="qc-completed-view">
+          <div className="qc-result-alert glassmorphic" style={{ borderLeftColor: "red" }}>
+            <span className="result-icon" style={{ backgroundColor: "rgba(255, 0, 0, 0.2)", color: "red" }}>❌</span>
+            <div className="result-meta font-space">
+              <h4>SEO DIAGNOSTIC FAILED</h4>
+              <p style={{ color: "red" }}>Error Details: {errorMsg}</p>
+            </div>
+            <button className="spacious-submit-btn font-space qc-reset-btn" onClick={() => setScanState('idle')}>
+              🔄 RESET SCANNER
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WebAuditingConsole() {
+  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'completed' | 'error'>('idle');
+  const [targetUrl, setTargetUrl] = useState("https://rmmservice.co.za");
+  
+  // SSH state toggle
+  const [sshHost, setSshHost] = useState("");
+  const [sshPort, setSshPort] = useState(22);
+  const [sshUser, setSshUser] = useState("");
+  const [sshPass, setSshPass] = useState("");
+  const [sitePath, setSitePath] = useState("/var/www/html");
+  const [showSsh, setShowSsh] = useState(false);
+
+  const [progress, setProgress] = useState(0);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [scorecard, setScorecard] = useState<any>(null);
+  
+  // php.ini specific upload checks
+  const [iniResult, setIniResult] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
+  const startAudit = async () => {
+    if (!targetUrl || !targetUrl.trim()) return;
+    setScanState('scanning');
+    setProgress(0);
+    setLogs([`[SYSTEM] Connecting to cortex-web-auditor API daemon...`]);
+    setErrorMsg(null);
+    setScorecard(null);
+    setIniResult(null);
+
+    try {
+      const payload: any = { url: targetUrl };
+      if (showSsh && sshHost && sshUser) {
+        payload.ssh_host = sshHost;
+        payload.ssh_port = sshPort;
+        payload.ssh_user = sshUser;
+        payload.ssh_pass = sshPass;
+        payload.site_path = sitePath;
+      }
+
+      const res = await fetch("/api/audit/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`Auditor Daemon API failed: ${res.statusText}`);
+      const data = await res.json();
+      
+      setLogs(prev => [
+        ...prev, 
+        `[SYSTEM] Audit task registered: ${data.audit_id}`,
+        `[AUDITOR] Initiating public headers analysis & mixed content checks...`
+      ]);
+      if (payload.ssh_host) {
+        setLogs(prev => [...prev, `[INGESTION] SSH details provided. Remote directory ingestion queued.`]);
+      }
+
+      pollAudit(data.audit_id);
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setScanState('error');
+    }
+  };
+
+  const pollAudit = (id: string) => {
+    let currentProgress = 10;
+    const timer = setInterval(async () => {
+      try {
+        currentProgress = Math.min(95, currentProgress + 15);
+        setProgress(currentProgress);
+
+        const res = await fetch(`/api/audit/jobs/${id}`);
+        if (!res.ok) throw new Error("Audit query failed");
+        const data = await res.json();
+
+        setLogs(prev => {
+          const timestamp = new Date().toLocaleTimeString();
+          const auditLogs = [];
+          if (currentProgress >= 30) auditLogs.push(`[AUDITOR] Fetching HTTP responses and secure header flags...`);
+          if (currentProgress >= 50 && showSsh) auditLogs.push(`[INGESTION] SSH backup compress: remote tarball compiled. Downloading bundle.`);
+          if (currentProgress >= 70 && showSsh) auditLogs.push(`[CODECHECK] Executing ClamAV shell malware scanners & integrity checksum matches...`);
+          if (currentProgress >= 85) auditLogs.push(`[COMPLIANCE] Mapping library compatibility and upgrade vulnerabilities...`);
+          
+          let updatedLogs = [...prev];
+          auditLogs.forEach(log => {
+            if (!updatedLogs.some(l => l.includes(log.slice(0, 20)))) {
+              updatedLogs.push(`[${timestamp}] ${log}`);
+            }
+          });
+          return updatedLogs;
+        });
+
+        if (data.status === 'completed') {
+          clearInterval(timer);
+          setProgress(100);
+          setScorecard(data);
+          setScanState('completed');
+        } else if (data.status === 'error') {
+          clearInterval(timer);
+          setScanState('error');
+        }
+      } catch (e: any) {
+        clearInterval(timer);
+        setErrorMsg(e.message);
+        setScanState('error');
+      }
+    }, 2000);
+  };
+
+  const handleIniUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanState('scanning');
+    setProgress(50);
+    setLogs([
+      `[UPLOADER] Uploading target configuration file: ${file.name}...`,
+      `[AUDITOR] Executing PHP configuration parser filters...`
+    ]);
+    setIniResult(null);
+    setScorecard(null);
+    setErrorMsg(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/audit/upload-ini", {
+        method: "POST",
+        body: formData
+      });
+      if (!res.ok) throw new Error("INI audit upload failed");
+      const data = await res.json();
+
+      setIniResult(data);
+      setProgress(100);
+      setScanState('completed');
+      setLogs(prev => [...prev, `[SUCCESS] PHP verification completed. Grade: ${data.grade}. Total issues found: ${data.total_issues}`]);
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setScanState('error');
+    }
+  };
+
+  const overall = scorecard?.overall_grade || iniResult?.grade || "A";
+
+  return (
+    <div className="qc-console-card glassmorphic">
+      {scanState === 'idle' && (
+        <div className="qc-idle-view">
+          <div className="qc-scanning-radar">
+            <div className="radar-sweep" style={{ borderLeftColor: "violet" }}></div>
+            <span className="radar-icon">🩺</span>
+          </div>
+          <h3 className="font-space">WEBSITE HEALTH & SECURITY AUDITOR</h3>
+          <p className="font-space text-dim" style={{ marginBottom: "1.25rem" }}>
+            Conduct malware static analysis scans, track core CMS checksum validations, inspect remote server PHP configuration vulnerability directives, and review browser security header logs.
+          </p>
+
+          <div className="qc-input-group font-space" style={{ width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "1rem" }}>
+            <label style={{ fontSize: "0.55rem", color: "violet", letterSpacing: "2px", textTransform: "uppercase", textAlign: "left", opacity: 0.8, fontWeight: 700 }}>Target URL</label>
+            <input 
+              type="url"
+              placeholder="Enter site URL (e.g. https://rmmservice.co.za)"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              style={{
+                width: "100%", padding: "8px 12px", background: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(238, 130, 238, 0.2)", borderRadius: "6px",
+                color: "#fff", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box"
+              }}
+              required
+            />
+          </div>
+
+          <div className="font-space" style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+            <button className="spacious-submit-btn" style={{ padding: "6px 10px", fontSize: "0.65rem", background: showSsh ? "rgba(255,255,255,0.05)" : "rgba(238, 130, 238, 0.15)", border: "1px solid violet" }} onClick={() => setShowSsh(false)}>
+              Public Header Scan
+            </button>
+            <button className="spacious-submit-btn" style={{ padding: "6px 10px", fontSize: "0.65rem", background: showSsh ? "rgba(238, 130, 238, 0.15)" : "rgba(255,255,255,0.05)", border: "1px solid violet" }} onClick={() => setShowSsh(true)}>
+              SSH Backup & Code Audit
+            </button>
+            <label className="spacious-submit-btn" style={{ padding: "6px 10px", fontSize: "0.65rem", cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid #555" }}>
+              Upload php.ini Scan
+              <input type="file" onChange={handleIniUpload} style={{ display: "none" }} accept=".ini" />
+            </label>
+          </div>
+
+          {showSsh && (
+            <div className="glassmorphic font-space" style={{ padding: "12px", width: "100%", maxWidth: "560px", marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem", boxSizing: "border-box", textAlign: "left", fontSize: "0.75rem" }}>
+              <div style={{ color: "violet", fontWeight: 700, letterSpacing: "1px", fontSize: "0.55rem", textTransform: "uppercase" }}>SSH Ingestion Parameters</div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input type="text" placeholder="Host (e.g. 192.168.1.1)" value={sshHost} onChange={(e) => setSshHost(e.target.value)} style={{ flex: 2, padding: "6px", background: "rgba(0,0,0,0.3)", border: "1px solid #444", color: "#fff", borderRadius: "4px", outline: "none" }} />
+                <input type="number" placeholder="Port" value={sshPort} onChange={(e) => setSshPort(parseInt(e.target.value) || 22)} style={{ flex: 1, padding: "6px", background: "rgba(0,0,0,0.3)", border: "1px solid #444", color: "#fff", borderRadius: "4px", outline: "none" }} />
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input type="text" placeholder="SSH Username" value={sshUser} onChange={(e) => setSshUser(e.target.value)} style={{ flex: 1, padding: "6px", background: "rgba(0,0,0,0.3)", border: "1px solid #444", color: "#fff", borderRadius: "4px", outline: "none" }} />
+                <input type="password" placeholder="SSH Password" value={sshPass} onChange={(e) => setSshPass(e.target.value)} style={{ flex: 1, padding: "6px", background: "rgba(0,0,0,0.3)", border: "1px solid #444", color: "#fff", borderRadius: "4px", outline: "none" }} />
+              </div>
+              <input type="text" placeholder="Site Directory (e.g. /var/www/html)" value={sitePath} onChange={(e) => setSitePath(e.target.value)} style={{ padding: "6px", background: "rgba(0,0,0,0.3)", border: "1px solid #444", color: "#fff", borderRadius: "4px", outline: "none" }} />
+            </div>
+          )}
+
+          <button className="spacious-submit-btn font-space qc-initiate-btn pulse-glow" style={{ borderImage: "none", backgroundColor: "rgba(238,130,238,0.15)", borderColor: "violet" }} onClick={startAudit} disabled={!targetUrl || !targetUrl.trim()}>
+            ⚡ INITIATE HEALTH & SECURITY AUDIT
+          </button>
+        </div>
+      )}
+
+      {scanState === 'scanning' && (
+        <div className="qc-scanning-view">
+          <div className="qc-hud-header">
+            <span className="hud-title font-space blinking" style={{ color: "violet" }}>FORENSIC SECURITY CHECK IN PROGRESS</span>
+            <span className="hud-percent font-space" style={{ color: "violet" }}>{progress}%</span>
+          </div>
+          <div className="qc-progress-track">
+            <div className="qc-progress-bar" style={{ width: `${progress}%`, backgroundColor: "violet" }}></div>
+          </div>
+          <div className="qc-logs-terminal">
+            <div className="terminal-header font-space">AUDITOR DAEMON SHELL LOGS</div>
+            <div className="terminal-body scrollable">
+              {logs.map((log, index) => (
+                <div key={index} className="terminal-log-line font-space">{log}</div>
+              ))}
+              <div ref={terminalEndRef}></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'completed' && (
+        <div className="qc-completed-view">
+          <div className="qc-result-alert glassmorphic" style={{ borderLeftColor: "violet" }}>
+            <span className="result-icon" style={{ backgroundColor: "rgba(238, 130, 238, 0.2)", color: "violet" }}>✓</span>
+            <div className="result-meta font-space">
+              <h4>SECURITY & COMPLIANCE VERIFICATION COMPLETED</h4>
+              <p>
+                {overall === 'A' || overall === 'B'
+                  ? `State: SECURE & COMPLIANT // STACK VERIFIED`
+                  : `State: SECURITY RISK detected // IMMEDIATION ADVISED`}
+              </p>
+            </div>
+            <button className="spacious-submit-btn font-space qc-reset-btn" onClick={() => setScanState('idle')}>
+              🔄 NEW AUDIT
+            </button>
+          </div>
+
+          <div className="qc-metrics-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))" }}>
+            <div className="qc-metric-card glassmorphic">
+              <span className="metric-label font-space">OVERALL GRADE</span>
+              <span className="metric-value font-space secure-glow" style={{ color: "violet", textShadow: "0 0 10px rgba(238, 130, 238, 0.5)" }}>
+                {overall}
+              </span>
+            </div>
+            {scorecard && (
+              <>
+                <div className="qc-metric-card glassmorphic">
+                  <span className="metric-label font-space">CODE HEALTH</span>
+                  <span className="metric-value font-space text-online">{scorecard.code_quality_grade}</span>
+                </div>
+                <div className="qc-metric-card glassmorphic">
+                  <span className="metric-label font-space">SECURITY</span>
+                  <span className="metric-value font-space text-online">{scorecard.security_grade}</span>
+                </div>
+                <div className="qc-metric-card glassmorphic">
+                  <span className="metric-label font-space">COMPATIBILITY</span>
+                  <span className="metric-value font-space text-online">{scorecard.compatibility_grade}</span>
+                </div>
+              </>
+            )}
+            {iniResult && (
+              <div className="qc-metric-card glassmorphic">
+                <span className="metric-label font-space">INI ISSUES</span>
+                <span className="metric-value font-space" style={{ color: iniResult.total_issues > 0 ? "orange" : "green" }}>{iniResult.total_issues}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="font-space" style={{ maxHeight: "250px", overflowY: "auto", background: "rgba(0,0,0,0.3)", padding: "10px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.05)", textAlign: "left", fontSize: "0.7rem", color: "#ddd" }}>
+            <h4 style={{ color: "violet", fontSize: "0.75rem", marginBottom: "0.5rem" }}>Security & Configuration Deficiencies</h4>
+            
+            {scorecard?.details?.network_issues?.length > 0 && (
+              <div style={{ marginBottom: "0.75rem" }}>
+                <div style={{ fontWeight: 700, color: "#fff", marginBottom: "0.25rem" }}>Missing Security Headers & mixed content:</div>
+                {scorecard.details.network_issues.map((i: any, idx: number) => (
+                  <div key={idx} style={{ marginLeft: "10px", color: "#ccc", marginBottom: "0.2rem" }}>
+                    • <span style={{ color: "orange" }}>[{i.severity.toUpperCase()}]</span> {i.parameter}: {i.description} (Fix: <code style={{ color: "#a5d6ff" }}>{i.fix}</code>)
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(scorecard?.details?.php_issues?.length > 0 || iniResult?.issues?.length > 0) && (
+              <div style={{ marginBottom: "0.75rem" }}>
+                <div style={{ fontWeight: 700, color: "#fff", marginBottom: "0.25rem" }}>Insecure PHP configuration directives:</div>
+                {(scorecard?.details?.php_issues || iniResult?.issues).map((i: any, idx: number) => (
+                  <div key={idx} style={{ marginLeft: "10px", color: "#ccc", marginBottom: "0.2rem" }}>
+                    • <span style={{ color: "red" }}>[{i.severity.toUpperCase()}]</span> {i.parameter}: {i.description} (Fix: <code style={{ color: "#a5d6ff" }}>{i.fix}</code>)
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {scorecard?.details?.malware_issues?.length > 0 && (
+              <div style={{ marginBottom: "0.75rem" }}>
+                <div style={{ fontWeight: 700, color: "red", marginBottom: "0.25rem" }}>🚨 Malicious code patterns / web shells detected:</div>
+                {scorecard.details.malware_issues.map((i: any, idx: number) => (
+                  <div key={idx} style={{ marginLeft: "10px", color: "red", marginBottom: "0.2rem" }}>
+                    • File: {i.file} - Thread: {i.threat} (Action: <code style={{ color: "#fff" }}>{i.fix}</code>)
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {scorecard?.details?.integrity_issues?.length > 0 && (
+              <div style={{ marginBottom: "0.75rem" }}>
+                <div style={{ fontWeight: 700, color: "red", marginBottom: "0.25rem" }}>🚨 CMS Core checksum manipulation errors:</div>
+                {scorecard.details.integrity_issues.map((i: any, idx: number) => (
+                  <div key={idx} style={{ marginLeft: "10px", color: "orange", marginBottom: "0.2rem" }}>
+                    • Core File: {i.file} - {i.message} (Action: <code style={{ color: "#fff" }}>{i.fix}</code>)
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!scorecard?.details?.network_issues?.length && !scorecard?.details?.php_issues?.length && !iniResult?.issues?.length && !scorecard?.details?.malware_issues?.length && !scorecard?.details?.integrity_issues?.length && (
+              <div style={{ color: "green", fontStyle: "italic" }}>No major vulnerabilities or configuration overrides detected. Server health conforms to CORTEX normal templates.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {scanState === 'error' && (
+        <div className="qc-completed-view">
+          <div className="qc-result-alert glassmorphic" style={{ borderLeftColor: "red" }}>
+            <span className="result-icon" style={{ backgroundColor: "rgba(255, 0, 0, 0.2)", color: "red" }}>❌</span>
+            <div className="result-meta font-space">
+              <h4>SECURITY AUDIT FAILED</h4>
+              <p style={{ color: "red" }}>Error Details: {errorMsg}</p>
+            </div>
+            <button className="spacious-submit-btn font-space qc-reset-btn" onClick={() => setScanState('idle')}>
+              🔄 RESET AUDITOR
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [status, setStatus] = useState<ServiceStatus[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -2473,6 +3191,23 @@ function App() {
                   <QCScanningConsole />
                 </section>
               )}
+
+              {/* SEO Scanning Console - Rendered EXCLUSIVELY for permitted users */}
+              {!isUserAdmin && activeUserRecord.permissions.run_seo_scans && (
+                <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
+                  <h2 className="section-title">🔍 IN-DEPTH SEO DIAGNOSTIC SCANNING CONSOLE</h2>
+                  <SEOScanningConsole />
+                </section>
+              )}
+
+              {/* Website Health & Security Auditor Console - Rendered EXCLUSIVELY for permitted users */}
+              {!isUserAdmin && activeUserRecord.permissions.run_web_audits && (
+                <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
+                  <h2 className="section-title">🩺 COMPREHENSIVE WEBSITE HEALTH & SECURITY AUDITING CONSOLE</h2>
+                  <WebAuditingConsole />
+                </section>
+              )}
+
 
               {/* Core gate links list - Rendered natively for all users */}
               <section className="section gateways-section">
