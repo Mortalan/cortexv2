@@ -90,10 +90,12 @@ body {
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
 }
 
 .content::-webkit-scrollbar {
-  width: 4px;
+  width: 8px;
 }
 
 .content::-webkit-scrollbar-thumb {
@@ -121,6 +123,16 @@ body {
 }
 
 @media (max-width: 900px) {
+  html, body, #root {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  .dashboard {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
   .main-layout {
     flex-direction: column;
     height: auto;

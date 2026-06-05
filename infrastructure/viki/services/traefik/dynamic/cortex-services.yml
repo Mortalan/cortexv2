@@ -108,6 +108,38 @@ http:
       service: netlock-console-service
       priority: 10
 
+    # 12. SEO Scanner Daemon API
+    seo-scanner:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/seo`)"
+      entryPoints:
+        - web
+      service: seo-scanner-service
+      middlewares:
+        - authelia@docker
+        - seo-scanner-stripprefix@file
+      priority: 120
+
+    # 13. Web Health & Security Auditor Daemon API
+    web-auditor:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/audit`)"
+      entryPoints:
+        - web
+      service: web-auditor-service
+      middlewares:
+        - authelia@docker
+        - web-auditor-stripprefix@file
+      priority: 120
+
+  middlewares:
+    seo-scanner-stripprefix:
+      stripPrefix:
+        prefixes:
+          - "/api/seo"
+    web-auditor-stripprefix:
+      stripPrefix:
+        prefixes:
+          - "/api/audit"
+
   services:
     dashboard-react-service:
       loadBalancer:
@@ -153,3 +185,13 @@ http:
       loadBalancer:
         servers:
           - url: "http://192.168.50.241:8082"
+
+    seo-scanner-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:8090"
+
+    web-auditor-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:8091"
