@@ -5,22 +5,27 @@
 > Backup of the original unified infrastructure documentation:
 > [/home/louis/cortex/archive/backup_20260603/docs/INFRA.md](file:///home/louis/cortex/archive/backup_20260603/docs/INFRA.md)
 
-### 1. CORE NODES (VM TRIAD)
-- **CORE-100 (192.168.50.241):** 
-    - Ingress: Traefik
-    - RMM: NetLock 3.0.0 (Licensed)
-    - Identity: LLDAP + Authelia (SSO)
-    - Ticketing: GLPI
-- **AI-101 (192.168.50.242):**
-    - Intelligence: Ollama (RTX 4060)
-    - Automation: n8n + Redis
-- **LAKE-102 (192.168.50.243):**
-    - Storage: 4TB BTRFS HDD (/mnt/data_lake)
-    - Roles: Forensic logging, Snapshot management.
-
-### 2. GATEWAY & EXTERNAL
-- **Host:** Ubuntu 22.04 (192.168.50.239)
-- **Role:** HAProxy (SSL Termination: *.rmmservice.co.za)
+### 1. CORE NODES & SERVICES (LXC DECENTRALIZATION)
+Cortex has decentralized its operations from a single VM into four dedicated LXC containers on the hypervisor (192.168.50.240) sharing a dynamic BTRFS Forensic Data Lake under `/mnt/data_lake`:
+- **LXC Ingress & Identity (201 - 192.168.50.251):**
+    - Router: Traefik Ingress (v2.11)
+    - Identity: LLDAP + Authelia SSO (Session parameters: `expiration: 24h`, `inactivity: 12h`)
+- **LXC Core Command (202 - 192.168.50.252):**
+    - UI: React Dashboard (Served via Nginx)
+    - APIs: Reflex Daemon (Flask API), Hermes API Gateway
+    - Forensic Logs: Vector Collector, Velociraptor EDR Console
+    - Scanners: SEO Scanner (port 8090), Web Auditor (port 8091)
+    - **SPIDER:** Standalone FITS SEO & GEO Crawler (Port 8092 FastAPI server + async task worker utilizing private Redis queue)
+- **LXC GLPI Ticketing (203 - 192.168.50.253):**
+    - Ticketing: GLPI + Apache SSL Pass-Through reverse-proxy
+- **LXC Automation (204 - 192.168.50.254):**
+    - Automation: n8n canvas portal + Redis broker
+- **Primary VM 100 (192.168.50.241):**
+    - RMM: NetLock 3.0.0 Console (Licensed)
+- **Primary AI VM 101 (192.168.50.242):**
+    - Intelligence: Ollama (RTX 4060 GPU acceleration, models: `hermes3`)
+- **Forensics VM LAKE-102 (192.168.50.243):**
+    - Storage: 4TB ZFS/BTRFS Data Lake `/mnt/data_lake` NFS shared to LXC containers
 
 ### 3. NETWORK TOPOLOGY
 Client -> HAProxy -> Traefik -> Service Container.

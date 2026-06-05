@@ -5,6 +5,18 @@
 > Historical logs prior to June 2026 have been archived to optimize context size. 
 > Full history backup: [/home/louis/cortex/archive/backup_20260603/docs/CHANGELOG.md](file:///home/louis/cortex/archive/backup_20260603/docs/CHANGELOG.md)
 
+### 05 JUNE 2026 - DEPLOYED STANDALONE SPIDER SEO & GEO CRAWLER SERVICE (MOLE RUN MODE)
+- **Standalone SPIDER Crawler Deployed:** Created and deployed the isolated `cortex-spider` Docker service stack on `192.168.50.252` port `8092`, consisting of:
+  - `cortex-spider-app`: FastAPI application server serving endpoints and the static index console.
+  - `cortex-spider-worker`: Async task worker utilizing blocking list pops (`blpop`) on Redis for background crawls.
+  - `cortex-spider-redis`: Private Redis broker container for complete microservice queue isolation.
+- **GEO (Generative Engine Optimization) Audits:** Configured the crawler to interface with Ollama on VM 101 (`192.168.50.242`) running the `hermes3` model to perform semantic content reviews, scoring pages for AI Ingestibility, Citation Likelihood, and Conversational Q&A query alignment.
+- **Developer Auto-Fix Generation:** Integrated an automated code compiler in the crawler backend that outputs valid JSON-LD schemas, Nginx redirects, and robots.txt entries based on crawled page data.
+- **Live Google SERP Simulator:** Implemented an interactive Google search results preview modal in the frontend (styled under Google dark theme) allowing real-time character limit validation, visual text truncation, one-click AI recommendation overrides, and HTML tags export.
+- **Playwright HTML-to-PDF Report Compiler:** Implemented a white-label client PDF audit report generator in `spider_app.py`. It renders custom FITS-branded HTML templates (Inter and Orbitron fonts, Cyan `#00AFEF` and Orange `#FF8C00` accents) inside a headless Playwright Chromium print context (`page.pdf()`), generating A4 reports.
+- **Traefik Route Integration:** Updated `cortex-services.yml` to route `/api/spider` (protected by Authelia SSO) to port `8092` with path prefix stripping, and restarted the Traefik container on Ingress node `192.168.50.251`.
+- **Dashboard Button & HUD Status Check:** Registered SPIDER inside the React dashboard `App.tsx` service list, added the local docker check to `status_check.sh`, and updated status telemetry logs.
+
 ### 03 JUNE 2026 - AUTHELIA HOME REDIRECT, OLLAMA ENDPOINT ALIGNMENT & GLPI SECURE CONTEXT HARDENING (MOLE RUN MODE)
 - **Authelia Default Redirection Alignment:** Changed `default_redirection_url` from `https://cortex.rmmservice.co.za` to the primary domain `https://rmmservice.co.za` in `infrastructure/viki/services/authelia/configuration.yml` and deployed it to LXC 201's mounted Data Lake config directory.
 - **Ollama AI Endpoint Realignment:** Updated the React frontend [App.tsx](file:///home/louis/cortex/infrastructure/viki/services/dashboard-react/src/App.tsx) Ollama AI link targets to resolve directly to the main domain `https://rmmservice.co.za/api/viki/`, fully deprecating the `cortex.` subdomain.

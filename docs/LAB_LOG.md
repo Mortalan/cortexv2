@@ -11,6 +11,7 @@
 - [x] **SSO Home Redirection, Dashboard Telemetry Cache-Busting & GLPI SSL Pass-Through Hardening (Mole Run) - COMPLETED**
 - [x] **Phase 23: In-Depth SEO Diagnostic Scanner (cortex-seo-scanner) - COMPLETED**
 - [x] **Phase 24: Comprehensive Website Health & Security Auditor (cortex-web-auditor) - COMPLETED**
+- [x] **Phase 25: Deployed Standalone SPIDER SEO & GEO Crawler Stack - COMPLETED**
 - [ ] **Phase 20: Microsoft 365 Graph Calendar Integration - PLANNING**
 
 
@@ -51,7 +52,20 @@
 
 ---
 
+#### **Phase 25: Deployed Standalone SPIDER SEO & GEO Crawler Stack (Completed June 5, 2026)**
+1. **Isolated Service Stack:** Deployed `cortex-spider` Docker service stack on `192.168.50.252` port `8092`. Uses FastAPI webserver (`spider-app`), a background worker (`spider-worker`), and a private broker (`spider-redis`).
+2. **DuckDB Database-per-Job:** Crawl datasets are written to self-contained DuckDB databases in `/mnt/data_lake/audit/spider/job_*.db` to prevent write locking and enable easy backup/removal.
+3. **GEO (Generative Engine Optimization) Audits:** Configured crawler to invoke Ollama on VM 101 to evaluate content against AI Ingestibility, Citation Likelihood, and Conversational Q&A indexes, outputting optimization suggestions for AI search visibility (Perplexity, ChatGPT Search, Gemini SGE).
+4. **Developer Auto-Fix & Google SERP Simulator:** 
+   - Backend auto-generates Nginx redirects, robots.txt, and JSON-LD structured schema script blocks.
+   - Built an interactive Google search results preview modal in the frontend (Google dark theme styling) featuring character limit warnings, visual text truncation, one-click AI recommendation overrides, and HTML tags export.
+5. **Playwright PDF Compilation:** Integrates an A4 print PDF compiler that loads a custom FITS-branded HTML print template (Orbitron and Inter fonts, Cyan/Orange accents) into headless Playwright chromium and calls `page.pdf()`, generating high-quality client reports.
+6. **SSO Gateway routing:** Configured Traefik rules in `cortex-services.yml` for `/api/spider` (Authelia SSO protected) and restarted Traefik. Integrated SPIDER in the React dashboard gateway matrix and updated `status_check.sh`.
+
+---
+
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.
 - `@snapshots/PANGO_20260529`: Pre-demo stable code refactoring and database baseline recovery.
 - `@snapshots/VOOP_20260605`: Decoupled scanner consoles, report save/export controls, and scrollable responsive dashboard layout.
+- `@snapshots/SPIDER_DEPLOY_20260605`: Standalone FITS SPIDER crawler stack deployed with GEO audits, auto-fixes, and Google SERP simulator.

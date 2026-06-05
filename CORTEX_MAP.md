@@ -10,11 +10,11 @@
 ## 1. SYSTEM STATUS SUMMARY
 - **Gateway (HAProxy):** 192.168.50.239 - **ACTIVE** (SSL Termination for all 16 domains)
 - **LXC Ingress & Identity (201):** 192.168.50.251 - **ACTIVE** (Traefik, Authelia, LLDAP)
-- **LXC Core Command (202):** 192.168.50.252 - **ACTIVE** (React Dashboard, Reflex, Hermes, Vector, Velociraptor)
+- **LXC Core Command (202):** 192.168.50.252 - **ACTIVE** (React Dashboard, Reflex, Hermes, Vector, Velociraptor, SPIDER)
 - **LXC GLPI Ticketing (203):** 192.168.50.253 - **ACTIVE** (MariaDB, GLPI)
 - **LXC Automation (204):** 192.168.50.254 - **ACTIVE** (Redis, n8n)
 - **Primary VM 100:** 192.168.50.241 - **ACTIVE** (NetLock RMM Stack)
-- **Forensics VM LAKE-102:** 192.168.50.243 - **ACTIVE** (4TB BTRFS Forensic Data Lake)
+- **Forensics VM LAKE-102:** 192.168.50.243 - **ACTIVE** (4TB ZFS/BTRFS Forensic Data Lake)
 
 ---
 
@@ -31,13 +31,13 @@
 
 ---
 
-## 3. NEXT PHASE: CALENDAR SYNC & GATEWAY HARDENING
-- **Phase 20:** Implement [M365 Graph Calendar Integration](file:///home/louis/cortex/docs/roadmap/4_outlook_integration.md) (Double-Booking Conflict Engine & 3-Day Dashboard Widget).
-- **Phase 21:** Port legacy Next.js/.NET Core [Overtime Tracker](file:///home/louis/cortex/docs/roadmap/6_overtime_system.md) into core FastAPI stack and GLPI ticket follow-up hook.
-- **Phase 22:** Deploy [Emergency API Kill Switch](file:///home/louis/cortex/docs/roadmap/7_security_protocols.md) at middleware level wired to EDR triggers.
-- **Phase 23:** Build and deploy [In-Depth SEO Diagnostic Scanner](file:///home/louis/cortex/seoscan.md) (`cortex-seo-scanner`) for crawl discovery, technical auditing, and auto-optimization hooks.
-- **Phase 24:** Build and deploy [Comprehensive Website Health & Security Auditor](file:///home/louis/cortex/webaudit.md) (`cortex-web-auditor`) for file integrity, malware scans, PHP configurations, compatibility analysis, and redirect audits.
-
+## 3. NEXT PHASES & STATUS
+- **Phase 20 (PLANNING):** Implement [M365 Graph Calendar Integration](file:///home/louis/cortex/docs/roadmap/4_outlook_integration.md) (Double-Booking Conflict Engine & 3-Day Dashboard Widget).
+- **Phase 21 (PLANNING):** Port legacy Next.js/.NET Core [Overtime Tracker](file:///home/louis/cortex/docs/roadmap/6_overtime_system.md) into core FastAPI stack and GLPI ticket follow-up hook.
+- **Phase 22 (PLANNING):** Deploy [Emergency API Kill Switch](file:///home/louis/cortex/docs/roadmap/7_security_protocols.md) at middleware level wired to EDR triggers.
+- **Phase 23 (COMPLETED):** Deployed [In-Depth SEO Diagnostic Scanner](file:///home/louis/cortex/seoscan.md) (`cortex-seo-scanner`) for technical audits.
+- **Phase 24 (COMPLETED):** Deployed [Comprehensive Website Health & Security Auditor](file:///home/louis/cortex/webaudit.md) (`cortex-web-auditor`) for website security scans and redirects audits.
+- **Phase 25 (COMPLETED):** Deployed **SPIDER** standalone FITS SEO & GEO crawler stack with AI content critiques, code auto-fixes, and Google SERP simulator.
 
 ---
-*Last Updated: Wednesday, 03 June 2026*
+*Last Updated: Friday, 05 June 2026*
