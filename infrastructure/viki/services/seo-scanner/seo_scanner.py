@@ -402,6 +402,9 @@ async def get_remediate_advice(job_id: str) -> JSONResponse:
         SELECT url, title, meta_description, h1_count, word_count, images_missing_alt
         FROM pages WHERE job_id = ? AND (title IS NULL OR title_length < 30 OR title_length > 60 OR meta_description_length < 110 OR meta_description_length > 160 OR h1_count != 1 OR word_count < 300 OR images_missing_alt > 0)
     """, (job_id,)).fetchall()
+    
+    # Generate generic site sitemap XML
+    urls_crawled = conn.execute("SELECT url FROM pages WHERE job_id = ? AND status_code = 200", (job_id,)).fetchall()
     conn.close()
     
     advice = []
@@ -466,7 +469,6 @@ async def get_remediate_advice(job_id: str) -> JSONResponse:
         advice.append(item_advice)
         
     # Generate generic site sitemap XML
-    urls_crawled = conn.execute("SELECT url FROM pages WHERE job_id = ? AND status_code = 200", (job_id,)).fetchall()
     sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for (u,) in urls_crawled:
         sitemap_xml += f'  <url>\n    <loc>{u}</loc>\n    <changefreq>weekly</changefreq>\n  </url>\n'
