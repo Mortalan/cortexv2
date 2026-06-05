@@ -54,3 +54,4 @@
 ### SNAPSHOT HISTORY
 - `@snapshots/baseline_20260519`: Initial stable forensic state.
 - `@snapshots/PANGO_20260529`: Pre-demo stable code refactoring and database baseline recovery.
+- `@snapshots/VOOP_20260605`: Decoupled scanner consoles, report save/export controls, and scrollable responsive dashboard layout.
