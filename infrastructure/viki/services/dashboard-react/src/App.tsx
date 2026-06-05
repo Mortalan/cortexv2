@@ -118,8 +118,9 @@ const staticServicesData = [
       { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
       { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
       { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
-      { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "https://cortex.rmmservice.co.za/api/seo", icon: "🔍" },
-      { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "https://cortex.rmmservice.co.za/api/audit", icon: "🩺" }
+      { name: "QC Scanner", subtitle: "Security & Design Audit", url: "/?mode=qc", icon: "🛡️" },
+      { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "/?mode=seo", icon: "🔍" },
+      { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "/?mode=audit", icon: "🩺" }
     ],
   },
   {
@@ -1817,8 +1818,9 @@ function App() {
         { name: "GLPI", subtitle: "Incident Command", url: "https://glpi.rmmservice.co.za", icon: "🎫" },
         { name: "Velociraptor", subtitle: "Threat Hunter", url: "https://edr.rmmservice.co.za", icon: "👻" },
         { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
-        { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "https://cortex.rmmservice.co.za/api/seo", icon: "🔍" },
-        { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "https://cortex.rmmservice.co.za/api/audit", icon: "🩺" }
+        { name: "QC Scanner", subtitle: "Security & Design Audit", url: "/?mode=qc", icon: "🛡️" },
+        { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "/?mode=seo", icon: "🔍" },
+        { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "/?mode=audit", icon: "🩺" }
       ],
     },
     {
@@ -3034,6 +3036,78 @@ function App() {
 
               </div>
             </section>
+          ) : currentMode === "seo" ? (
+            <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                <h2 className="section-title" style={{ margin: 0 }}>🔍 IN-DEPTH SEO DIAGNOSTIC SCANNING CONSOLE</h2>
+                <button 
+                  className="spacious-submit-btn font-space" 
+                  onClick={() => {
+                    setCurrentMode(null);
+                    window.history.pushState({}, "", "/");
+                  }}
+                  style={{ background: "rgba(0, 255, 157, 0.1)", border: "1px solid rgba(0, 255, 157, 0.4)", color: "var(--online)", display: "flex", gap: "0.4rem", alignItems: "center" }}
+                >
+                  ◀ Back to Dashboard
+                </button>
+              </div>
+              {activeUserRecord.permissions.run_seo_scans ? (
+                <SEOScanningConsole />
+              ) : (
+                <div className="qc-console-card glassmorphic" style={{ padding: "2rem", textAlign: "center", color: "var(--offline)" }}>
+                  <h3>ACCESS DENIED</h3>
+                  <p>You do not have the required permission (run_seo_scans) to access the SEO Diagnostic Scanner.</p>
+                </div>
+              )}
+            </section>
+          ) : currentMode === "audit" ? (
+            <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                <h2 className="section-title" style={{ margin: 0 }}>🩺 COMPREHENSIVE WEBSITE HEALTH & SECURITY AUDITING CONSOLE</h2>
+                <button 
+                  className="spacious-submit-btn font-space" 
+                  onClick={() => {
+                    setCurrentMode(null);
+                    window.history.pushState({}, "", "/");
+                  }}
+                  style={{ background: "rgba(0, 255, 157, 0.1)", border: "1px solid rgba(0, 255, 157, 0.4)", color: "var(--online)", display: "flex", gap: "0.4rem", alignItems: "center" }}
+                >
+                  ◀ Back to Dashboard
+                </button>
+              </div>
+              {activeUserRecord.permissions.run_web_audits ? (
+                <WebAuditingConsole />
+              ) : (
+                <div className="qc-console-card glassmorphic" style={{ padding: "2rem", textAlign: "center", color: "var(--offline)" }}>
+                  <h3>ACCESS DENIED</h3>
+                  <p>You do not have the required permission (run_web_audits) to access the Website Health & Security Auditor.</p>
+                </div>
+              )}
+            </section>
+          ) : currentMode === "qc" ? (
+            <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                <h2 className="section-title" style={{ margin: 0 }}>🛡️ QUALITY CONTROL (QC) SECURITY & DESIGN SCANNING CONSOLE</h2>
+                <button 
+                  className="spacious-submit-btn font-space" 
+                  onClick={() => {
+                    setCurrentMode(null);
+                    window.history.pushState({}, "", "/");
+                  }}
+                  style={{ background: "rgba(0, 255, 157, 0.1)", border: "1px solid rgba(0, 255, 157, 0.4)", color: "var(--online)", display: "flex", gap: "0.4rem", alignItems: "center" }}
+                >
+                  ◀ Back to Dashboard
+                </button>
+              </div>
+              {activeUserRecord.permissions.run_qc_scans ? (
+                <QCScanningConsole />
+              ) : (
+                <div className="qc-console-card glassmorphic" style={{ padding: "2rem", textAlign: "center", color: "var(--offline)" }}>
+                  <h3>ACCESS DENIED</h3>
+                  <p>You do not have the required permission (run_qc_scans) to access the Quality Control Scanner.</p>
+                </div>
+              )}
+            </section>
           ) : (
             <>
               {/* Dynamic Unified Multi-User Widget Grid - Rendered EXCLUSIVELY for Non-Admins */}
@@ -3184,29 +3258,7 @@ function App() {
                 </section>
               )}
 
-              {/* Quality Control (QC) Scanning Console - Rendered EXCLUSIVELY for permitted users */}
-              {!isUserAdmin && activeUserRecord.permissions.run_qc_scans && (
-                <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
-                  <h2 className="section-title">🛡️ QUALITY CONTROL (QC) SECURITY & DESIGN SCANNING CONSOLE</h2>
-                  <QCScanningConsole />
-                </section>
-              )}
 
-              {/* SEO Scanning Console - Rendered EXCLUSIVELY for permitted users */}
-              {!isUserAdmin && activeUserRecord.permissions.run_seo_scans && (
-                <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
-                  <h2 className="section-title">🔍 IN-DEPTH SEO DIAGNOSTIC SCANNING CONSOLE</h2>
-                  <SEOScanningConsole />
-                </section>
-              )}
-
-              {/* Website Health & Security Auditor Console - Rendered EXCLUSIVELY for permitted users */}
-              {!isUserAdmin && activeUserRecord.permissions.run_web_audits && (
-                <section className="section qc-section" style={{ marginTop: "1.5rem" }}>
-                  <h2 className="section-title">🩺 COMPREHENSIVE WEBSITE HEALTH & SECURITY AUDITING CONSOLE</h2>
-                  <WebAuditingConsole />
-                </section>
-              )}
 
 
               {/* Core gate links list - Rendered natively for all users */}
@@ -3271,8 +3323,8 @@ function App() {
           )}
         </main>
 
-        {/* Floating Holographic 3D Head Sidebar - Completely Stripped if Unassigned or in Admin Console */}
-        {activeUserRecord.viki_assigned && isUserAdmin && currentMode !== "admin" && (
+        {/* Floating Holographic 3D Head Sidebar - Completely Stripped if Unassigned or not on Homepage */}
+        {activeUserRecord.viki_assigned && isUserAdmin && currentMode === null && (
           <aside className="monitor-sidebar">
             <div 
               onClick={() => window.open("/?mode=viki-chat", "_blank")}
