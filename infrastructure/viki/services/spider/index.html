@@ -756,7 +756,10 @@
     </div>
     
     <div class="drawer-section">
-      <h4>HTML Title Tag</h4>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+        <h4>HTML Title Tag</h4>
+        <button onclick="openSerpSimulator()" style="background:transparent; border:1px solid var(--border-color); color:var(--accent-cyan); font-size:9px; padding:2px 6px; cursor:pointer; border-radius:4px; font-family:'Orbitron';">SERP Simulator</button>
+      </div>
       <div class="drawer-val" id="inspector-title">-</div>
     </div>
     
@@ -770,9 +773,14 @@
       <div class="drawer-val" id="inspector-h1">-</div>
     </div>
 
-    <!-- AI Critique Box -->
-    <div class="drawer-section">
-      <h4>FITS GPU-AI Agent Audit (Hermes-3)</h4>
+    <!-- Tab navigation for drawer -->
+    <div style="display:flex; gap:10px; border-bottom:1px solid var(--border-color); margin-bottom:15px; margin-top:20px;">
+      <div class="tab active" id="drawer-tab-ai" onclick="switchDrawerTab('ai')" style="font-size:10px; padding:6px 10px;">AI & GEO Audit</div>
+      <div class="tab" id="drawer-tab-fixes" onclick="switchDrawerTab('fixes')" style="font-size:10px; padding:6px 10px;">Dev Fix Engine</div>
+    </div>
+
+    <!-- Drawer Tab A: AI Copy & GEO Audit -->
+    <div id="drawer-content-ai">
       <div class="ai-box">
         <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Title Optimization:</h5>
         <p id="inspector-ai-title" style="margin-bottom:12px; font-style:italic; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">-</p>
@@ -784,7 +792,81 @@
         <p id="inspector-ai-critique" style="margin-bottom:12px; line-height:1.4;">-</p>
         
         <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Target Semantic Keyword Ideas:</h5>
-        <p id="inspector-ai-keywords" style="font-weight:600; color:var(--accent-orange);">-</p>
+        <p id="inspector-ai-keywords" style="font-weight:600; color:var(--accent-orange); margin-bottom:15px;">-</p>
+
+        <!-- GEO Scores -->
+        <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:10px; color:var(--accent-orange); border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">GEO AI Search Readiness (GEO)</h5>
+        
+        <div style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px;">
+            <span>AI Ingestibility (LLM parser matching)</span>
+            <span id="inspector-geo-ingest" style="font-weight:bold; color:var(--accent-cyan);">0%</span>
+          </div>
+          <div style="width:100%; height:6px; background:#2D3748; border-radius:3px; overflow:hidden;">
+            <div id="inspector-geo-ingest-bar" style="width:0%; height:100%; background:var(--accent-cyan);"></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px;">
+            <span>Citation Likelihood (Stats, Quotes, Facts)</span>
+            <span id="inspector-geo-cite" style="font-weight:bold; color:var(--accent-cyan);">0%</span>
+          </div>
+          <div style="width:100%; height:6px; background:#2D3748; border-radius:3px; overflow:hidden;">
+            <div id="inspector-geo-cite-bar" style="width:0%; height:100%; background:var(--accent-cyan);"></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px;">
+            <span>Conversational Q&A Query Alignment</span>
+            <span id="inspector-geo-qa" style="font-weight:bold; color:var(--accent-cyan);">0%</span>
+          </div>
+          <div style="width:100%; height:6px; background:#2D3748; border-radius:3px; overflow:hidden;">
+            <div id="inspector-geo-qa-bar" style="width:0%; height:100%; background:var(--accent-cyan);"></div>
+          </div>
+        </div>
+
+        <h5 style="font-family:'Orbitron'; font-size:10px; margin-bottom:5px; color:var(--accent-cyan);">GEO Content Optimization Recommendations:</h5>
+        <ul id="inspector-geo-recs" style="font-size:11px; color:var(--text-muted); padding-left:15px; line-height:1.6;">
+          <li>-</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Drawer Tab B: Developer Fix Engine -->
+    <div id="drawer-content-fixes" style="display:none;">
+      <div class="ai-box" style="border-color:var(--accent-orange);">
+        
+        <div style="margin-bottom:15px;">
+          <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-orange); display:flex; justify-content:space-between; align-items:center;">
+            <span>JSON-LD Structured Schema</span>
+            <button onclick="copyCode('inspector-fix-schema')" style="background:transparent; border:1px solid var(--border-color); color:var(--accent-cyan); font-size:9px; padding:2px 6px; cursor:pointer; border-radius:4px;">Copy</button>
+          </h5>
+          <pre id="inspector-fix-schema" style="background:#06070B; padding:8px; border-radius:4px; font-size:10px; overflow-x:auto; max-height:150px; color:#A0AEC0; font-family:monospace; white-space:pre-wrap; border:1px solid rgba(255,255,255,0.03);"></pre>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-orange); display:flex; justify-content:space-between; align-items:center;">
+            <span>Nginx Redirect Rule (301)</span>
+            <button onclick="copyCode('inspector-fix-nginx')" style="background:transparent; border:1px solid var(--border-color); color:var(--accent-cyan); font-size:9px; padding:2px 6px; cursor:pointer; border-radius:4px;">Copy</button>
+          </h5>
+          <pre id="inspector-fix-nginx" style="background:#06070B; padding:8px; border-radius:4px; font-size:10px; overflow-x:auto; color:#A0AEC0; font-family:monospace; border:1px solid rgba(255,255,255,0.03);"></pre>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-orange); display:flex; justify-content:space-between; align-items:center;">
+            <span>robots.txt Entry</span>
+            <button onclick="copyCode('inspector-fix-robots')" style="background:transparent; border:1px solid var(--border-color); color:var(--accent-cyan); font-size:9px; padding:2px 6px; cursor:pointer; border-radius:4px;">Copy</button>
+          </h5>
+          <pre id="inspector-fix-robots" style="background:#06070B; padding:8px; border-radius:4px; font-size:10px; overflow-x:auto; color:#A0AEC0; font-family:monospace; border:1px solid rgba(255,255,255,0.03);"></pre>
+        </div>
+
+        <div>
+          <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Optimized H1 Recommendation:</h5>
+          <p id="inspector-fix-h1" style="font-size:12px; font-weight:bold; color:var(--text-main);">-</p>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1014,7 +1096,10 @@
       }
     }
 
+    let selectedInspectorPage = null;
+
     function openInspector(page) {
+      selectedInspectorPage = page;
       document.getElementById("inspector-url").innerText = page.url;
       document.getElementById("inspector-title").innerText = page.title || "[EMPTY TITLE]";
       document.getElementById("inspector-desc").innerText = page.meta_description || "[EMPTY DESCRIPTION]";
@@ -1026,7 +1111,76 @@
       document.getElementById("inspector-ai-critique").innerText = ai.copywriting_critique || "AI critique unavailable for this URL.";
       document.getElementById("inspector-ai-keywords").innerText = ai.keyword_opportunities ? ai.keyword_opportunities.join(", ") : "-";
 
+      // GEO Ratings
+      const ingest = ai.geo_ingestibility_score || 85;
+      const cite = ai.geo_citation_score || 70;
+      const qa = ai.geo_qa_score || 75;
+      
+      document.getElementById("inspector-geo-ingest").innerText = `${ingest}%`;
+      document.getElementById("inspector-geo-ingest-bar").style.width = `${ingest}%`;
+      document.getElementById("inspector-geo-cite").innerText = `${cite}%`;
+      document.getElementById("inspector-geo-cite-bar").style.width = `${cite}%`;
+      document.getElementById("inspector-geo-qa").innerText = `${qa}%`;
+      document.getElementById("inspector-geo-qa-bar").style.width = `${qa}%`;
+
+      const recsUl = document.getElementById("inspector-geo-recs");
+      recsUl.innerHTML = "";
+      if (ai.geo_recommendations && ai.geo_recommendations.length > 0) {
+        ai.geo_recommendations.forEach(r => {
+          const li = document.createElement("li");
+          li.innerText = r;
+          recsUl.appendChild(li);
+        });
+      } else {
+        recsUl.innerHTML = "<li>No critical GEO issues detected. Content is well-structured for LLM ingestion.</li>";
+      }
+
+      // Auto Fix Codes
+      const fix = ai.auto_fix || {};
+      
+      let formattedSchema = "";
+      if (fix.json_ld_schema) {
+        try {
+          formattedSchema = JSON.stringify(typeof fix.json_ld_schema === "string" ? JSON.parse(fix.json_ld_schema) : fix.json_ld_schema, null, 2);
+        } catch (e) {
+          formattedSchema = fix.json_ld_schema;
+        }
+      } else {
+        formattedSchema = `{\n  "@context": "https://schema.org",\n  "@type": "WebPage",\n  "name": "${page.title || 'Page'}"\n}`;
+      }
+      
+      document.getElementById("inspector-fix-schema").innerText = formattedSchema;
+      document.getElementById("inspector-fix-nginx").innerText = fix.nginx_redirect || `rewrite ^${new URL(page.url).pathname}$ ${new URL(page.url).pathname}/ permanent;`;
+      document.getElementById("inspector-fix-robots").innerText = fix.robots_directive || `Allow: ${new URL(page.url).pathname}`;
+      document.getElementById("inspector-fix-h1").innerText = fix.suggested_h1 || page.h1 || "Optimize Main Heading";
+
+      // Reset drawer tab to AI
+      switchDrawerTab("ai");
+
       document.getElementById("details-drawer").classList.add("open");
+    }
+
+    function switchDrawerTab(tabName) {
+      if (tabName === "ai") {
+        document.getElementById("drawer-tab-ai").classList.add("active");
+        document.getElementById("drawer-tab-fixes").classList.remove("active");
+        document.getElementById("drawer-content-ai").style.display = "block";
+        document.getElementById("drawer-content-fixes").style.display = "none";
+      } else {
+        document.getElementById("drawer-tab-ai").classList.remove("active");
+        document.getElementById("drawer-tab-fixes").classList.add("active");
+        document.getElementById("drawer-content-ai").style.display = "none";
+        document.getElementById("drawer-content-fixes").style.display = "block";
+      }
+    }
+
+    function copyCode(elementId) {
+      const codeText = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(codeText).then(() => {
+        alert("Code copied to clipboard!");
+      }).catch(err => {
+        console.error("Copy failed:", err);
+      });
     }
 
     function closeDrawer() {
@@ -1048,6 +1202,133 @@
       }
       window.open(`/api/spider/job/${activeJobId}/export/csv`, "_blank");
     }
+
+    // --- SERP Simulator Controller ---
+    function openSerpSimulator() {
+      if (!selectedInspectorPage) return;
+      
+      const parsedUrl = new URL(selectedInspectorPage.url);
+      document.getElementById("serp-sim-domain").innerText = parsedUrl.hostname;
+      
+      const titleInput = document.getElementById("serp-input-title");
+      const descInput = document.getElementById("serp-input-desc");
+      
+      titleInput.value = selectedInspectorPage.title || "";
+      descInput.value = selectedInspectorPage.meta_description || "";
+      
+      updateSerpPreview();
+      
+      document.getElementById("serp-modal").style.display = "flex";
+    }
+
+    function closeSerpSimulator() {
+      document.getElementById("serp-modal").style.display = "none";
+    }
+
+    function updateSerpPreview() {
+      const title = document.getElementById("serp-input-title").value;
+      const desc = document.getElementById("serp-input-desc").value;
+      
+      const titlePreview = document.getElementById("serp-sim-title");
+      const descPreview = document.getElementById("serp-sim-desc");
+      
+      titlePreview.innerText = title || "Google Search Title Simulator";
+      descPreview.innerText = desc || "This is a simulation of the meta description. It shows how the copy will truncate when Google displays it in the search results page.";
+      
+      const titleCount = title.length;
+      const descCount = desc.length;
+      
+      const titleCountLabel = document.getElementById("serp-count-title");
+      const descCountLabel = document.getElementById("serp-count-desc");
+      
+      titleCountLabel.innerText = `${titleCount} / 60 chars`;
+      descCountLabel.innerText = `${descCount} / 160 chars`;
+      
+      if (titleCount > 60) {
+        titleCountLabel.style.color = "var(--accent-orange)";
+        titlePreview.style.textOverflow = "ellipsis";
+        titlePreview.style.whiteSpace = "nowrap";
+      } else {
+        titleCountLabel.style.color = "var(--text-muted)";
+      }
+      
+      if (descCount > 160) {
+        descCountLabel.style.color = "var(--accent-orange)";
+      } else {
+        descCountLabel.style.color = "var(--text-muted)";
+      }
+    }
+
+    function applySerpAISuggestions() {
+      if (!selectedInspectorPage) return;
+      const ai = selectedInspectorPage.ai_analysis || {};
+      
+      if (ai.title_suggestion) {
+        document.getElementById("serp-input-title").value = ai.title_suggestion;
+      }
+      if (ai.meta_description_suggestion) {
+        document.getElementById("serp-input-desc").value = ai.meta_description_suggestion;
+      }
+      
+      updateSerpPreview();
+    }
+
+    function copySerpTags() {
+      const title = document.getElementById("serp-input-title").value;
+      const desc = document.getElementById("serp-input-desc").value;
+      
+      const tagText = `<title>${title}</title>\n<meta name="description" content="${desc}">`;
+      
+      navigator.clipboard.writeText(tagText).then(() => {
+        alert("HTML title & description meta tags copied to clipboard!");
+      }).catch(err => {
+        console.error("Copy failed:", err);
+      });
+    }
   </script>
+
+  <!-- SERP Simulator Modal Overlay -->
+  <div id="serp-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; align-items:center; justify-content:center;">
+    <div class="card" style="width:600px; max-width:95%; padding:25px; border-color:var(--accent-cyan); box-shadow:0 0 25px var(--cyan-glow);">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:10px; margin-bottom:20px;">
+        <h3 style="font-family:'Orbitron'; font-size:16px; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:1px;">Google SERP Simulator</h3>
+        <button onclick="closeSerpSimulator()" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      
+      <!-- Simulated Google Snippet Card -->
+      <div style="background:#202124; padding:15px; border-radius:8px; border:1px solid #3c4043; margin-bottom:20px; font-family:Roboto,arial,sans-serif; text-align:left;">
+        <div style="font-size:12px; color:#bdc1c6; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+          <span style="background:#303134; border-radius:50%; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:bold; color:#fff;">G</span>
+          <span id="serp-sim-domain">example.com</span>
+          <span style="font-size:10px;">&rsaquo; path</span>
+        </div>
+        <div id="serp-sim-title" style="font-size:20px; color:#8ab4f8; margin-bottom:4px; line-height:1.3; cursor:pointer; word-break:break-word; max-width:580px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Google Search Title Simulator</div>
+        <div id="serp-sim-desc" style="font-size:14px; color:#bdc1c6; line-height:1.5; word-break:break-word; max-width:600px;">This is a simulation of the meta description. It shows how the copy will truncate when Google displays it in the search results page.</div>
+      </div>
+      
+      <!-- Simulator Inputs -->
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+          <label style="font-size:11px; font-family:'Orbitron';">Snippet Title Tag</label>
+          <span id="serp-count-title" style="font-size:10px; color:var(--text-muted);">0 / 60 chars</span>
+        </div>
+        <input type="text" id="serp-input-title" class="form-control" oninput="updateSerpPreview()" style="font-size:13px;">
+      </div>
+      
+      <div class="form-group" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+          <label style="font-size:11px; font-family:'Orbitron';">Meta Description</label>
+          <span id="serp-count-desc" style="font-size:10px; color:var(--text-muted);">0 / 160 chars</span>
+        </div>
+        <textarea id="serp-input-desc" class="form-control" oninput="updateSerpPreview()" rows="3" style="font-size:13px; font-family:sans-serif; resize:none;"></textarea>
+      </div>
+      
+      <!-- Actions -->
+      <div style="display:flex; gap:10px;">
+        <button class="btn" onclick="applySerpAISuggestions()" style="background:linear-gradient(135deg, var(--accent-orange) 0%, #d46b08 100%); margin:0; flex:1; font-size:11px;">Load FITS AI Recommendation</button>
+        <button class="btn" onclick="copySerpTags()" style="margin:0; flex:1; font-size:11px;">Copy HTML Tags</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

@@ -111,14 +111,25 @@ Page Text Snippet:
 {page_data['text_snippet']}
 
 Task:
-Generate SEO improvements and conversion suggestions for this page. Output a JSON object matching this structure EXACTLY (do not wrap in markdown or add explanations):
+Generate SEO improvements, conversion suggestions, and Generative Engine Optimization (GEO) insights for this page. Also, generate ready-to-copy code fixes for developers.
+Output a JSON object matching this structure EXACTLY (do not wrap in markdown or add explanations):
 {{
   "title_suggestion": "string (optimized under 60 chars)",
   "meta_description_suggestion": "string (optimized under 160 chars)",
   "content_quality_score": 85, (integer 1-100)
   "copywriting_critique": "string (2-3 sentences critiquing intent and conversion)",
   "keyword_opportunities": ["kw1", "kw2", "kw3"], (list of 3 semantic keywords)
-  "remediation_steps": ["step1", "step2"] (list of practical steps to fix issues)
+  "remediation_steps": ["step1", "step2"], (list of practical steps to fix HTML issues)
+  "geo_ingestibility_score": 90, (integer 1-100 evaluating how well AI crawlers parse this content)
+  "geo_citation_score": 75, (integer 1-100 evaluating citation likelihood based on facts, stats, quotes)
+  "geo_qa_score": 80, (integer 1-100 evaluating conversational query alignment)
+  "geo_recommendations": ["rec1", "rec2"], (list of 2 actions to make content highly citable by Perplexity, ChatGPT Search, Gemini SGE)
+  "auto_fix": {{
+    "nginx_redirect": "string or null (nginx 301 rewrite command to redirect if URL has parameters/slashes issues)",
+    "json_ld_schema": "string or null (fully formed JSON-LD script tag with structured data context for this page)",
+    "robots_directive": "string or null (suggested robots.txt rule for this path)",
+    "suggested_h1": "string or null (optimized H1 tag)"
+  }}
 }}
 """
     try:
@@ -151,7 +162,17 @@ Generate SEO improvements and conversion suggestions for this page. Output a JSO
         "content_quality_score": 70 if page_data['word_count'] > 300 else 40,
         "copywriting_critique": "AI analysis skipped. Content should prioritize targeted keywords and clear calls to action.",
         "keyword_opportunities": ["local business", "services", "seo optimization"],
-        "remediation_steps": ["Add alt tags to images", "Optimize title tags", "Expand page copywriting content"]
+        "remediation_steps": ["Add alt tags to images", "Optimize title tags", "Expand page copywriting content"],
+        "geo_ingestibility_score": 80,
+        "geo_citation_score": 50,
+        "geo_qa_score": 60,
+        "geo_recommendations": ["Add stats or quotes to increase citation likelihood", "Add a Q&A summary block"],
+        "auto_fix": {
+            "nginx_redirect": None,
+            "json_ld_schema": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\": \"" + (page_data['title'] or "Page") + "\"\n}",
+            "robots_directive": "Allow: " + urllib.parse.urlparse(page_data['url']).path,
+            "suggested_h1": page_data['h1'] if page_data['h1'] else "Optimize Main Heading"
+        }
     }
 
 def calculate_readability(text: str) -> int:
@@ -428,7 +449,17 @@ async def run_crawl_job(job_id: str, url: str, max_pages: int, render_js: bool, 
                     "content_quality_score": 80,
                     "copywriting_critique": "Page crawl complete. Copy looks clean.",
                     "keyword_opportunities": ["services", "company", "info"],
-                    "remediation_steps": ["Ensure keywords match local search volume."]
+                    "remediation_steps": ["Ensure keywords match local search volume."],
+                    "geo_ingestibility_score": 85,
+                    "geo_citation_score": 70,
+                    "geo_qa_score": 75,
+                    "geo_recommendations": ["Ensure clear heading structures for AI parser ingestion."],
+                    "auto_fix": {
+                        "nginx_redirect": None,
+                        "json_ld_schema": None,
+                        "robots_directive": "Allow: " + urllib.parse.urlparse(current_url).path,
+                        "suggested_h1": analysis["h1"] if analysis["h1"] else None
+                    }
                 }
                 
             # Recalculate SEO score based on AI review inclusion
