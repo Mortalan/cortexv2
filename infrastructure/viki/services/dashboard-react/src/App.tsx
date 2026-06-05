@@ -1518,6 +1518,114 @@ function WebAuditingConsole() {
 
   const overall = scorecard?.overall_grade || iniResult?.grade || "A";
 
+  const downloadMarkdownReport = () => {
+    const data = scorecard || iniResult;
+    if (!data) return;
+
+    const timestamp = new Date().toLocaleString();
+    let md = `# CORTEX: Website Health & Security Audit Report\n`;
+    md += `**Generated:** ${timestamp}\n`;
+    md += `**Target:** ${targetUrl || iniResult?.filename || "php.ini Configuration File"}\n`;
+    md += `**Overall Grade:** ${overall}\n\n`;
+
+    md += `## Executive Summary\n`;
+    if (overall === 'A' || overall === 'B') {
+      md += `> [!NOTE]\n`;
+      md += `> **Status:** SECURE & COMPLIANT // STACK VERIFIED\n`;
+      md += `> The target system conforms to CORTEX normal templates and security guidelines.\n\n`;
+    } else {
+      md += `> [!WARNING]\n`;
+      md += `> **Status:** SECURITY RISK DETECTED // REMEDIATION ADVISED\n`;
+      md += `> Critical deficiencies or vulnerabilities were identified. Please apply the fixes below.\n\n`;
+    }
+
+    if (scorecard) {
+      md += `## Scorecard Breakdown\n`;
+      md += `| Category | Grade |\n`;
+      md += `| --- | --- |\n`;
+      md += `| Code Quality | ${scorecard.code_quality_grade || "N/A"} |\n`;
+      md += `| Security | ${scorecard.security_grade || "N/A"} |\n`;
+      md += `| Compatibility | ${scorecard.compatibility_grade || "N/A"} |\n`;
+      md += `| Link Integrity | ${scorecard.link_integrity_grade || "N/A"} |\n\n`;
+
+      const details = scorecard.details || {};
+      
+      if (details.network_issues?.length > 0) {
+        md += `## Missing Security Headers & Mixed Content\n`;
+        details.network_issues.forEach((i: any) => {
+          md += `- **[${i.severity.toUpperCase()}]** ${i.parameter}: ${i.description}\n`;
+          md += `  *Fix:* \`${i.fix}\`\n`;
+        });
+        md += `\n`;
+      }
+
+      if (details.php_issues?.length > 0) {
+        md += `## PHP Configuration Vulnerabilities\n`;
+        details.php_issues.forEach((i: any) => {
+          md += `- **[${i.severity.toUpperCase()}]** ${i.parameter}: ${i.description}\n`;
+          md += `  *Fix:* \`${i.fix}\`\n`;
+        });
+        md += `\n`;
+      }
+
+      if (details.malware_issues?.length > 0) {
+        md += `## 🚨 Malware & Web Shells Detected\n`;
+        details.malware_issues.forEach((i: any) => {
+          md += `- **File:** ${i.file} \n`;
+          md += `  *Threat:* ${i.threat} (Action: \`${i.fix}\`)\n`;
+        });
+        md += `\n`;
+      }
+
+      if (details.integrity_issues?.length > 0) {
+        md += `## 🚨 CMS Core Checksum Failures\n`;
+        details.integrity_issues.forEach((i: any) => {
+          md += `- **File:** ${i.file} \n`;
+          md += `  *Issue:* ${i.message} (Action: \`${i.fix}\`)\n`;
+        });
+        md += `\n`;
+      }
+    }
+
+    if (iniResult) {
+      md += `## php.ini Configuration Audit Details\n`;
+      md += `- **Total Configuration Issues:** ${iniResult.total_issues}\n\n`;
+      
+      if (iniResult.issues?.length > 0) {
+        md += `### Security Deficiencies\n`;
+        iniResult.issues.forEach((i: any) => {
+          md += `- **[${i.severity.toUpperCase()}]** ${i.parameter}: ${i.description}\n`;
+          md += `  *Fix:* \`${i.fix}\`\n`;
+        });
+        md += `\n`;
+      }
+    }
+
+    md += `---\n`;
+    md += `*Report compiled by CORTEX Web Auditor daemon.*`;
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `web_audit_report_${scorecard?.audit_id || "ini"}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadJsonReport = () => {
+    const data = scorecard || iniResult;
+    if (!data) return;
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `web_audit_data_${scorecard?.audit_id || "ini"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="qc-console-card glassmorphic">
       {scanState === 'idle' && (
@@ -1648,6 +1756,23 @@ function WebAuditingConsole() {
                 <span className="metric-value font-space" style={{ color: iniResult.total_issues > 0 ? "orange" : "green" }}>{iniResult.total_issues}</span>
               </div>
             )}
+          </div>
+
+          <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", marginBottom: "1rem" }} className="font-space">
+            <button 
+              className="spacious-submit-btn" 
+              onClick={downloadMarkdownReport}
+              style={{ flex: 1, padding: "8px", fontSize: "0.7rem", background: "rgba(238, 130, 238, 0.15)", border: "1px solid violet", color: "#fff" }}
+            >
+              📄 SAVE MARKDOWN REPORT
+            </button>
+            <button 
+              className="spacious-submit-btn" 
+              onClick={downloadJsonReport}
+              style={{ flex: 1, padding: "8px", fontSize: "0.7rem", background: "rgba(255,255,255,0.05)", border: "1px solid #555" }}
+            >
+              💾 DOWNLOAD JSON DATA
+            </button>
           </div>
 
           <div className="font-space" style={{ maxHeight: "250px", overflowY: "auto", background: "rgba(0,0,0,0.3)", padding: "10px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.05)", textAlign: "left", fontSize: "0.7rem", color: "#ddd" }}>
