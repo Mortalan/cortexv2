@@ -483,14 +483,63 @@ async def get_remediate_advice(job_id: str) -> JSONResponse:
 @app.get("/crawl/{job_id}/export")
 async def export_crawl_csv(job_id: str) -> StreamingResponse:
     conn = duckdb.connect(DB_PATH)
-    res = conn.execute("SELECT url, status_code, seo_score, title, meta_description, h1, word_count, canonical FROM pages WHERE job_id = ?", (job_id,)).fetchall()
+    res = conn.execute("""
+        SELECT url, status_code, seo_score, title, meta_description, h1, word_count, canonical,
+               title_length, meta_description_length, h1_count, images_missing_alt
+        FROM pages WHERE job_id = ?
+    """, (job_id,)).fetchall()
     conn.close()
     
     def csv_generator():
-        yield "URL,Status Code,SEO Score,Title,Meta Description,H1 Heading,Word Count,Canonical URL\n"
+        yield "URL,Status Code,SEO Score,Title,Meta Description,H1 Heading,Word Count,Canonical URL,Recommendations\n"
         for row in res:
+            url, status_code, seo_score, title, meta_desc, h1, word_count, canonical, title_length, meta_desc_length, h1_count, img_alt = row
+            
+            recommendations = []
+            if not title:
+                recommendations.append("Title tag is missing")
+            elif title_length is not None and (title_length < 30 or title_length > 60):
+                recommendations.append(f"Suboptimal title length ({title_length} chars, target: 30-60)")
+                
+            if not meta_desc:
+                recommendations.append("Meta description is missing")
+            elif meta_desc_length is not None and (meta_desc_length < 110 or meta_desc_length > 160):
+                recommendations.append(f"Suboptimal meta description length ({meta_desc_length} chars, target: 110-160)")
+                
+            if h1_count is not None:
+                if h1_count == 0:
+                    recommendations.append("H1 heading is missing")
+                elif h1_count > 1:
+                    recommendations.append(f"Multiple H1 headings found ({h1_count})")
+                
+            if word_count is not None and word_count < 300:
+                recommendations.append(f"Thin content ({word_count} words, target: >300)")
+                
+            if img_alt is not None and img_alt > 0:
+                recommendations.append(f"{img_alt} images missing alt attributes")
+                
+            if not canonical:
+                recommendations.append("Canonical tag is missing")
+            elif canonical != url:
+                recommendations.append("Canonical URL mismatch")
+
+            rec_str = "; ".join(recommendations) if recommendations else "No issues detected"
+            
+            # Prepare standard fields
+            fields = [
+                url,
+                status_code,
+                seo_score,
+                title,
+                meta_desc,
+                h1,
+                word_count,
+                canonical,
+                rec_str
+            ]
+            
             escaped_row = []
-            for item in row:
+            for item in fields:
                 if item is None:
                     escaped_row.append("")
                 else:
@@ -503,6 +552,7 @@ async def export_crawl_csv(job_id: str) -> StreamingResponse:
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=seo_audit_{job_id}.csv"}
     )
+
 
 @app.get("/history")
 async def get_crawl_history() -> JSONResponse:
