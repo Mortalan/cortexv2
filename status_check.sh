@@ -27,6 +27,7 @@ services=(
   "tcp|192.168.50.242:11434|Ollama AI"
   "local|reflex-daemon|Reflex Engine"
   "local|hermes-agent|Hermes Agent"
+  "local|cortex-spider-app|SPIDER"
 )
 
 for i in "${!services[@]}"; do

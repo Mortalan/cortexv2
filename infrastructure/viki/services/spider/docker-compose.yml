@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  spider-redis:
+    image: redis:alpine
+    container_name: cortex-spider-redis
+    restart: always
+    networks:
+      - netlock_netlock-network
+
+  spider-app:
+    build: .
+    container_name: cortex-spider-app
+    restart: always
+    ports:
+      - "8092:8000"
+    environment:
+      - REDIS_URL=redis://cortex-spider-redis:6379/0
+      - DATA_DIR=/mnt/data_lake/audit/spider
+      - OLLAMA_URL=http://192.168.50.242:11434
+    volumes:
+      - /mnt/data_lake/audit:/mnt/data_lake/audit
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+      - .:/app
+    networks:
+      - netlock_netlock-network
+    depends_on:
+      - spider-redis
+
+  spider-worker:
+    build: .
+    container_name: cortex-spider-worker
+    restart: always
+    command: python spider_worker.py
+    environment:
+      - REDIS_URL=redis://cortex-spider-redis:6379/0
+      - DATA_DIR=/mnt/data_lake/audit/spider
+      - OLLAMA_URL=http://192.168.50.242:11434
+    volumes:
+      - /mnt/data_lake/audit:/mnt/data_lake/audit
+      - /mnt/data_lake/logs:/mnt/data_lake/logs
+      - .:/app
+    networks:
+      - netlock_netlock-network
+    depends_on:
+      - spider-redis
+
+networks:
+  netlock_netlock-network:
+    external: true

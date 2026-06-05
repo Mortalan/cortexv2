@@ -130,6 +130,17 @@ http:
         - web-auditor-stripprefix@file
       priority: 120
 
+    # 14. SPIDER SEO Scanner Daemon API & Web Console
+    spider:
+      rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/spider`)"
+      entryPoints:
+        - web
+      service: spider-service
+      middlewares:
+        - authelia@docker
+        - spider-stripprefix@file
+      priority: 120
+
   middlewares:
     seo-scanner-stripprefix:
       stripPrefix:
@@ -139,6 +150,10 @@ http:
       stripPrefix:
         prefixes:
           - "/api/audit"
+    spider-stripprefix:
+      stripPrefix:
+        prefixes:
+          - "/api/spider"
 
   services:
     dashboard-react-service:
@@ -195,3 +210,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://192.168.50.252:8091"
+
+    spider-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.252:8092"

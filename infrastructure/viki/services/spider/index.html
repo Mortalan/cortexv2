@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FITS SPIDER | Enterprise SEO Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #06070B;
+      --bg-secondary: #0D111A;
+      --accent-cyan: #00AFEF;
+      --accent-orange: #FF8C00;
+      --cyan-glow: rgba(0, 175, 239, 0.3);
+      --orange-glow: rgba(255, 140, 0, 0.3);
+      --border-color: rgba(0, 175, 239, 0.15);
+      --text-main: #FFFFFF;
+      --text-muted: #BAC4D6;
+      --card-bg: rgba(13, 17, 26, 0.7);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent-cyan) var(--bg-secondary);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--accent-cyan);
+      border-radius: 3px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation bar */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+    }
+
+    .brand-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--accent-cyan);
+    }
+
+    .brand-subtitle {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .history-selector-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    select {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 6px;
+      outline: none;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: border 0.3s ease;
+    }
+
+    select:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    /* Main Container Layout */
+    .container {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+      padding: 20px;
+      flex: 1;
+      height: calc(100vh - 71px);
+      overflow: hidden;
+    }
+
+    /* Left Sidebar: Controls & Analytics */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      height: 100%;
+      padding-right: 5px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--accent-orange);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      border-left: 3px solid var(--accent-cyan);
+      padding-left: 8px;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .form-control {
+      width: 100%;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: 6px;
+      outline: none;
+      transition: border 0.3s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+
+    .switch-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #2D3748;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, #005fcf 100%);
+      color: var(--text-main);
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-top: 10px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    /* Live Progress state */
+    .progress-hud {
+      display: none;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background-color: #2D3748;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-orange) 100%);
+      transition: width 0.3s ease;
+    }
+
+    .pulse-status {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-orange);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+      margin-right: 5px;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(255, 140, 0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 140, 0, 0); }
+    }
+
+    /* Circular SVG Gauges */
+    .gauges-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .gauge-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .gauge-svg {
+      width: 70px;
+      height: 70px;
+      transform: rotate(-90deg);
+    }
+
+    .gauge-bg {
+      fill: none;
+      stroke: #2D3748;
+      stroke-width: 6;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke: var(--accent-cyan);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .gauge-val {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--text-main);
+      margin-top: 5px;
+    }
+
+    .gauge-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    /* Right Workspace: Table Grid & Filters */
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .workspace-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .search-bar {
+      width: 300px;
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    .tab-container {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2px;
+      overflow-x: auto;
+    }
+
+    .tab {
+      color: var(--text-muted);
+      padding: 10px 16px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .tab:hover {
+      color: var(--accent-cyan);
+    }
+
+    .tab.active {
+      color: var(--accent-cyan);
+      border-bottom-color: var(--accent-cyan);
+    }
+
+    /* Data Table Section */
+    .table-container {
+      flex: 1;
+      overflow: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--bg-secondary);
+      color: var(--text-muted);
+      padding: 12px 16px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+    }
+
+    tr:hover td {
+      background-color: rgba(0, 175, 239, 0.05);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .badge-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge-200 { background: rgba(56, 161, 105, 0.2); color: #38A169; }
+    .badge-300 { background: rgba(221, 107, 32, 0.2); color: #DD6B20; }
+    .badge-error { background: rgba(229, 62, 62, 0.2); color: #E53E3E; }
+
+    .score-badge {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+    }
+
+    .score-green { color: #38A169; }
+    .score-orange { color: #DD6B20; }
+    .score-red { color: #E53E3E; }
+
+    /* Action Buttons in Workspace */
+    .workspace-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-action {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      transition: all 0.3s ease;
+    }
+
+    .btn-action:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+
+    /* Details Panel Slide-out */
+    .details-drawer {
+      position: fixed;
+      right: -500px;
+      top: 71px;
+      width: 480px;
+      height: calc(100vh - 71px);
+      background-color: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+      transition: right 0.3s ease-in-out;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      padding: 25px;
+      overflow-y: auto;
+    }
+
+    .details-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+
+    .drawer-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .btn-close:hover {
+      color: var(--text-main);
+    }
+
+    .drawer-section {
+      margin-bottom: 20px;
+    }
+
+    .drawer-section h4 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      color: var(--accent-orange);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .drawer-val {
+      background-color: var(--bg-primary);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .ai-box {
+      background: rgba(0, 175, 239, 0.05);
+      border: 1px dashed var(--accent-cyan);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    .ai-box p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Ingress Navigation -->
+  <header>
+    <a href="#" class="brand">
+      <!-- FITS Logo Robot/Mask Icon SVG -->
+      <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="45" stroke="#00AFEF" stroke-width="8"/>
+        <path d="M35 35H65V45H45V55H60V65H45V75H35V35Z" fill="#00AFEF"/>
+        <rect x="65" y="55" width="10" height="20" fill="#FF8C00"/>
+      </svg>
+      <div class="brand-title">FITS <span class="brand-subtitle">SPIDER</span></div>
+    </a>
+    <div class="history-selector-container">
+      <label for="history-select" style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Crawl History:</label>
+      <select id="history-select" onchange="loadSelectedJob()">
+        <option value="">-- Select Audit --</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Content Workspace -->
+  <div class="container">
+    
+    <!-- Left column: Control forms & Analytics HUD -->
+    <div class="sidebar">
+      
+      <!-- Launch Config Card -->
+      <div class="card">
+        <div class="card-title">Crawl Controller</div>
+        <div class="form-group">
+          <label for="input-url">Target URL</label>
+          <input type="text" id="input-url" class="form-control" placeholder="https://example.com" value="https://fits.net.za">
+        </div>
+        <div class="form-group">
+          <label for="input-pages">Crawl Depth Limit (URLs)</label>
+          <input type="number" id="input-pages" class="form-control" value="50" min="5" max="10000">
+        </div>
+        <div class="form-group">
+          <label for="input-ua">User-Agent Profile</label>
+          <select id="input-ua" class="form-control" style="padding:10px;">
+            <option value="desktop">FITS Spider (Desktop)</option>
+            <option value="mobile">FITS Spider (Mobile)</option>
+            <option value="googlebot">Googlebot Desktop Spoof</option>
+          </select>
+        </div>
+        <div class="switch-group">
+          <span style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Render JavaScript (Playwright)</span>
+          <label class="switch">
+            <input type="checkbox" id="switch-js">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="switch-group" style="margin-bottom:15px;">
+          <span style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Obey Robots.txt</span>
+          <label class="switch">
+            <input type="checkbox" id="switch-robots" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <button class="btn" onclick="startAudit()">Launch SPIDER Audit</button>
+      </div>
+
+      <!-- Real-time progress tracker (Conditional display) -->
+      <div class="card progress-hud" id="progress-hud">
+        <div class="card-title">Live Scraper telemetry</div>
+        <div style="font-size:13px; margin-bottom:5px; display:flex; justify-content:space-between;">
+          <span>Status: <span class="pulse-status"></span><strong id="live-status-label">CRAWLING</strong></span>
+          <span id="live-pages-counter">0/50</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="live-progress-bar"></div>
+        </div>
+      </div>
+
+      <!-- Core score meters -->
+      <div class="card">
+        <div class="card-title">SEO Metric Gauges</div>
+        <div class="gauges-grid">
+          <div class="gauge-item">
+            <svg class="gauge-svg">
+              <circle cx="35" cy="35" r="30" class="gauge-bg"/>
+              <circle cx="35" cy="35" r="30" class="gauge-fill" id="gauge-fill-tech" stroke-dasharray="188.4" stroke-dashoffset="188.4"/>
+            </svg>
+            <div class="gauge-val" id="gauge-val-tech">-%</div>
+            <div class="gauge-label">Technical</div>
+          </div>
+          <div class="gauge-item">
+            <svg class="gauge-svg">
+              <circle cx="35" cy="35" r="30" class="gauge-bg"/>
+              <circle cx="35" cy="35" r="30" class="gauge-fill" id="gauge-fill-onpage" stroke-dasharray="188.4" stroke-dashoffset="188.4"/>
+            </svg>
+            <div class="gauge-val" id="gauge-val-onpage">-%</div>
+            <div class="gauge-label">On-Page</div>
+          </div>
+          <div class="gauge-item">
+            <svg class="gauge-svg">
+              <circle cx="35" cy="35" r="30" class="gauge-bg"/>
+              <circle cx="35" cy="35" r="30" class="gauge-fill" id="gauge-fill-perf" stroke-dasharray="188.4" stroke-dashoffset="188.4"/>
+            </svg>
+            <div class="gauge-val" id="gauge-val-perf">-%</div>
+            <div class="gauge-label">Performance</div>
+          </div>
+          <div class="gauge-item">
+            <svg class="gauge-svg">
+              <circle cx="35" cy="35" r="30" class="gauge-bg"/>
+              <circle cx="35" cy="35" r="30" class="gauge-fill" id="gauge-fill-ai" stroke-dasharray="188.4" stroke-dashoffset="188.4"/>
+            </svg>
+            <div class="gauge-val" id="gauge-val-ai">-%</div>
+            <div class="gauge-label">AI critique</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Workspace filter workspace -->
+    <div class="workspace">
+      
+      <div class="workspace-header">
+        <div class="tab-container" id="tab-headers">
+          <div class="tab active" onclick="setTab('all')">All Pages</div>
+          <div class="tab" onclick="setTab('error')">Errors (4xx/5xx)</div>
+          <div class="tab" onclick="setTab('redirect')">Redirects (3xx)</div>
+          <div class="tab" onclick="setTab('missing_title')">Title Warnings</div>
+          <div class="tab" onclick="setTab('missing_desc')">Meta Warnings</div>
+          <div class="tab" onclick="setTab('missing_alt')">Alt Tag Gaps</div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="workspace-search" class="search-bar" placeholder="Search pages..." oninput="filterTable()">
+          <div class="workspace-actions">
+            <button class="btn-action" onclick="downloadPDFReport()">Client PDF Report</button>
+            <button class="btn-action" onclick="downloadCSVReport()">Export CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table container -->
+      <div class="table-container">
+        <table id="pages-table">
+          <thead>
+            <tr>
+              <th style="width: 45%;">URL</th>
+              <th style="width: 10%; text-align: center;">HTTP Status</th>
+              <th style="width: 15%; text-align: center;">Load speed</th>
+              <th style="width: 15%; text-align: center;">Word count</th>
+              <th style="width: 15%; text-align: center;">SEO Score</th>
+            </tr>
+          </thead>
+          <tbody id="pages-tbody">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 50px; color: var(--text-muted);">
+                Select an audit from the dropdown history or launch a new scan.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Slide-out Details drawer panel -->
+  <div class="details-drawer" id="details-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">Page Inspector</div>
+      <button class="btn-close" onclick="closeDrawer()">&times;</button>
+    </div>
+    
+    <div class="drawer-section">
+      <h4>Page URL</h4>
+      <div class="drawer-val" id="inspector-url">-</div>
+    </div>
+    
+    <div class="drawer-section">
+      <h4>HTML Title Tag</h4>
+      <div class="drawer-val" id="inspector-title">-</div>
+    </div>
+    
+    <div class="drawer-section">
+      <h4>Meta Description</h4>
+      <div class="drawer-val" id="inspector-desc">-</div>
+    </div>
+    
+    <div class="drawer-section">
+      <h4>Primary Header (H1)</h4>
+      <div class="drawer-val" id="inspector-h1">-</div>
+    </div>
+
+    <!-- AI Critique Box -->
+    <div class="drawer-section">
+      <h4>FITS GPU-AI Agent Audit (Hermes-3)</h4>
+      <div class="ai-box">
+        <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Title Optimization:</h5>
+        <p id="inspector-ai-title" style="margin-bottom:12px; font-style:italic; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">-</p>
+        
+        <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Meta Description Optimization:</h5>
+        <p id="inspector-ai-desc" style="margin-bottom:12px; font-style:italic; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">-</p>
+        
+        <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Copywriting & Conversion Critique:</h5>
+        <p id="inspector-ai-critique" style="margin-bottom:12px; line-height:1.4;">-</p>
+        
+        <h5 style="font-family:'Orbitron'; font-size:11px; margin-bottom:5px; color:var(--accent-cyan);">Target Semantic Keyword Ideas:</h5>
+        <p id="inspector-ai-keywords" style="font-weight:600; color:var(--accent-orange);">-</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeJobId = "";
+    let activeTab = "all";
+    let polledPagesData = [];
+    let pollInterval = null;
+
+    window.onload = async () => {
+      await fetchJobsHistory();
+    };
+
+    async function fetchJobsHistory() {
+      try {
+        const response = await fetch("/api/spider/jobs");
+        if (response.ok) {
+          const jobs = await response.json();
+          const select = document.getElementById("history-select");
+          // Clear except first
+          select.innerHTML = '<option value="">-- Select Audit --</option>';
+          jobs.forEach(job => {
+            const opt = document.createElement("option");
+            opt.value = job.job_id;
+            opt.innerText = `${job.url} (${job.created_at.split(' ')[0]} - ${job.pages_crawled} pgs)`;
+            select.appendChild(opt);
+          });
+        }
+      } catch (e) {
+        console.error("Failed loading jobs history:", e);
+      }
+    }
+
+    async function loadSelectedJob() {
+      const select = document.getElementById("history-select");
+      const jobId = select.value;
+      if (!jobId) return;
+      activeJobId = jobId;
+      closeDrawer();
+      await loadJobData(jobId);
+    }
+
+    async function loadJobData(jobId) {
+      try {
+        const response = await fetch(`/api/spider/job/${jobId}/pages`);
+        if (response.ok) {
+          polledPagesData = await response.json();
+          renderTable();
+          calculateCoreGauges();
+        }
+      } catch (e) {
+        console.error("Error loading job pages:", e);
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("pages-tbody");
+      tbody.innerHTML = "";
+
+      let filtered = polledPagesData;
+      
+      // Filter by Tab
+      if (activeTab === "error") {
+        filtered = polledPagesData.filter(p => p.status_code >= 400);
+      } else if (activeTab === "redirect") {
+        filtered = polledPagesData.filter(p => p.status_code >= 300 && p.status_code < 400);
+      } else if (activeTab === "missing_title") {
+        filtered = polledPagesData.filter(p => !p.title);
+      } else if (activeTab === "missing_desc") {
+        filtered = polledPagesData.filter(p => !p.meta_description);
+      } else if (activeTab === "missing_alt") {
+        filtered = polledPagesData.filter(p => p.images_missing_alt > 0);
+      }
+
+      // Filter by Search input
+      const searchVal = document.getElementById("workspace-search").value.toLowerCase();
+      if (searchVal) {
+        filtered = filtered.filter(p => p.url.toLowerCase().includes(searchVal) || p.title.toLowerCase().includes(searchVal));
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No pages matching filters found.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.onclick = () => openInspector(p);
+        
+        let badgeClass = "badge-200";
+        if (p.status_code >= 400) badgeClass = "badge-error";
+        else if (p.status_code >= 300) badgeClass = "badge-300";
+        
+        let scoreClass = "score-green";
+        if (p.seo_score < 60) scoreClass = "score-red";
+        else if (p.seo_score < 85) scoreClass = "score-orange";
+
+        tr.innerHTML = `
+          <td style="font-weight: 500; font-size:12px; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.url}</td>
+          <td style="text-align: center;"><span class="badge-status ${badgeClass}">${p.status_code}</span></td>
+          <td style="text-align: center;">${p.load_time_ms} ms</td>
+          <td style="text-align: center;">${p.word_count}</td>
+          <td style="text-align: center; font-weight: bold;" class="score-badge ${scoreClass}">${p.seo_score}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function setTab(tabName) {
+      activeTab = tabName;
+      // Update Tab CSS
+      const tabs = document.querySelectorAll(".tab");
+      tabs.forEach(t => t.classList.remove("active"));
+      event.target.classList.add("active");
+      renderTable();
+    }
+
+    function filterTable() {
+      renderTable();
+    }
+
+    function calculateCoreGauges() {
+      if (polledPagesData.length === 0) return;
+      
+      let totalTech = 0;
+      let totalOnPage = 0;
+      let totalPerf = 0;
+      let totalAi = 0;
+
+      polledPagesData.forEach(p => {
+        totalTech += p.technical_score;
+        totalOnPage += p.onpage_score;
+        totalPerf += p.performance_score;
+        totalAi += p.ai_score;
+      });
+
+      const count = polledPagesData.length;
+      updateGauge("tech", Math.round(totalTech / count));
+      updateGauge("onpage", Math.round(totalOnPage / count));
+      updateGauge("perf", Math.round(totalPerf / count));
+      updateGauge("ai", Math.round(totalAi / count));
+    }
+
+    function updateGauge(gaugeId, scoreVal) {
+      document.getElementById(`gauge-val-${gaugeId}`).innerText = `${scoreVal}%`;
+      const fillCircle = document.getElementById(`gauge-fill-${gaugeId}`);
+      // SVG Circumference = 2 * PI * r = 2 * 3.14159 * 30 = 188.4
+      const dashOffset = 188.4 - (188.4 * scoreVal) / 100;
+      fillCircle.style.strokeDashoffset = dashOffset;
+      
+      // Color updates based on scores
+      if (scoreVal >= 85) fillCircle.style.stroke = "#38A169";
+      else if (scoreVal >= 60) fillCircle.style.stroke = "#DD6B20";
+      else fillCircle.style.stroke = "#E53E3E";
+    }
+
+    async function startAudit() {
+      const url = document.getElementById("input-url").value;
+      const maxPages = document.getElementById("input-pages").value;
+      const renderJs = document.getElementById("switch-js").checked;
+      const userAgent = document.getElementById("input-ua").value;
+      const obeyRobots = document.getElementById("switch-robots").checked;
+
+      if (!url) {
+        alert("Please specify a Target URL.");
+        return;
+      }
+
+      closeDrawer();
+      document.getElementById("progress-hud").style.display = "block";
+      document.getElementById("live-status-label").innerText = "QUEUING";
+      document.getElementById("live-pages-counter").innerText = `0/${maxPages}`;
+      document.getElementById("live-progress-bar").style.width = "0%";
+
+      try {
+        const response = await fetch("/api/spider/crawl", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: url,
+            max_pages: parseInt(maxPages),
+            render_js: renderJs,
+            user_agent: userAgent,
+            obey_robots: obeyRobots
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          activeJobId = data.job_id;
+          
+          // Start Polling loop
+          if (pollInterval) clearInterval(pollInterval);
+          pollInterval = setInterval(pollJobProgress, 2000);
+        } else {
+          alert("Failed launching crawl job. Check backend queue status.");
+        }
+      } catch (e) {
+        console.error("Crawl initiation exception:", e);
+      }
+    }
+
+    async function pollJobProgress() {
+      if (!activeJobId) return;
+      try {
+        const response = await fetch(`/api/spider/job/${activeJobId}`);
+        if (response.ok) {
+          const job = await response.json();
+          const percent = Math.round((job.pages_crawled / job.max_pages) * 100);
+          
+          document.getElementById("live-status-label").innerText = job.status.toUpperCase();
+          document.getElementById("live-pages-counter").innerText = `${job.pages_crawled}/${job.max_pages}`;
+          document.getElementById("live-progress-bar").style.width = `${Math.min(100, percent)}%`;
+
+          // Load current results incrementally
+          await loadJobData(activeJobId);
+
+          if (job.status === "completed" || job.status === "failed") {
+            clearInterval(pollInterval);
+            document.getElementById("live-status-label").innerText = job.status.toUpperCase();
+            await fetchJobsHistory();
+          }
+        }
+      } catch (e) {
+        console.error("Progress polling failed:", e);
+      }
+    }
+
+    function openInspector(page) {
+      document.getElementById("inspector-url").innerText = page.url;
+      document.getElementById("inspector-title").innerText = page.title || "[EMPTY TITLE]";
+      document.getElementById("inspector-desc").innerText = page.meta_description || "[EMPTY DESCRIPTION]";
+      document.getElementById("inspector-h1").innerText = page.h1 || "[EMPTY H1]";
+      
+      const ai = page.ai_analysis;
+      document.getElementById("inspector-ai-title").innerText = ai.title_suggestion || "-";
+      document.getElementById("inspector-ai-desc").innerText = ai.meta_description_suggestion || "-";
+      document.getElementById("inspector-ai-critique").innerText = ai.copywriting_critique || "AI critique unavailable for this URL.";
+      document.getElementById("inspector-ai-keywords").innerText = ai.keyword_opportunities ? ai.keyword_opportunities.join(", ") : "-";
+
+      document.getElementById("details-drawer").classList.add("open");
+    }
+
+    function closeDrawer() {
+      document.getElementById("details-drawer").classList.remove("open");
+    }
+
+    function downloadPDFReport() {
+      if (!activeJobId) {
+        alert("Please select or complete a crawl before downloading the client PDF report.");
+        return;
+      }
+      window.open(`/api/spider/job/${activeJobId}/report/pdf`, "_blank");
+    }
+
+    function downloadCSVReport() {
+      if (!activeJobId) {
+        alert("Please select or complete a crawl before exporting to CSV.");
+        return;
+      }
+      window.open(`/api/spider/job/${activeJobId}/export/csv`, "_blank");
+    }
+  </script>
+</body>
+</html>

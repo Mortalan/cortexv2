@@ -1945,7 +1945,8 @@ function App() {
         { name: "Custom Reports", subtitle: "On-Request Compiler", url: "/?mode=reports", icon: "📊" },
         { name: "QC Scanner", subtitle: "Security & Design Audit", url: "/?mode=qc", icon: "🛡️" },
         { name: "SEO Scanner", subtitle: "Tech & On-Page SEO", url: "/?mode=seo", icon: "🔍" },
-        { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "/?mode=audit", icon: "🩺" }
+        { name: "Website Auditor", subtitle: "Health & Malware Scan", url: "/?mode=audit", icon: "🩺" },
+        { name: "SPIDER", subtitle: "FITS SEO Crawl & Critique", url: "/api/spider/", icon: "🕷️" }
       ],
     },
     {
