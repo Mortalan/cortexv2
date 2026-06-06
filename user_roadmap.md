@@ -21,6 +21,7 @@
 | **8. Decentralized LXC Transition** | See [LAB_LOG.md](file:///home/louis/cortex/docs/LAB_LOG.md) | **COMPLETED (Phase 19)** |
 | **9. In-Depth SEO Scanner** | [seoscan.md](file:///home/louis/cortex/seoscan.md) | **STABLE & VERIFIED (Phase 23)** |
 | **10. Comprehensive Website Auditor** | [webaudit.md](file:///home/louis/cortex/webaudit.md) | **STABLE & VERIFIED (Phase 24)** |
+| **11. Standalone SPIDER Crawler** | [docs/SPIDER_BOARD_PROPOSAL.md](file:///home/louis/cortex/docs/SPIDER_BOARD_PROPOSAL.md) / [docs/SPIDER_ROADMAP.md](file:///home/louis/cortex/docs/SPIDER_ROADMAP.md) | **STABLE & VERIFIED (Phase 25)** |
 
 ---
 
@@ -31,5 +32,5 @@
 *   **Security Isolation:** The newly deployed 4-node LXC cluster allows granular access policies and physical container boundaries.
 
 ---
-*Last Updated: Friday, 05 June 2026*
+*Last Updated: Saturday, 06 June 2026*
 *Author: Antigravity Architect Mode*

@@ -3,7 +3,7 @@
 
 ### 1. THE BRAIN (LLM) & SOVEREIGN AGENT
 - **Engine:** Ollama on GPU (AI-101) + local stateful ReAct dispatcher (`viki_agent.py` on VM 100).
-- **Models:** `viki` (Contextual), `llama3:latest`, `phi`
+- **Models:** `viki` (Contextual), `llama3:latest`, `hermes3` (GEO Audits), `phi`
 - **Context Sync:** `viki_sync.py` (ACTIVE - Synchronizes `docs/` and `CORTEX_MAP.md`).
 - **Database Operations:** Native SQL execution and schema-discovery self-correction for GLPI MariaDB and NetLock RMM MySQL (`mysql-container` in `dogha6`), granting active administrative control over users, roles, tickets, and RMM policies.
 - **Dynamic Reporting:** Orchestrates DOCX and PDF compiling via `cortex_reporter.py` with custom historical window spec extraction.

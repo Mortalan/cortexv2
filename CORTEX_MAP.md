@@ -1,6 +1,9 @@
 # CORTEX: SYSTEM MAP & INDEX
 ## [VERSION 2.5 - JUNE 2026] - COGNITIVE INTEGRATION & STABILIZATION
 
+### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
+> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and user_roadmap.md to begin implementing Section 4 (Microsoft Graph Calendar Sync Integration) or the new Outlook Appointments widget under Phase 20. Do not read unrelated files."
+
 > [!IMPORTANT]
 > **Backup Reference:** A full archive copy of the unified documentation baseline is stored at:
 > [/home/louis/cortex/archive/backup_20260603/](file:///home/louis/cortex/archive/backup_20260603/)
@@ -28,6 +31,8 @@
 | **Change History** | [docs/CHANGELOG.md](file:///home/louis/cortex/docs/CHANGELOG.md) | Chronological development logs (June 2026). |
 | **Roadmap Dashboard**| [user_roadmap.md](file:///home/louis/cortex/user_roadmap.md) | Reference dashboard index for planned features. |
 | **Roadmap Specs** | [docs/roadmap/](file:///home/louis/cortex/docs/roadmap/) | Modular specification files per feature (1 to 7). |
+| **SPIDER Proposal** | [docs/SPIDER_BOARD_PROPOSAL.md](file:///home/louis/cortex/docs/SPIDER_BOARD_PROPOSAL.md) | Strategic Board Proposal for SPIDER SEO & GEO crawler platform. |
+| **SPIDER Roadmap** | [docs/SPIDER_ROADMAP.md](file:///home/louis/cortex/docs/SPIDER_ROADMAP.md) | Product Roadmap to the Forefront of SEO for SPIDER. |
 
 ---
 
@@ -37,7 +42,7 @@
 - **Phase 22 (PLANNING):** Deploy [Emergency API Kill Switch](file:///home/louis/cortex/docs/roadmap/7_security_protocols.md) at middleware level wired to EDR triggers.
 - **Phase 23 (COMPLETED):** Deployed [In-Depth SEO Diagnostic Scanner](file:///home/louis/cortex/seoscan.md) (`cortex-seo-scanner`) for technical audits.
 - **Phase 24 (COMPLETED):** Deployed [Comprehensive Website Health & Security Auditor](file:///home/louis/cortex/webaudit.md) (`cortex-web-auditor`) for website security scans and redirects audits.
-- **Phase 25 (COMPLETED):** Deployed **SPIDER** standalone FITS SEO & GEO crawler stack with AI content critiques, code auto-fixes, and Google SERP simulator.
+- **Phase 25 (COMPLETED):** Deployed **SPIDER** standalone FITS SEO & GEO crawler stack ([SPIDER Board Proposal](file:///home/louis/cortex/docs/SPIDER_BOARD_PROPOSAL.md) / [SPIDER Forefront Roadmap](file:///home/louis/cortex/docs/SPIDER_ROADMAP.md)) with AI content critiques, code auto-fixes, and Google SERP simulator.
 
 ---
-*Last Updated: Friday, 05 June 2026*
+*Last Updated: Saturday, 06 June 2026*
