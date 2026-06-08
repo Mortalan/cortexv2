@@ -15,7 +15,9 @@ DATA_DIR = os.getenv("DATA_DIR", "/mnt/data_lake/audit/spider")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.50.242:11434")
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://192.168.50.254:5678/webhook/spider-audit")
 
+LOCAL_DB_DIR = os.getenv("LOCAL_DB_DIR", "/app/db_local")
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(LOCAL_DB_DIR, exist_ok=True)
 
 async def trigger_n8n_webhook(job_id: str, url: str, db_path: str):
     """Notify n8n of the completed audit with key metrics and AI suggestions."""
@@ -101,7 +103,7 @@ async def main():
             user_agent_key = job.get("user_agent", "desktop")
             obey_robots = job.get("obey_robots", True)
             
-            db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+            db_path = os.path.join(LOCAL_DB_DIR, f"{job_id}.db")
             
             logger.info(f"[SPIDER-WORKER] Starting crawl for job_id={job_id} url={url}")
             
@@ -118,6 +120,17 @@ async def main():
             
             # Post-crawl webhook dispatch to n8n
             await trigger_n8n_webhook(job_id, url, db_path)
+            
+            # Finalize and archive database from local storage to data lake
+            data_lake_path = os.path.join(DATA_DIR, f"{job_id}.db")
+            logger.info(f"[SPIDER-WORKER] Archiving {db_path} to {data_lake_path}...")
+            try:
+                import shutil
+                shutil.copy2(db_path, data_lake_path)
+                os.remove(db_path)
+                logger.info(f"[SPIDER-WORKER] Successfully archived and cleaned up {job_id}.db")
+            except Exception as e:
+                logger.error(f"[SPIDER-WORKER] Failed to archive database: {e}")
             
         except redis.exceptions.TimeoutError:
             # Normal socket timeout when BLPOP times out on an empty queue

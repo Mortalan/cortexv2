@@ -22,11 +22,14 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://cortex-spider-redis:6379/0")
 DATA_DIR = os.getenv("DATA_DIR", "/mnt/data_lake/audit/spider")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.50.242:11434")
 
-# Global master database of jobs
-MASTER_DB = os.path.join(DATA_DIR, "spider_master.db")
+LOCAL_DB_DIR = os.getenv("LOCAL_DB_DIR", "/app/db_local")
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(LOCAL_DB_DIR, exist_ok=True)
 
-def get_db_conn(db_path: str, read_only: bool = False, max_retries: int = 5, delay: float = 0.2):
+# Global master database of jobs stored locally to prevent NFS lock conflicts
+MASTER_DB = os.path.join(LOCAL_DB_DIR, "spider_master.db")
+
+def get_db_conn(db_path: str, read_only: bool = False, max_retries: int = 50, delay: float = 0.1):
     """Retrieve a DuckDB connection with transient lock conflict retries."""
     for i in range(max_retries):
         try:
@@ -37,8 +40,25 @@ def get_db_conn(db_path: str, read_only: bool = False, max_retries: int = 5, del
                 continue
             raise e
 
+def get_job_db_path(job_id: str) -> str:
+    """Resolve database path, checking local storage first, then data lake."""
+    local_path = os.path.join(LOCAL_DB_DIR, f"{job_id}.db")
+    if os.path.exists(local_path):
+        return local_path
+    return os.path.join(DATA_DIR, f"{job_id}.db")
+
 # Initialize master job store
 def init_master_db():
+    # Migrate master DB from data lake if not present locally
+    old_master_db = os.path.join(DATA_DIR, "spider_master.db")
+    if os.path.exists(old_master_db) and not os.path.exists(MASTER_DB):
+        try:
+            import shutil
+            shutil.copy2(old_master_db, MASTER_DB)
+            logger.info("[SPIDER] Migrated spider_master.db from data lake to local storage.")
+        except Exception as e:
+            logger.error(f"[SPIDER] Failed to migrate spider_master.db: {e}")
+            
     with get_db_conn(MASTER_DB) as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS jobs (
@@ -100,7 +120,7 @@ async def start_crawl(request: CrawlRequest):
     job_id = f"job_{uuid.uuid4().hex[:12]}"
     
     # Initialize the job DB
-    job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+    job_db_path = os.path.join(LOCAL_DB_DIR, f"{job_id}.db")
     
     # Initialize DuckDB file for the job
     with get_db_conn(job_db_path) as conn:
@@ -169,7 +189,7 @@ async def list_jobs():
 @app.get("/job/{job_id}")
 async def get_job_status(job_id: str):
     """Poll progress details for a specific crawl job."""
-    job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+    job_db_path = get_job_db_path(job_id)
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Job DB file not found.")
         
@@ -205,7 +225,7 @@ async def get_job_pages(
     search: Optional[str] = Query(None)
 ):
     """Retrieve detailed page audit statistics from a job database."""
-    job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+    job_db_path = get_job_db_path(job_id)
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Crawl data file not found.")
         
@@ -290,7 +310,7 @@ async def get_job_pages(
 @app.get("/job/{job_id}/links")
 async def get_job_links(job_id: str):
     """Retrieve discovered link relationships (internal & external) for visual mapping."""
-    job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+    job_db_path = get_job_db_path(job_id)
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Job crawl data not found.")
         
@@ -304,11 +324,11 @@ async def get_job_links(job_id: str):
 @app.get("/job/{job_id}/export/csv")
 async def export_job_csv(job_id: str):
     """Generate and export audit results as a CSV spreadsheet."""
-    job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+    job_db_path = get_job_db_path(job_id)
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Crawl dataset not found.")
         
-    csv_file_path = os.path.join(DATA_DIR, f"{job_id}_export.csv")
+    csv_file_path = os.path.join(LOCAL_DB_DIR, f"{job_id}_export.csv")
     
     # Export using DuckDB COPY statement
     with get_db_conn(job_db_path, read_only=True) as conn:
@@ -323,7 +343,7 @@ async def export_job_csv(job_id: str):
 @app.get("/job/{job_id}/report/pdf")
 async def get_pdf_report(job_id: str):
     """Render a premium white-label client PDF audit report utilizing FITS branding."""
-    job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
+    job_db_path = get_job_db_path(job_id)
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Job database not found.")
         
