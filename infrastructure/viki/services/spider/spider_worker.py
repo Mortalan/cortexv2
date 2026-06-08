@@ -97,7 +97,7 @@ async def main():
             user_agent_key = job.get("user_agent", "desktop")
             obey_robots = job.get("obey_robots", True)
             
-            db_path = os.path.join(DATA_DIR, f"job_{job_id}.db")
+            db_path = os.path.join(DATA_DIR, f"{job_id}.db")
             
             logger.info(f"[SPIDER-WORKER] Starting crawl for job_id={job_id} url={url}")
             

@@ -326,7 +326,7 @@ def analyze_page_html(
         nonlocal max_depth, total_elements
         total_elements += 1
         max_depth = max(max_depth, current_depth)
-        for child in element.find_children(recursive=False):
+        for child in element.find_all(recursive=False):
             get_depth(child, current_depth + 1)
     body = soup.find("body")
     if body:
