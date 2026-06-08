@@ -267,7 +267,19 @@ async def get_job_pages(
             "ai_score": r[20],
             "seo_score": r[21],
             "redirect_chain": r[22].split(",") if r[22] else [],
-            "ai_analysis": ai_data
+            "ai_analysis": ai_data,
+            "ttfb_ms": r[24] if len(r) > 24 else r[2],
+            "dom_depth": r[25] if len(r) > 25 else 0,
+            "dom_element_count": r[26] if len(r) > 26 else 0,
+            "soft_404_flag": r[27] if len(r) > 27 else False,
+            "blindspot_has_hidden_text": r[28] if len(r) > 28 else False,
+            "blindspot_hidden_text": r[29] if len(r) > 29 else "",
+            "elementor_optimization_active": r[30] if len(r) > 30 else False,
+            "header_nesting_valid": r[31] if len(r) > 31 else True,
+            "date_freshness_valid": r[32] if len(r) > 32 else True,
+            "word_rule_met": r[33] if len(r) > 33 else True,
+            "schema_conflicts": r[34].split(",") if (len(r) > 34 and r[34]) else [],
+            "executive_priority_ledger": json.loads(r[35]) if (len(r) > 35 and r[35]) else []
         })
         
     return pages_list
@@ -347,8 +359,29 @@ async def get_pdf_report(job_id: str):
         ORDER BY seo_score ASC LIMIT 15
     """).fetchall()
     
+    # 4. Fetch consolidated priority ledger items from all pages
+    ledger_rows = conn.execute("SELECT executive_priority_ledger_json FROM pages WHERE executive_priority_ledger_json IS NOT NULL").fetchall()
     conn.close()
     
+    consolidated_ledger = []
+    seen_vulns = set()
+    for row in ledger_rows:
+        if row[0]:
+            try:
+                items = json.loads(row[0])
+                for item in items:
+                    vuln = item.get("Vulnerability Detected")
+                    if vuln and vuln not in seen_vulns:
+                        seen_vulns.add(vuln)
+                        consolidated_ledger.append({
+                            "pillar": item.get("Audit Pillar", "General"),
+                            "vulnerability": vuln,
+                            "impact": item.get("Technical Impact", "N/A"),
+                            "strategy": item.get("Platform Resolution Strategy", "N/A")
+                        })
+            except Exception:
+                pass
+                
     pages_list = []
     for p in crawled_pages:
         ai_data = {}
@@ -692,7 +725,45 @@ async def get_pdf_report(job_id: str):
             </div>
         </div>
         
-        <!-- Page 3: Page Level Audit details -->
+        <!-- Page 3: Executive Priority Ledger -->
+        <div class="page">
+            <div class="page-title">Executive Priority Ledger</div>
+            <p class="section-desc">The following prioritization matrix lists all technical, performance, and schema vulnerabilities discovered across the website, ordered by engineering impact:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Audit Pillar</th>
+                        <th style="width: 25%;">Vulnerability Detected</th>
+                        <th style="width: 30%;">Technical Impact</th>
+                        <th style="width: 30%;">Platform Resolution Strategy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if consolidated_ledger %}
+                        {% for item in consolidated_ledger %}
+                        <tr>
+                            <td style="font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 11px; color: #00AFEF;">{{ item.pillar }}</td>
+                            <td style="font-size: 12px; font-weight: 500;">{{ item.vulnerability }}</td>
+                            <td style="font-size: 11px; color: #4A5568;">{{ item.impact }}</td>
+                            <td style="font-size: 11px; color: #2D3748; background-color: #F0F9FF; border-left: 2px solid #00AFEF; padding-left: 5px;">{{ item.strategy }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #718096; padding: 20px;">No technical or schema vulnerabilities detected across the audited pages. Complete compliance achieved.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+            
+            <div class="footer-info" style="margin-top: 40px;">
+                <span>FITS SPIDER SEO Report &copy; 2026</span>
+                <span>Target: {{ target_url }}</span>
+            </div>
+        </div>
+        
+        <!-- Page 4: Page Level Audit details -->
         <div class="page">
             <div class="page-title">Page-Level Diagnostics</div>
             <p class="section-desc">The table below details the top pages with the lowest SEO optimization scores, highlighting specific structural and AI recommendations:</p>
@@ -768,7 +839,8 @@ async def get_pdf_report(job_id: str):
         missing_titles=summary[7],
         missing_descs=summary[8],
         missing_alts=summary[9],
-        pages=pages_list
+        pages=pages_list,
+        consolidated_ledger=consolidated_ledger
     )
     
     # 6. Feed rendered HTML into headless Playwright to generate PDF
