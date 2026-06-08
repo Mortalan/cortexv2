@@ -1,12 +1,12 @@
 # CORTEX: SYSTEM MAP & INDEX
-## [VERSION 2.5 - JUNE 2026] - COGNITIVE INTEGRATION & STABILIZATION
+## [VERSION 2.6 - JUNE 2026] - SYSTEM DIAGNOSIS & STABILIZATION
 
 ### **SESSION STARTUP COMMAND (ANTIGRAVITY CLI)**
-> "agy: Initialize CORTEX Architect Mode. Load CORTEX_MAP.md and user_roadmap.md to begin implementing Section 4 (Microsoft Graph Calendar Sync Integration) or the new Outlook Appointments widget under Phase 20. Do not read unrelated files."
+> "agy: Initialize CORTEX Architect Mode. Read only CORTEX_MAP.md to understand the active system index, then await instruction on task targets. Do not read other log or infrastructure files unless requested."
 
 > [!IMPORTANT]
 > **Backup Reference:** A full archive copy of the unified documentation baseline is stored at:
-> [/home/louis/cortex/archive/backup_20260603/](file:///home/louis/cortex/archive/backup_20260603/)
+> [/home/louis/cortex/archive/backup_20260608/](file:///home/louis/cortex/archive/backup_20260608/)
 
 ---
 
