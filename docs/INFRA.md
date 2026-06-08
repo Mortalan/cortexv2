@@ -34,7 +34,7 @@ Forensic logs via WireGuard tunnel to LAKE-102.
 
 ### 4. DEPLOYMENT & ROUTING PROTOCOLS
 To prevent infrastructure degradation (404s/502s/401s), the following rules must be strictly observed:
-- **Execution Boundaries:** Development tools and AI agents operate on the local source repository. **Never** assume local command execution reaches the Docker daemon. You must manually SSH into the server (`192.168.50.241` / `240`), execute `git pull`, and run `docker compose up -d` to ingest config changes.
+- **Execution Boundaries:** Development tools and AI agents operate on the local source repository but **MUST automatically deploy all changes to the remote servers** (e.g. using `rsync` to sync code changes to `root@192.168.50.252:/opt/cortex/` and running remote docker compose rebuilds/restarts via SSH). The user does not need to perform manual SSH pulls or restarts; the AI agent is expected to handle remote synchronization and container updates automatically.
 - **Router Overlap:** Never assign the same Traefik `Host()` rule to multiple active containers (e.g., legacy Homer Dashboard and React Dashboard). This causes unpredictable round-robin 502/404 routing. Ensure obsolete containers have `traefik.enable=false`.
 - **External Proxies:** For routing to external nodes (e.g., `Ollama` at `192.168.50.242`), Traefik Docker labels are insufficient. A `file` provider must be used inside `/etc/traefik/dynamic` (e.g., `ollama.yml`) with a defined `loadBalancer.servers.url`.
 - **Authentication Conflicts:** Services that rely on internal native GUI basic authentication (such as `Velociraptor EDR`) must **not** be wrapped in Traefik's `authelia@docker` middleware. Double-wrapping authentication layers results in an unavoidable `401 Unauthorized` loop. 
