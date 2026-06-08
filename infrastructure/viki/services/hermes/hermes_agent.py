@@ -652,7 +652,7 @@ async def handle_triage(request: Request) -> JSONResponse:
             "prompt": f"{system_prompt}\n\n{prompt}",
             "stream": False,
             "format": "json"
-        }, timeout=15)
+        }, timeout=120.0)
         
         if res.status_code == 200:
             result_json = json.loads(res.json().get("response", "{}"))

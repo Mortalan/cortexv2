@@ -380,7 +380,7 @@ def run_agent_loop(user_message: str, history: list) -> str:
                 "prompt": prompt,
                 "stream": False,
                 "format": "json"
-            }, timeout=25)
+            }, timeout=120.0)
             
             if res.status_code != 200:
                 return "Error: Ollama connection fault during active cognitive loop."
