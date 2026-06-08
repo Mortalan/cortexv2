@@ -71,3 +71,11 @@
 - `@snapshots/PANGO_20260529`: Pre-demo stable code refactoring and database baseline recovery.
 - `@snapshots/VOOP_20260605`: Decoupled scanner consoles, report save/export controls, and scrollable responsive dashboard layout.
 - `@snapshots/SPIDER_DEPLOY_20260605`: Standalone FITS SPIDER crawler stack deployed with GEO audits, auto-fixes, and Google SERP simulator.
+
+---
+
+### BACKLOG & PLANNING TO-DOs
+- [ ] **Velociraptor Ticket Ingestion:** Create tickets in GLPI for all critical/high security alerts triggered by Velociraptor (ensuring critical events are tracked even when dashboard is unattended).
+- [ ] **MinIO Backup Failure Tickets:** Monitor MinIO backup scripts/events and automatically open a GLPI ticket if a backup job fails.
+- [ ] **RMM Alert Consolidation Window Expansion:** Update [glpi_rmm_consolidator.php](file:///usr/local/bin/glpi_rmm_consolidator.php) on `192.168.50.232` to expand the consolidation time window from 2 hours (`7200` seconds) to 12 hours (`43200` seconds) to handle long-running resource alerts.
+
