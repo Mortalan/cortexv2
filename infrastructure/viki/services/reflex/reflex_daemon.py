@@ -95,7 +95,8 @@ DEFAULT_APPS = {
     "Authelia": True,
     "WireGuard": True,
     "SEO Scanner": True,
-    "Website Auditor": True
+    "Website Auditor": True,
+    "SPIDER": True
 }
 
 _cached_permissions = None
