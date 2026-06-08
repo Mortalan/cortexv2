@@ -73,8 +73,14 @@ async def main():
     logger.info(f"  Data Lake: {DATA_DIR}")
     logger.info("==================================================")
     
-    # Establish connection to private Redis broker
-    r = redis.Redis.from_url(REDIS_URL)
+    # Establish connection to private Redis broker with keepalive and timeouts configured
+    r = redis.Redis.from_url(
+        REDIS_URL,
+        socket_timeout=15,
+        socket_connect_timeout=5,
+        socket_keepalive=True,
+        retry_on_timeout=True
+    )
     
     while True:
         try:
@@ -113,6 +119,9 @@ async def main():
             # Post-crawl webhook dispatch to n8n
             await trigger_n8n_webhook(job_id, url, db_path)
             
+        except redis.exceptions.TimeoutError:
+            # Normal socket timeout when BLPOP times out on an empty queue
+            continue
         except redis.ConnectionError:
             logger.error("[SPIDER-WORKER] Redis connection lost. Retrying in 5s...")
             await asyncio.sleep(5)
