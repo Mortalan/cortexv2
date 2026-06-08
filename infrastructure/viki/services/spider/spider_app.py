@@ -81,7 +81,7 @@ def sync_job_status(job_id: str, url: str, status: str, pages_crawled: int, max_
     ))
     conn.close()
 
-@app.post("/api/spider/crawl")
+@app.post("/crawl")
 async def start_crawl(request: CrawlRequest):
     """Start a new crawl by registering it in master db and queuing it in Redis."""
     target_url = request.url
@@ -137,7 +137,7 @@ async def start_crawl(request: CrawlRequest):
         
     return {"status": "queued", "job_id": job_id, "url": target_url}
 
-@app.get("/api/spider/jobs")
+@app.get("/jobs")
 async def list_jobs():
     """Retrieve all history of crawl jobs."""
     conn = duckdb.connect(MASTER_DB)
@@ -159,7 +159,7 @@ async def list_jobs():
         })
     return jobs_list
 
-@app.get("/api/spider/job/{job_id}")
+@app.get("/job/{job_id}")
 async def get_job_status(job_id: str):
     """Poll progress details for a specific crawl job."""
     job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
@@ -193,7 +193,7 @@ async def get_job_status(job_id: str):
         "completed_at": str(info[4]) if info[4] else None
     }
 
-@app.get("/api/spider/job/{job_id}/pages")
+@app.get("/job/{job_id}/pages")
 async def get_job_pages(
     job_id: str,
     status_filter: Optional[str] = Query(None),
@@ -284,7 +284,7 @@ async def get_job_pages(
         
     return pages_list
 
-@app.get("/api/spider/job/{job_id}/links")
+@app.get("/job/{job_id}/links")
 async def get_job_links(job_id: str):
     """Retrieve discovered link relationships (internal & external) for visual mapping."""
     job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
@@ -299,7 +299,7 @@ async def get_job_links(job_id: str):
         {"source": l[0], "target": l[1], "type": l[2], "anchor": l[3]} for l in links
     ]
 
-@app.get("/api/spider/job/{job_id}/export/csv")
+@app.get("/job/{job_id}/export/csv")
 async def export_job_csv(job_id: str):
     """Generate and export audit results as a CSV spreadsheet."""
     job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
@@ -319,7 +319,7 @@ async def export_job_csv(job_id: str):
         filename=f"spider_seo_audit_{job_id}.csv"
     )
 
-@app.get("/api/spider/job/{job_id}/report/pdf")
+@app.get("/job/{job_id}/report/pdf")
 async def get_pdf_report(job_id: str):
     """Render a premium white-label client PDF audit report utilizing FITS branding."""
     job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")

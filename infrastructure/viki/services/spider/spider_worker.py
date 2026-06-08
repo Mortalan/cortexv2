@@ -59,7 +59,7 @@ async def trigger_n8n_webhook(job_id: str, url: str, db_path: str):
             "worst_pages": [
                 {"url": p[0], "score": p[1], "title": p[2]} for p in worst_pages
             ],
-            "report_download_url": f"https://cortex.rmmservice.co.za/spider/report/{job_id}/pdf"
+            "report_download_url": f"https://cortex.rmmservice.co.za/api/spider/job/{job_id}/report/pdf"
         }
         
         async with httpx.AsyncClient(timeout=10.0) as client:
