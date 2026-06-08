@@ -24,11 +24,25 @@ services:
     user: root
     environment:
       - TZ=Africa/Johannesburg
+    ports:
+      - '8082:80'
     volumes:
       - '/home/netlock/web_console/appsettings.json:/app/appsettings.json'
       - '/home/netlock/web_console/internal:/app/internal'
       - '/home/netlock/web_console/logs:/var/0x101 Cyber Security/NetLock RMM/Web Console/'
       - '/home/netlock/certificates:/app/certificates'
+      - '/home/netlock/web_console/xterm.min.js:/app/wwwroot/js/xterm/xterm.min.js'
+      - '/home/netlock/web_console/xterm.min.js.gz:/app/wwwroot/js/xterm/xterm.min.js.gz'
+      - '/home/netlock/web_console/xterm.min.js.br:/app/wwwroot/js/xterm/xterm.min.js.br'
+      - '/home/netlock/web_console/leaflet.js:/app/wwwroot/js/leaflet/leaflet.js'
+      - '/home/netlock/web_console/leaflet.js.gz:/app/wwwroot/js/leaflet/leaflet.js.gz'
+      - '/home/netlock/web_console/leaflet.js.br:/app/wwwroot/js/leaflet/leaflet.js.br'
+      - '/home/netlock/web_console/leaflet.markercluster.js:/app/wwwroot/js/leaflet/leaflet.markercluster.js'
+      - '/home/netlock/web_console/leaflet.markercluster.js.gz:/app/wwwroot/js/leaflet/leaflet.markercluster.js.gz'
+      - '/home/netlock/web_console/leaflet.markercluster.js.br:/app/wwwroot/js/leaflet/leaflet.markercluster.js.br'
+      - '/home/netlock/web_console/quill.js:/app/wwwroot/js/quill/quill.js'
+      - '/home/netlock/web_console/quill.js.gz:/app/wwwroot/js/quill/quill.js.gz'
+      - '/home/netlock/web_console/quill.js.br:/app/wwwroot/js/quill/quill.js.br'
       - /etc/localtime:/etc/localtime:ro
     labels:
       - 'traefik.enable=true'
