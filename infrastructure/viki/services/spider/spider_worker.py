@@ -5,7 +5,7 @@ import logging
 import httpx
 import redis
 import duckdb
-from spider_crawler import run_crawl_job
+from spider_crawler import run_crawl_job, get_db_conn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cortex-spider-worker")
@@ -21,26 +21,24 @@ async def trigger_n8n_webhook(job_id: str, url: str, db_path: str):
     """Notify n8n of the completed audit with key metrics and AI suggestions."""
     logger.info(f"[SPIDER-WORKER] Querying summary for n8n notification: {job_id}")
     try:
-        conn = duckdb.connect(db_path)
-        # Fetch averages
-        summary = conn.execute("""
-            SELECT 
-                COUNT(*) as pages_count,
-                AVG(seo_score) as avg_seo,
-                AVG(technical_score) as avg_tech,
-                AVG(onpage_score) as avg_onpage,
-                AVG(performance_score) as avg_perf,
-                AVG(ai_score) as avg_ai
-            FROM pages
-        """).fetchone()
-        
-        # Fetch worst pages
-        worst_pages = conn.execute("""
-            SELECT url, seo_score, title FROM pages 
-            ORDER BY seo_score ASC LIMIT 3
-        """).fetchall()
-        
-        conn.close()
+        with get_db_conn(db_path, read_only=True) as conn:
+            # Fetch averages
+            summary = conn.execute("""
+                SELECT 
+                    COUNT(*) as pages_count,
+                    AVG(seo_score) as avg_seo,
+                    AVG(technical_score) as avg_tech,
+                    AVG(onpage_score) as avg_onpage,
+                    AVG(performance_score) as avg_perf,
+                    AVG(ai_score) as avg_ai
+                FROM pages
+            """).fetchone()
+            
+            # Fetch worst pages
+            worst_pages = conn.execute("""
+                SELECT url, seo_score, title FROM pages 
+                ORDER BY seo_score ASC LIMIT 3
+            """).fetchall()
         
         if not summary:
             return

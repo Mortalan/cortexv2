@@ -22,89 +22,97 @@ USER_AGENTS = {
     "googlebot": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 }
 
+def get_db_conn(db_path: str, read_only: bool = False, max_retries: int = 5, delay: float = 0.2):
+    """Retrieve a DuckDB connection with transient lock conflict retries."""
+    for i in range(max_retries):
+        try:
+            return duckdb.connect(db_path, read_only=read_only)
+        except Exception as e:
+            if "lock" in str(e).lower() and i < max_retries - 1:
+                time.sleep(delay)
+                continue
+            raise e
+
 def init_job_db(db_path: str) -> None:
     """Initialize DuckDB tables for a specific crawl job."""
-    conn = duckdb.connect(db_path)
-    
-    # 1. Job Info Table
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS job_info (
-            job_id VARCHAR PRIMARY KEY,
-            url VARCHAR,
-            status VARCHAR,
-            pages_crawled INTEGER,
-            max_pages INTEGER,
-            created_at TIMESTAMP,
-            completed_at TIMESTAMP,
-            config_json VARCHAR
-        )
-    """)
-    
-    # 2. Pages Table (Expanded schema)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS pages (
-            url VARCHAR PRIMARY KEY,
-            status_code INTEGER,
-            load_time_ms INTEGER,
-            word_count INTEGER,
-            title VARCHAR,
-            title_length INTEGER,
-            meta_description VARCHAR,
-            meta_description_length INTEGER,
-            h1 VARCHAR,
-            h1_count INTEGER,
-            canonical VARCHAR,
-            canonical_status VARCHAR,
-            images_total INTEGER,
-            images_missing_alt INTEGER,
-            schema_types VARCHAR,
-            schema_json VARCHAR,
-            readability_score INTEGER,
-            technical_score INTEGER,
-            onpage_score INTEGER,
-            performance_score INTEGER,
-            ai_score INTEGER,
-            seo_score INTEGER,
-            redirect_chain VARCHAR,
-            ai_analysis_json VARCHAR,
-            ttfb_ms INTEGER,
-            dom_depth INTEGER,
-            dom_element_count INTEGER,
-            soft_404_flag BOOLEAN,
-            blindspot_has_hidden_text BOOLEAN,
-            blindspot_hidden_text VARCHAR,
-            elementor_optimization_active BOOLEAN,
-            header_nesting_valid BOOLEAN,
-            date_freshness_valid BOOLEAN,
-            word_rule_met BOOLEAN,
-            schema_conflicts VARCHAR,
-            executive_priority_ledger_json VARCHAR
-        )
-    """)
-    
-    # 3. Links Table
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS links (
-            source_url VARCHAR,
-            target_url VARCHAR,
-            link_type VARCHAR, -- 'internal' or 'external'
-            anchor_text VARCHAR,
-            status_code INTEGER
-        )
-    """)
-    
-    # 4. Images Table
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS images (
-            page_url VARCHAR,
-            image_url VARCHAR,
-            alt_text VARCHAR,
-            file_size_kb INTEGER,
-            status_code INTEGER
-        )
-    """)
-    
-    conn.close()
+    with get_db_conn(db_path) as conn:
+        # 1. Job Info Table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS job_info (
+                job_id VARCHAR PRIMARY KEY,
+                url VARCHAR,
+                status VARCHAR,
+                pages_crawled INTEGER,
+                max_pages INTEGER,
+                created_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                config_json VARCHAR
+            )
+        """)
+        
+        # 2. Pages Table (Expanded schema)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pages (
+                url VARCHAR PRIMARY KEY,
+                status_code INTEGER,
+                load_time_ms INTEGER,
+                word_count INTEGER,
+                title VARCHAR,
+                title_length INTEGER,
+                meta_description VARCHAR,
+                meta_description_length INTEGER,
+                h1 VARCHAR,
+                h1_count INTEGER,
+                canonical VARCHAR,
+                canonical_status VARCHAR,
+                images_total INTEGER,
+                images_missing_alt INTEGER,
+                schema_types VARCHAR,
+                schema_json VARCHAR,
+                readability_score INTEGER,
+                technical_score INTEGER,
+                onpage_score INTEGER,
+                performance_score INTEGER,
+                ai_score INTEGER,
+                seo_score INTEGER,
+                redirect_chain VARCHAR,
+                ai_analysis_json VARCHAR,
+                ttfb_ms INTEGER,
+                dom_depth INTEGER,
+                dom_element_count INTEGER,
+                soft_404_flag BOOLEAN,
+                blindspot_has_hidden_text BOOLEAN,
+                blindspot_hidden_text VARCHAR,
+                elementor_optimization_active BOOLEAN,
+                header_nesting_valid BOOLEAN,
+                date_freshness_valid BOOLEAN,
+                word_rule_met BOOLEAN,
+                schema_conflicts VARCHAR,
+                executive_priority_ledger_json VARCHAR
+            )
+        """)
+        
+        # 3. Links Table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS links (
+                source_url VARCHAR,
+                target_url VARCHAR,
+                link_type VARCHAR, -- 'internal' or 'external'
+                anchor_text VARCHAR,
+                status_code INTEGER
+            )
+        """)
+        
+        # 4. Images Table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS images (
+                page_url VARCHAR,
+                image_url VARCHAR,
+                alt_text VARCHAR,
+                file_size_kb INTEGER,
+                status_code INTEGER
+            )
+        """)
 
 async def call_ollama_critique(ollama_url: str, page_data: Dict[str, Any]) -> Dict[str, Any]:
     """Call Ollama on VM 101 for semantic review of page content."""
@@ -144,28 +152,37 @@ Output a JSON object matching this structure EXACTLY (do not wrap in markdown or
   }}
 }}
 """
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{ollama_url}/api/generate",
-                json={
-                    "model": "hermes3",
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.3}
-                }
-            )
-            if response.status_code == 200:
-                resp_data = response.json()
-                raw_text = resp_data.get("response", "").strip()
-                # Clean markdown wrapper if any
-                if raw_text.startswith("```json"):
-                    raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-                elif raw_text.startswith("```"):
-                    raw_text = raw_text.split("```")[1].split("```")[0].strip()
-                return json.loads(raw_text)
-    except Exception as e:
-        logger.error(f"Ollama critique failed: {e}")
+    models = ["hermes3", "llama3:latest", "viki:latest"]
+    for model in models:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{ollama_url}/api/generate",
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {"temperature": 0.3}
+                    }
+                )
+                if response.status_code == 200:
+                    resp_data = response.json()
+                    raw_text = resp_data.get("response", "").strip()
+                    
+                    # Robust JSON extraction
+                    start_idx = raw_text.find("{")
+                    end_idx = raw_text.rfind("}")
+                    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                        json_str = raw_text[start_idx:end_idx+1]
+                        return json.loads(json_str)
+                    else:
+                        return json.loads(raw_text)
+                elif response.status_code == 404:
+                    logger.warning(f"Ollama model '{model}' not found on {ollama_url}. Trying next fallback...")
+                    continue
+        except Exception as e:
+            logger.error(f"Ollama critique failed for model '{model}': {e}")
+            continue
         
     # Fallback default recommendations
     return {
@@ -585,16 +602,15 @@ async def run_crawl_job(job_id: str, url: str, max_pages: int, render_js: bool, 
     """Run an isolated asynchronous website crawl."""
     init_job_db(db_path)
     
-    conn = duckdb.connect(db_path)
-    # Save Initial Status
-    config = {
-        "render_js": render_js,
-        "user_agent_key": user_agent_key,
-        "obey_robots": obey_robots,
-        "ollama_url": ollama_url
-    }
-    conn.execute("UPDATE job_info SET status = 'running' WHERE job_id = ?", (job_id,))
-    conn.close()
+    with get_db_conn(db_path) as conn:
+        # Save Initial Status
+        config = {
+            "render_js": render_js,
+            "user_agent_key": user_agent_key,
+            "obey_robots": obey_robots,
+            "ollama_url": ollama_url
+        }
+        conn.execute("UPDATE job_info SET status = 'running' WHERE job_id = ?", (job_id,))
     
     parsed_base = urllib.parse.urlparse(url)
     base_domain = parsed_base.netloc
@@ -817,82 +833,77 @@ async def run_crawl_job(job_id: str, url: str, max_pages: int, render_js: bool, 
             analysis["ai_score"] = ai_score
             
             # Save to DuckDB
-            conn = duckdb.connect(db_path)
-            conn.execute("""
-                INSERT OR REPLACE INTO pages 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                current_url, status_code, load_time_ms, analysis["word_count"],
-                analysis["title"], analysis["title_length"], analysis["meta_description"], analysis["meta_description_length"],
-                analysis["h1"], analysis["h1_count"], analysis["canonical"], analysis["canonical_status"],
-                analysis["images_total"], analysis["images_missing_alt"], analysis["schema_types"], analysis["schema_json"],
-                analysis["readability_score"], analysis["technical_score"], analysis["onpage_score"],
-                analysis["performance_score"], analysis["ai_score"], analysis["seo_score"], ",".join(redirect_chain), json.dumps(ai_critique),
-                analysis["ttfb_ms"], analysis["dom_depth"], analysis["dom_element_count"], analysis["soft_404_flag"],
-                analysis["blindspot_has_hidden_text"], analysis["blindspot_hidden_text"], analysis["elementor_optimization_active"],
-                analysis["header_nesting_valid"], analysis["date_freshness_valid"], analysis["word_rule_met"],
-                analysis["schema_conflicts"], analysis["executive_priority_ledger_json"]
-            ))
-            
-            # Save links
-            for link in analysis["links"]:
-                t_url = link["target_url"]
-                if link["link_type"] == "internal" and t_url not in visited and t_url not in queue:
-                    if len(visited) + len(queue) < max_pages * 2:
-                        queue.append(t_url)
-                        
+            with get_db_conn(db_path) as conn:
                 conn.execute("""
-                    INSERT INTO links VALUES (?, ?, ?, ?, ?)
-                """, (current_url, t_url, link["link_type"], link["anchor_text"], 200))
+                    INSERT OR REPLACE INTO pages 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    current_url, status_code, load_time_ms, analysis["word_count"],
+                    analysis["title"], analysis["title_length"], analysis["meta_description"], analysis["meta_description_length"],
+                    analysis["h1"], analysis["h1_count"], analysis["canonical"], analysis["canonical_status"],
+                    analysis["images_total"], analysis["images_missing_alt"], analysis["schema_types"], analysis["schema_json"],
+                    analysis["readability_score"], analysis["technical_score"], analysis["onpage_score"],
+                    analysis["performance_score"], analysis["ai_score"], analysis["seo_score"], ",".join(redirect_chain), json.dumps(ai_critique),
+                    analysis["ttfb_ms"], analysis["dom_depth"], analysis["dom_element_count"], analysis["soft_404_flag"],
+                    analysis["blindspot_has_hidden_text"], analysis["blindspot_hidden_text"], analysis["elementor_optimization_active"],
+                    analysis["header_nesting_valid"], analysis["date_freshness_valid"], analysis["word_rule_met"],
+                    analysis["schema_conflicts"], analysis["executive_priority_ledger_json"]
+                ))
                 
-            # Save images
-            for img in analysis["images_data"]:
-                conn.execute("""
-                    INSERT INTO images VALUES (?, ?, ?, ?, ?)
-                """, (current_url, img["image_url"], img["alt_text"], 0, 200))
-                
-            conn.close()
+                # Save links
+                for link in analysis["links"]:
+                    t_url = link["target_url"]
+                    if link["link_type"] == "internal" and t_url not in visited and t_url not in queue:
+                        if len(visited) + len(queue) < max_pages * 2:
+                            queue.append(t_url)
+                            
+                    conn.execute("""
+                        INSERT INTO links VALUES (?, ?, ?, ?, ?)
+                    """, (current_url, t_url, link["link_type"], link["anchor_text"], 200))
+                    
+                # Save images
+                for img in analysis["images_data"]:
+                    conn.execute("""
+                        INSERT INTO images VALUES (?, ?, ?, ?, ?)
+                    """, (current_url, img["image_url"], img["alt_text"], 0, 200))
         else:
             # Handle non-200 or connection errors
-            conn = duckdb.connect(db_path)
-            conn.execute("""
-                INSERT OR REPLACE INTO pages 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                current_url, status_code, load_time_ms, 0, "", 0, "", 0, "", 0, "", "missing",
-                0, 0, "", "[]", 0, 30, 10, 20, 20, 20, ",".join(redirect_chain), "{}",
-                load_time_ms, 0, 0, False, False, "", False, True, True, True, "", "[]"
-            ))
-            conn.close()
+            with get_db_conn(db_path) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO pages 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    current_url, status_code, load_time_ms, 0, "", 0, "", 0, "", 0, "", "missing",
+                    0, 0, "", "[]", 0, 30, 10, 20, 20, 20, ",".join(redirect_chain), "{}",
+                    load_time_ms, 0, 0, False, False, "", False, True, True, True, "", "[]"
+                ))
             
         # Update progress counter
-        conn = duckdb.connect(db_path)
-        conn.execute("UPDATE job_info SET pages_crawled = ? WHERE job_id = ?", (crawled_count, job_id))
-        conn.close()
+        with get_db_conn(db_path) as conn:
+            conn.execute("UPDATE job_info SET pages_crawled = ? WHERE job_id = ?", (crawled_count, job_id))
         
         await asyncio.sleep(0.5)
         
     # After crawl, check for orphan pages
-    conn = duckdb.connect(db_path)
-    all_pages = [r[0] for r in conn.execute("SELECT url FROM pages").fetchall()]
-    for p_url in all_pages:
-        if p_url != url: # ignore homepage
-            inbound_count = conn.execute("SELECT COUNT(*) FROM links WHERE target_url = ? AND source_url != ?", (p_url, p_url)).fetchone()[0]
-            if inbound_count == 0:
-                page_data = conn.execute("SELECT executive_priority_ledger_json, technical_score, seo_score FROM pages WHERE url = ?", (p_url,)).fetchone()
-                if page_data:
-                    ledger = json.loads(page_data[0])
-                    ledger.append({
-                        "Audit Pillar": "Indexation",
-                        "Vulnerability Detected": "Orphan page structure detected (no internal inbound links)",
-                        "Technical Impact": "Search engine crawlers and AI agents will fail to discover and index this page naturally.",
-                        "Platform Resolution Strategy": "Add internal links pointing to this URL from high-authority parent/landing pages."
-                    })
-                    new_tech_score = max(0, page_data[1] - 15)
-                    # rough re-average
-                    new_seo_score = int((new_tech_score + (page_data[2]*4 - page_data[1]*4)/4)/2)
-                    conn.execute("UPDATE pages SET executive_priority_ledger_json = ?, technical_score = ?, seo_score = ? WHERE url = ?", (json.dumps(ledger), new_tech_score, new_seo_score, p_url))
-    conn.close()
+    with get_db_conn(db_path) as conn:
+        all_pages = [r[0] for r in conn.execute("SELECT url FROM pages").fetchall()]
+        for p_url in all_pages:
+            if p_url != url: # ignore homepage
+                inbound_count = conn.execute("SELECT COUNT(*) FROM links WHERE target_url = ? AND source_url != ?", (p_url, p_url)).fetchone()[0]
+                if inbound_count == 0:
+                    page_data = conn.execute("SELECT executive_priority_ledger_json, technical_score, seo_score FROM pages WHERE url = ?", (p_url,)).fetchone()
+                    if page_data:
+                        ledger = json.loads(page_data[0])
+                        ledger.append({
+                            "Audit Pillar": "Indexation",
+                            "Vulnerability Detected": "Orphan page structure detected (no internal inbound links)",
+                            "Technical Impact": "Search engine crawlers and AI agents will fail to discover and index this page naturally.",
+                            "Platform Resolution Strategy": "Add internal links pointing to this URL from high-authority parent/landing pages."
+                        })
+                        new_tech_score = max(0, page_data[1] - 15)
+                        # rough re-average
+                        new_seo_score = int((new_tech_score + (page_data[2]*4 - page_data[1]*4)/4)/2)
+                        conn.execute("UPDATE pages SET executive_priority_ledger_json = ?, technical_score = ?, seo_score = ? WHERE url = ?", (json.dumps(ledger), new_tech_score, new_seo_score, p_url))
     
     if browser:
         await browser.close()
@@ -900,9 +911,8 @@ async def run_crawl_job(job_id: str, url: str, max_pages: int, render_js: bool, 
         await playwright_context.stop()
         
     # Mark job completed
-    conn = duckdb.connect(db_path)
-    conn.execute("UPDATE job_info SET status = 'completed', completed_at = ? WHERE job_id = ?", (
-        time.strftime("%Y-%m-%d %H:%M:%S"), job_id
-    ))
-    conn.close()
+    with get_db_conn(db_path) as conn:
+        conn.execute("UPDATE job_info SET status = 'completed', completed_at = ? WHERE job_id = ?", (
+            time.strftime("%Y-%m-%d %H:%M:%S"), job_id
+        ))
     logger.info(f"[SPIDER] Crawl job {job_id} finalized successfully.")

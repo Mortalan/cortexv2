@@ -26,23 +26,33 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.50.242:11434")
 MASTER_DB = os.path.join(DATA_DIR, "spider_master.db")
 os.makedirs(DATA_DIR, exist_ok=True)
 
+def get_db_conn(db_path: str, read_only: bool = False, max_retries: int = 5, delay: float = 0.2):
+    """Retrieve a DuckDB connection with transient lock conflict retries."""
+    for i in range(max_retries):
+        try:
+            return duckdb.connect(db_path, read_only=read_only)
+        except Exception as e:
+            if "lock" in str(e).lower() and i < max_retries - 1:
+                time.sleep(delay)
+                continue
+            raise e
+
 # Initialize master job store
 def init_master_db():
-    conn = duckdb.connect(MASTER_DB)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS jobs (
-            job_id VARCHAR PRIMARY KEY,
-            url VARCHAR,
-            status VARCHAR,
-            pages_crawled INTEGER,
-            max_pages INTEGER,
-            created_at TIMESTAMP,
-            completed_at TIMESTAMP,
-            render_js BOOLEAN,
-            user_agent VARCHAR
-        )
-    """)
-    conn.close()
+    with get_db_conn(MASTER_DB) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                job_id VARCHAR PRIMARY KEY,
+                url VARCHAR,
+                status VARCHAR,
+                pages_crawled INTEGER,
+                max_pages INTEGER,
+                created_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                render_js BOOLEAN,
+                user_agent VARCHAR
+            )
+        """)
 
 init_master_db()
 
@@ -70,16 +80,15 @@ class CrawlRequest(BaseModel):
 
 # Helper to sync master job record
 def sync_job_status(job_id: str, url: str, status: str, pages_crawled: int, max_pages: int, render_js: bool, user_agent: str):
-    conn = duckdb.connect(MASTER_DB)
-    conn.execute("""
-        INSERT OR REPLACE INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        job_id, url, status, pages_crawled, max_pages,
-        time.strftime("%Y-%m-%d %H:%M:%S"),
-        None if status == "running" else time.strftime("%Y-%m-%d %H:%M:%S"),
-        render_js, user_agent
-    ))
-    conn.close()
+    with get_db_conn(MASTER_DB) as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            job_id, url, status, pages_crawled, max_pages,
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            None if status == "running" else time.strftime("%Y-%m-%d %H:%M:%S"),
+            render_js, user_agent
+        ))
 
 @app.post("/crawl")
 async def start_crawl(request: CrawlRequest):
@@ -94,24 +103,23 @@ async def start_crawl(request: CrawlRequest):
     job_db_path = os.path.join(DATA_DIR, f"{job_id}.db")
     
     # Initialize DuckDB file for the job
-    conn = duckdb.connect(job_db_path)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS job_info (
-            job_id VARCHAR PRIMARY KEY,
-            url VARCHAR,
-            status VARCHAR,
-            pages_crawled INTEGER,
-            max_pages INTEGER,
-            created_at TIMESTAMP,
-            completed_at TIMESTAMP,
-            config_json VARCHAR
-        )
-    """)
-    conn.execute("INSERT INTO job_info VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (
-        job_id, target_url, "created", 0, request.max_pages,
-        time.strftime("%Y-%m-%d %H:%M:%S"), None, json.dumps(request.model_dump())
-    ))
-    conn.close()
+    with get_db_conn(job_db_path) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS job_info (
+                job_id VARCHAR PRIMARY KEY,
+                url VARCHAR,
+                status VARCHAR,
+                pages_crawled INTEGER,
+                max_pages INTEGER,
+                created_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                config_json VARCHAR
+            )
+        """)
+        conn.execute("INSERT INTO job_info VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (
+            job_id, target_url, "created", 0, request.max_pages,
+            time.strftime("%Y-%m-%d %H:%M:%S"), None, json.dumps(request.model_dump())
+        ))
     
     # Sync to master registry
     sync_job_status(job_id, target_url, "running", 0, request.max_pages, request.render_js, request.user_agent)
@@ -140,9 +148,8 @@ async def start_crawl(request: CrawlRequest):
 @app.get("/jobs")
 async def list_jobs():
     """Retrieve all history of crawl jobs."""
-    conn = duckdb.connect(MASTER_DB)
-    results = conn.execute("SELECT * FROM jobs ORDER BY created_at DESC").fetchall()
-    conn.close()
+    with get_db_conn(MASTER_DB, read_only=True) as conn:
+        results = conn.execute("SELECT * FROM jobs ORDER BY created_at DESC").fetchall()
     
     jobs_list = []
     for r in results:
@@ -167,9 +174,8 @@ async def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job DB file not found.")
         
     try:
-        conn = duckdb.connect(job_db_path)
-        info = conn.execute("SELECT status, pages_crawled, max_pages, created_at, completed_at FROM job_info").fetchone()
-        conn.close()
+        with get_db_conn(job_db_path, read_only=True) as conn:
+            info = conn.execute("SELECT status, pages_crawled, max_pages, created_at, completed_at FROM job_info").fetchone()
     except Exception as e:
         logger.error(f"Error reading job DB {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to query job info database.")
@@ -178,11 +184,10 @@ async def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job entry not initialized.")
         
     # Update master db with latest crawled count
-    conn = duckdb.connect(MASTER_DB)
-    conn.execute("UPDATE jobs SET status = ?, pages_crawled = ?, completed_at = ? WHERE job_id = ?", (
-        info[0], info[1], info[4] if info[0] == "completed" else None, job_id
-    ))
-    conn.close()
+    with get_db_conn(MASTER_DB) as conn:
+        conn.execute("UPDATE jobs SET status = ?, pages_crawled = ?, completed_at = ? WHERE job_id = ?", (
+            info[0], info[1], info[4] if info[0] == "completed" else None, job_id
+        ))
     
     return {
         "job_id": job_id,
@@ -204,7 +209,6 @@ async def get_job_pages(
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Crawl data file not found.")
         
-    conn = duckdb.connect(job_db_path)
     query = "SELECT * FROM pages WHERE 1=1"
     params = []
     
@@ -229,10 +233,9 @@ async def get_job_pages(
     query += " ORDER BY seo_score ASC"
     
     try:
-        results = conn.execute(query, params).fetchall()
-        conn.close()
+        with get_db_conn(job_db_path, read_only=True) as conn:
+            results = conn.execute(query, params).fetchall()
     except Exception as e:
-        conn.close()
         raise HTTPException(status_code=500, detail=f"Database query error: {e}")
         
     pages_list = []
@@ -291,9 +294,8 @@ async def get_job_links(job_id: str):
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Job crawl data not found.")
         
-    conn = duckdb.connect(job_db_path)
-    links = conn.execute("SELECT source_url, target_url, link_type, anchor_text FROM links LIMIT 1000").fetchall()
-    conn.close()
+    with get_db_conn(job_db_path, read_only=True) as conn:
+        links = conn.execute("SELECT source_url, target_url, link_type, anchor_text FROM links LIMIT 1000").fetchall()
     
     return [
         {"source": l[0], "target": l[1], "type": l[2], "anchor": l[3]} for l in links
@@ -309,9 +311,8 @@ async def export_job_csv(job_id: str):
     csv_file_path = os.path.join(DATA_DIR, f"{job_id}_export.csv")
     
     # Export using DuckDB COPY statement
-    conn = duckdb.connect(job_db_path)
-    conn.execute(f"COPY pages TO '{csv_file_path}' (HEADER, DELIMITER ',')")
-    conn.close()
+    with get_db_conn(job_db_path, read_only=True) as conn:
+        conn.execute(f"COPY pages TO '{csv_file_path}' (HEADER, DELIMITER ',')")
     
     return FileResponse(
         csv_file_path,
@@ -326,42 +327,40 @@ async def get_pdf_report(job_id: str):
     if not os.path.exists(job_db_path):
         raise HTTPException(status_code=404, detail="Job database not found.")
         
-    conn = duckdb.connect(job_db_path)
-    # 1. Fetch site overall score & specs
-    job_info = conn.execute("SELECT url, created_at FROM job_info").fetchone()
-    if not job_info:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Job metadata missing.")
+    with get_db_conn(job_db_path, read_only=True) as conn:
+        # 1. Fetch site overall score & specs
+        job_info = conn.execute("SELECT url, created_at FROM job_info").fetchone()
+        if not job_info:
+            raise HTTPException(status_code=404, detail="Job metadata missing.")
+            
+        target_url = job_info[0]
+        scan_date = job_info[1]
         
-    target_url = job_info[0]
-    scan_date = job_info[1]
-    
-    # 2. Fetch page metrics averages
-    summary = conn.execute("""
-        SELECT 
-            COUNT(*) as pages_count,
-            AVG(seo_score) as avg_seo,
-            AVG(technical_score) as avg_tech,
-            AVG(onpage_score) as avg_onpage,
-            AVG(performance_score) as avg_perf,
-            AVG(ai_score) as avg_ai,
-            SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as errors,
-            SUM(CASE WHEN title = '' OR title IS NULL THEN 1 ELSE 0 END) as missing_titles,
-            SUM(CASE WHEN meta_description = '' OR meta_description IS NULL THEN 1 ELSE 0 END) as missing_descs,
-            SUM(images_missing_alt) as missing_alts
-        FROM pages
-    """).fetchone()
-    
-    # 3. Fetch list of critical pages (lowest SEO scores first)
-    crawled_pages = conn.execute("""
-        SELECT url, status_code, seo_score, title, meta_description, h1, word_count, canonical_status, images_total, images_missing_alt, ai_analysis_json
-        FROM pages
-        ORDER BY seo_score ASC LIMIT 15
-    """).fetchall()
-    
-    # 4. Fetch consolidated priority ledger items from all pages
-    ledger_rows = conn.execute("SELECT executive_priority_ledger_json FROM pages WHERE executive_priority_ledger_json IS NOT NULL").fetchall()
-    conn.close()
+        # 2. Fetch page metrics averages
+        summary = conn.execute("""
+            SELECT 
+                COUNT(*) as pages_count,
+                AVG(seo_score) as avg_seo,
+                AVG(technical_score) as avg_tech,
+                AVG(onpage_score) as avg_onpage,
+                AVG(performance_score) as avg_perf,
+                AVG(ai_score) as avg_ai,
+                SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as errors,
+                SUM(CASE WHEN title = '' OR title IS NULL THEN 1 ELSE 0 END) as missing_titles,
+                SUM(CASE WHEN meta_description = '' OR meta_description IS NULL THEN 1 ELSE 0 END) as missing_descs,
+                SUM(images_missing_alt) as missing_alts
+            FROM pages
+        """).fetchone()
+        
+        # 3. Fetch list of critical pages (lowest SEO scores first)
+        crawled_pages = conn.execute("""
+            SELECT url, status_code, seo_score, title, meta_description, h1, word_count, canonical_status, images_total, images_missing_alt, ai_analysis_json
+            FROM pages
+            ORDER BY seo_score ASC LIMIT 15
+        """).fetchall()
+        
+        # 4. Fetch consolidated priority ledger items from all pages
+        ledger_rows = conn.execute("SELECT executive_priority_ledger_json FROM pages WHERE executive_priority_ledger_json IS NOT NULL").fetchall()
     
     consolidated_ledger = []
     seen_vulns = set()
