@@ -108,6 +108,23 @@ http:
       service: netlock-console-service
       priority: 10
 
+    # 11b. NetLock RMM Daemon API (on VM 100)
+    netlock-backend:
+      rule: "Host(`nl-backend.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: netlock-backend-service
+      priority: 10
+
+    # 11c. NetLock RMM Client Relay (on VM 100)
+    netlock-relay:
+      rule: "Host(`nl-relay.rmmservice.co.za`)"
+      entryPoints:
+        - web
+      service: netlock-relay-service
+      priority: 10
+
+
     # 12. SEO Scanner Daemon API
     seo-scanner:
       rule: "(Host(`cortex.rmmservice.co.za`) || Host(`rmmservice.co.za`)) && PathPrefix(`/api/seo`)"
@@ -200,6 +217,16 @@ http:
       loadBalancer:
         servers:
           - url: "http://192.168.50.241:8082"
+
+    netlock-backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.241:7080"
+
+    netlock-relay-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.50.241:7081"
 
     seo-scanner-service:
       loadBalancer:
