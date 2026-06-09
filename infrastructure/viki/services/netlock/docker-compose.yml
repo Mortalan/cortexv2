@@ -43,6 +43,12 @@ services:
       - '/home/netlock/web_console/quill.js:/app/wwwroot/js/quill/quill.js'
       - '/home/netlock/web_console/quill.js.gz:/app/wwwroot/js/quill/quill.js.gz'
       - '/home/netlock/web_console/quill.js.br:/app/wwwroot/js/quill/quill.js.br'
+      - '/home/netlock/web_console/custom.js:/app/wwwroot/js/custom.js'
+      - '/home/netlock/web_console/custom.js.gz:/app/wwwroot/js/custom.js.gz'
+      - '/home/netlock/web_console/custom.js.br:/app/wwwroot/js/custom.js.br'
+      - '/home/netlock/web_console/fullscreen.js:/app/wwwroot/js/fullscreen.js'
+      - '/home/netlock/web_console/fullscreen.js.gz:/app/wwwroot/js/fullscreen.js.gz'
+      - '/home/netlock/web_console/fullscreen.js.br:/app/wwwroot/js/fullscreen.js.br'
       - /etc/localtime:/etc/localtime:ro
     labels:
       - 'traefik.enable=true'
